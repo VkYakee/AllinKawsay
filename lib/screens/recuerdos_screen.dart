@@ -159,6 +159,7 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
       ),
     );
   }
+
   Widget _tarjetaRecuerdo(
     BuildContext context,
     Recuerdo r,
@@ -189,7 +190,7 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
               // Header con imagen principal
               Stack(
                 children: [
-                  // Imagen de portada
+                  // Imagen de portada OPTIMIZADA
                   if (r.tieneFotos)
                     ClipRRect(
                       borderRadius: const BorderRadius.only(
@@ -201,6 +202,8 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
                         width: double.infinity,
                         height: 220,
                         fit: BoxFit.cover,
+                        memCacheWidth: 600, // OPTIMIZACIÓN
+                        memCacheHeight: 400,
                         placeholder: (_, __) => Container(
                           height: 220,
                           color: AppColors.granate.withOpacity(0.1),
@@ -296,7 +299,7 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
                       child: PopupMenuButton<String>(
                         icon: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.black87,
                             shape: BoxShape.circle,
                           ),
@@ -340,6 +343,7 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
                     ),
                 ],
               ),
+
               // Contenido
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
