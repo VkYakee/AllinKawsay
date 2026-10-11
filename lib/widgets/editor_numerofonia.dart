@@ -37,7 +37,6 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
   }
 
   void _notify() {
-    // Notifica al padre con la lista actualizada
     widget.onChanged?.call(_estrofas);
   }
 
@@ -71,7 +70,7 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
                   _notify();
                 }),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
             ],
             _botonAgregarTabla(),
           ],
@@ -82,20 +81,20 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
 
   Widget _botonAgregarTabla() => SizedBox(
         width: double.infinity,
-        height: 50,
+        height: 48,
         child: OutlinedButton.icon(
           onPressed: () => setState(() {
             _estrofas.add(EstrofaNumerofonia.nueva());
             _notify();
           }),
-          icon: const Icon(Icons.add, color: AppColors.granate),
+          icon: const Icon(Icons.add, color: AppColors.granate, size: 18),
           label: const Text(
-            'AGREGAR NUEVA PARTE (TABLA)',
+            'AGREGAR NUEVA ESTROFA', // CAMBIO DE TEXTO
             style: TextStyle(
               color: AppColors.granate,
               fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-              fontSize: 12,
+              letterSpacing: 1.5,
+              fontSize: 11,
             ),
           ),
           style: OutlinedButton.styleFrom(
@@ -128,14 +127,14 @@ class _EditorEstrofa extends StatelessWidget {
     required this.onEliminar,
   });
 
-  static const double _charW = 9.9;
-  static const double _padH = 4.0;
+  static const double _charW = 7.5;
+  static const double _padH = 3.0;
 
   double _anchoCol(ColumnaNumerofonia c, double e) =>
-      ((c.maxLen.clamp(1, 99) * _charW + _padH * 2 + 2) * e).clamp(36 * e, 999.0);
+      ((c.maxLen.clamp(1, 99) * _charW + _padH * 2 + 1) * e).clamp(28 * e, 999.0);
 
   double _anchoBase() =>
-      24 + estrofa.columnas.fold<double>(0, (s, c) => s + _anchoCol(c, 1.0));
+      18 + estrofa.columnas.fold<double>(0, (s, c) => s + _anchoCol(c, 1.0));
 
   @override
   Widget build(BuildContext context) {
@@ -145,18 +144,18 @@ class _EditorEstrofa extends StatelessWidget {
     double e = 1.0;
     final base = _anchoBase();
     if (base > 0 && disponible > 0 && base > disponible) {
-      e = (disponible / base).clamp(0.7, 1.0);
+      e = (disponible / base).clamp(0.6, 1.0);
     }
 
     final n = estrofa.columnas.length;
     final tabla = Table(
       columnWidths: {
-        0: FixedColumnWidth(24 * e),
+        0: FixedColumnWidth(18 * e),
         for (int j = 0; j < n; j++)
           j + 1: FixedColumnWidth(_anchoCol(estrofa.columnas[j], e)),
       },
       border: TableBorder.all(
-        color: AppColors.granate.withOpacity(0.30),
+        color: AppColors.granate.withOpacity(0.25),
         width: 1,
       ),
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -180,12 +179,12 @@ class _EditorEstrofa extends StatelessWidget {
         Row(
           children: [
             Text(
-              'PARTE ${romanoNumerofonia(indice + 1)}',
+              'ESTROFA ${romanoNumerofonia(indice + 1)}', // CAMBIO: PARTE -> ESTROFA
               style: const TextStyle(
                 color: AppColors.granate,
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
-                letterSpacing: 2,
+                fontSize: 11,
+                letterSpacing: 1.5,
               ),
             ),
             const Spacer(),
@@ -205,30 +204,30 @@ class _EditorEstrofa extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        SingleChildScrollView(scrollDirection: Axis.horizontal, child: tabla),
         const SizedBox(height: 4),
+        SingleChildScrollView(scrollDirection: Axis.horizontal, child: tabla),
+        const SizedBox(height: 2),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
             onPressed: onAgregarColumna,
-            icon: const Icon(Icons.add, size: 15, color: AppColors.granate),
+            icon: const Icon(Icons.add, size: 14, color: AppColors.granate),
             label: const Text(
               'COLUMNA',
               style: TextStyle(
                 color: AppColors.granate,
                 fontWeight: FontWeight.bold,
-                fontSize: 10,
+                fontSize: 9,
                 letterSpacing: 1,
               ),
             ),
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               side: BorderSide(color: AppColors.granate.withOpacity(0.4)),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
@@ -238,7 +237,7 @@ class _EditorEstrofa extends StatelessWidget {
   }
 
   Widget _etiqueta(String t, double e) => Container(
-        height: 36 * e,
+        height: 30 * e,
         color: AppColors.granate,
         alignment: Alignment.center,
         child: Text(
@@ -246,7 +245,7 @@ class _EditorEstrofa extends StatelessWidget {
           style: TextStyle(
             color: AppColors.dorado,
             fontWeight: FontWeight.bold,
-            fontSize: 12 * e,
+            fontSize: 10 * e,
             height: 1.0,
           ),
         ),
@@ -261,7 +260,7 @@ class _EditorEstrofa extends StatelessWidget {
     Color color,
   ) =>
       SizedBox(
-        height: 36 * e,
+        height: 30 * e,
         child: TextFormField(
           key: ValueKey('cif-$i-$j-${es7 ? 7 : 6}'),
           initialValue: valor,
@@ -282,7 +281,7 @@ class _EditorEstrofa extends StatelessWidget {
             color: color,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',
-            fontSize: 15 * e,
+            fontSize: 12 * e,
             height: 1.0,
           ),
           decoration: const InputDecoration(
@@ -298,7 +297,7 @@ class _EditorEstrofa extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: onToggleBis,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: estrofa.bis
                 ? AppColors.dorado.withOpacity(0.20)
@@ -315,12 +314,12 @@ class _EditorEstrofa extends StatelessWidget {
             children: [
               Icon(
                 Icons.repeat,
-                size: 12,
+                size: 10,
                 color: estrofa.bis
                     ? AppColors.granate
                     : AppColors.granate.withOpacity(0.4),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 3),
               Text(
                 'BIS',
                 style: TextStyle(
@@ -328,7 +327,7 @@ class _EditorEstrofa extends StatelessWidget {
                       ? AppColors.granate
                       : AppColors.granate.withOpacity(0.4),
                   fontWeight: FontWeight.bold,
-                  fontSize: 10,
+                  fontSize: 9,
                   letterSpacing: 1,
                 ),
               ),
