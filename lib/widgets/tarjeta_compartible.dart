@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../models/cancion.dart';
 import '../theme/colors.dart';
 import 'visor_numerofonia.dart';
 
 class TarjetaCompartible extends StatelessWidget {
   final Cancion cancion;
+
   const TarjetaCompartible({super.key, required this.cancion});
 
   @override
@@ -14,20 +16,19 @@ class TarjetaCompartible extends StatelessWidget {
       color: AppColors.blanco,
       child: Stack(
         children: [
-          // === MARCA DE AGUA (detrás de todo) ===
+          // === MARCA DE AGUA ===
           Positioned.fill(
             child: IgnorePointer(
               child: Opacity(
-                opacity: 0.08,
+                opacity: 0.06,
                 child: Center(
                   child: ClipOval(
                     child: Image.asset(
                       'assets/logo.png',
-                      width: 480,
-                      height: 480,
+                      width: 500,
+                      height: 500,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const SizedBox.shrink(),
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),
                 ),
@@ -53,8 +54,7 @@ class TarjetaCompartible extends StatelessWidget {
                           width: 60,
                           height: 60,
                           color: AppColors.granate,
-                          child: const Icon(Icons.music_note,
-                              color: AppColors.dorado),
+                          child: const Icon(Icons.music_note, color: AppColors.dorado),
                         ),
                       ),
                     ),
@@ -86,7 +86,6 @@ class TarjetaCompartible extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 20),
                 Container(height: 2, color: AppColors.dorado),
                 const SizedBox(height: 20),
@@ -102,7 +101,6 @@ class TarjetaCompartible extends StatelessWidget {
                     letterSpacing: 1,
                   ),
                 ),
-
                 if (cancion.autor.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
@@ -115,7 +113,6 @@ class TarjetaCompartible extends StatelessWidget {
                     ),
                   ),
                 ],
-
                 if (cancion.ritmo.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -128,16 +125,16 @@ class TarjetaCompartible extends StatelessWidget {
                   ),
                 ],
 
-                // Numerofonía (se ajusta al ancho automáticamente)
+                // Numerofonía (ajustada para entrar completa)
                 if (cancion.tieneNumerofonia) ...[
                   const SizedBox(height: 24),
                   VisorNumerofonia(
                     estrofas: cancion.estrofas,
-                    escala: 1.3,
+                    escala: 1.0, // Escala base, el visor se auto-ajusta al ancho de 800px
                   ),
                 ],
 
-                // Letra
+                // Letra (Resumida o completa según espacio)
                 if (cancion.letra.isNotEmpty) ...[
                   const SizedBox(height: 24),
                   const Text(
@@ -155,15 +152,15 @@ class TarjetaCompartible extends StatelessWidget {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: AppColors.blanco,
-                      border:
-                          Border.all(color: AppColors.negro, width: 1),
+                      border: Border.all(color: AppColors.negro.withOpacity(0.2), width: 1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       cancion.letra,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 15,
-                        height: 1.9,
+                        fontSize: 14,
+                        height: 1.6,
                         color: AppColors.negro,
                         fontStyle: FontStyle.italic,
                       ),
@@ -174,7 +171,6 @@ class TarjetaCompartible extends StatelessWidget {
                 const SizedBox(height: 24),
                 Container(height: 1, color: AppColors.dorado),
                 const SizedBox(height: 8),
-
                 const Text(
                   'Compartido desde la app oficial',
                   textAlign: TextAlign.center,
