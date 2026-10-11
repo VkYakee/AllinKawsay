@@ -27,7 +27,6 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
   void initState() {
     super.initState();
     _estrofas = widget.estrofas ?? widget.inicial ?? <EstrofaNumerofonia>[];
-    
     if (_estrofas.isEmpty || _estrofas.every((e) => e.vacia)) {
       _estrofas.clear();
       while (_estrofas.length < 3) {
@@ -36,9 +35,7 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
     }
   }
 
-  void _notify() {
-    widget.onChanged?.call(_estrofas);
-  }
+  void _notify() => widget.onChanged?.call(_estrofas);
 
   @override
   Widget build(BuildContext context) {
@@ -47,15 +44,27 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
         final double disponible = cons.hasBoundedWidth
             ? cons.maxWidth
             : MediaQuery.of(context).size.width - 64;
+
+        // ESCALA ÚNICA para todas las estrofas del editor
+        double maxBase = 0;
+        for (final e in _estrofas) {
+          final b = _EditorEstrofa.baseDe(e);
+          if (b > maxBase) maxBase = b;
+        }
+        double esc = 1.0;
+        if (maxBase > 0 && disponible > 0 && maxBase > disponible) {
+          esc = (disponible / maxBase).clamp(0.6, 1.0);
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (int i = 0; i < _estrofas.length; i++) ...[
               _EditorEstrofa(
-                key: ValueKey('est-$i-${_estrofas[i].hashCode}'),
+                key: ValueKey('est-${identityHashCode(_estrofas[i])}'),
                 estrofa: _estrofas[i],
                 indice: i,
-                disponible: disponible,
+                escala: esc,
                 onCelda: _notify,
                 onToggleBis: () => setState(() {
                   _estrofas[i].bis = !_estrofas[i].bis;
@@ -72,45 +81,43 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
               ),
               const SizedBox(height: 16),
             ],
-            _botonAgregarTabla(),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () => setState(() {
+                  _estrofas.add(EstrofaNumerofonia.nueva());
+                  _notify();
+                }),
+                icon: const Icon(Icons.add, color: AppColors.granate, size: 18),
+                label: const Text(
+                  'AGREGAR NUEVA ESTROFA',
+                  style: TextStyle(
+                    color: AppColors.granate,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    fontSize: 11,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.granate.withOpacity(0.5)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
           ],
         );
       },
     );
   }
-
-  Widget _botonAgregarTabla() => SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: OutlinedButton.icon(
-          onPressed: () => setState(() {
-            _estrofas.add(EstrofaNumerofonia.nueva());
-            _notify();
-          }),
-          icon: const Icon(Icons.add, color: AppColors.granate, size: 18),
-          label: const Text(
-            'AGREGAR NUEVA ESTROFA', // CAMBIO DE TEXTO
-            style: TextStyle(
-              color: AppColors.granate,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-              fontSize: 11,
-            ),
-          ),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: AppColors.granate.withOpacity(0.5)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-        ),
-      );
 }
 
 class _EditorEstrofa extends StatelessWidget {
   final EstrofaNumerofonia estrofa;
   final int indice;
-  final double disponible;
+  final double escala;
   final VoidCallback onCelda;
   final VoidCallback onToggleBis;
   final VoidCallback onAgregarColumna;
@@ -120,39 +127,35 @@ class _EditorEstrofa extends StatelessWidget {
     super.key,
     required this.estrofa,
     required this.indice,
-    required this.disponible,
+    required this.escala,
     required this.onCelda,
     required this.onToggleBis,
     required this.onAgregarColumna,
     required this.onEliminar,
   });
 
-  static const double _charW = 7.5;
-  static const double _padH = 3.0;
+  static const double charW = 7.5;
+  static const double padH = 3.0;
 
-  double _anchoCol(ColumnaNumerofonia c, double e) =>
-      ((c.maxLen.clamp(1, 99) * _charW + _padH * 2 + 1) * e).clamp(28 * e, 999.0);
+  static double anchoCol(ColumnaNumerofonia c, double e) =>
+      ((c.maxLen.clamp(1, 99) * charW + padH * 2 + 1) * e)
+          .clamp(28 * e, 999.0);
 
-  double _anchoBase() =>
-      18 + estrofa.columnas.fold<double>(0, (s, c) => s + _anchoCol(c, 1.0));
+  static double baseDe(EstrofaNumerofonia e) =>
+      18 + e.columnas.fold<double>(0, (s, c) => s + anchoCol(c, 1.0));
 
   @override
   Widget build(BuildContext context) {
+    final e = escala;
     final oscuro = Theme.of(context).brightness == Brightness.dark;
     final colorNota = oscuro ? const Color(0xFFE8E8E8) : AppColors.negro;
-
-    double e = 1.0;
-    final base = _anchoBase();
-    if (base > 0 && disponible > 0 && base > disponible) {
-      e = (disponible / base).clamp(0.6, 1.0);
-    }
 
     final n = estrofa.columnas.length;
     final tabla = Table(
       columnWidths: {
         0: FixedColumnWidth(18 * e),
         for (int j = 0; j < n; j++)
-          j + 1: FixedColumnWidth(_anchoCol(estrofa.columnas[j], e)),
+          j + 1: FixedColumnWidth(anchoCol(estrofa.columnas[j], e)),
       },
       border: TableBorder.all(
         color: AppColors.granate.withOpacity(0.25),
@@ -163,12 +166,12 @@ class _EditorEstrofa extends StatelessWidget {
         TableRow(children: [
           _etiqueta('7', e),
           for (int j = 0; j < n; j++)
-            _celda(indice, j, true, estrofa.columnas[j].nota7, e, colorNota),
+            _celda(j, true, estrofa.columnas[j].nota7, e, colorNota),
         ]),
         TableRow(children: [
           _etiqueta('6', e),
           for (int j = 0; j < n; j++)
-            _celda(indice, j, false, estrofa.columnas[j].nota6, e, colorNota),
+            _celda(j, false, estrofa.columnas[j].nota6, e, colorNota),
         ]),
       ],
     );
@@ -179,7 +182,7 @@ class _EditorEstrofa extends StatelessWidget {
         Row(
           children: [
             Text(
-              'ESTROFA ${romanoNumerofonia(indice + 1)}', // CAMBIO: PARTE -> ESTROFA
+              'ESTROFA ${romanoNumerofonia(indice + 1)}',
               style: const TextStyle(
                 color: AppColors.granate,
                 fontWeight: FontWeight.bold,
@@ -188,7 +191,7 @@ class _EditorEstrofa extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            _chipBis(e),
+            _chipBis(),
             const SizedBox(width: 6),
             InkWell(
               borderRadius: BorderRadius.circular(8),
@@ -251,18 +254,11 @@ class _EditorEstrofa extends StatelessWidget {
         ),
       );
 
-  Widget _celda(
-    int i,
-    int j,
-    bool es7,
-    String valor,
-    double e,
-    Color color,
-  ) =>
+  Widget _celda(int j, bool es7, String valor, double e, Color color) =>
       SizedBox(
         height: 30 * e,
         child: TextFormField(
-          key: ValueKey('cif-$i-$j-${es7 ? 7 : 6}'),
+          key: ValueKey('cif-${identityHashCode(estrofa)}-$j-${es7 ? 7 : 6}'),
           initialValue: valor,
           onChanged: (v) {
             if (es7) {
@@ -293,7 +289,7 @@ class _EditorEstrofa extends StatelessWidget {
         ),
       );
 
-  Widget _chipBis(double e) => InkWell(
+  Widget _chipBis() => InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onToggleBis,
         child: Container(
