@@ -54,7 +54,8 @@ class TarjetaCompartible extends StatelessWidget {
                           width: 60,
                           height: 60,
                           color: AppColors.granate,
-                          child: const Icon(Icons.music_note, color: AppColors.dorado),
+                          child: const Icon(Icons.music_note,
+                              color: AppColors.dorado),
                         ),
                       ),
                     ),
@@ -125,47 +126,54 @@ class TarjetaCompartible extends StatelessWidget {
                   ),
                 ],
 
-                // Numerofonía (ajustada para entrar completa)
+                // Numerofonía (tablas simétricas, entra completa en 800px)
                 if (cancion.tieneNumerofonia) ...[
                   const SizedBox(height: 24),
                   VisorNumerofonia(
                     estrofas: cancion.estrofas,
-                    escala: 1.0, // Escala base, el visor se auto-ajusta al ancho de 800px
+                    escala: 1.0,
                   ),
                 ],
 
-                // Letra (Resumida o completa según espacio)
-                if (cancion.letra.isNotEmpty) ...[
+                // Letras con título
+                if (cancion.tieneLetra) ...[
                   const SizedBox(height: 24),
-                  const Text(
-                    'LETRA',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.granate,
-                      letterSpacing: 3,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.blanco,
-                      border: Border.all(color: AppColors.negro.withOpacity(0.2), width: 1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      cancion.letra,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 1.6,
-                        color: AppColors.negro,
-                        fontStyle: FontStyle.italic,
+                  for (int i = 0; i < cancion.letras.length; i++)
+                    if (!cancion.letras[i].vacia) ...[
+                      Text(
+                        cancion.letras[i].titulo.isNotEmpty
+                            ? cancion.letras[i].titulo.toUpperCase()
+                            : 'LETRA ${i + 1}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.granate,
+                          letterSpacing: 3,
+                        ),
                       ),
-                    ),
-                  ),
+                      const SizedBox(height: 10),
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.blanco,
+                          border: Border.all(
+                              color: AppColors.negro.withOpacity(0.2)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          cancion.letras[i].texto,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.7,
+                            color: AppColors.negro,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
                 ],
 
                 const SizedBox(height: 24),
