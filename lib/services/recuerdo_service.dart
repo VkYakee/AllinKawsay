@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/recuerdo.dart';
 import 'actividad_service.dart';
 
@@ -17,7 +18,7 @@ class RecuerdoService {
     final ref = await _db.collection('recuerdos').add(r.toMap());
     ActividadService.registrar(
       'crear_recuerdo',
-      'Subió el recuerdo "${r.titulo}" (${r.fotos.length} fotos)',
+      'Subió el recuerdo "${r.titulo}" (${r.fotos.length} fotos, ${r.videos.length} videos)',
     );
     return ref.id;
   }
