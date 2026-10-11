@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../models/numerofonia.dart';
 import '../theme/colors.dart';
 import '../widgets/visor_numerofonia.dart';
 
 class NumerofoniaFullscreenScreen extends StatefulWidget {
   final List<EstrofaNumerofonia> estrofas;
-  const NumerofoniaFullscreenScreen({
-    super.key,
-    required this.estrofas,
-  });
+
+  const NumerofoniaFullscreenScreen({super.key, required this.estrofas});
 
   @override
   State<NumerofoniaFullscreenScreen> createState() =>
@@ -18,169 +17,134 @@ class NumerofoniaFullscreenScreen extends StatefulWidget {
 
 class _NumerofoniaFullscreenScreenState
     extends State<NumerofoniaFullscreenScreen> {
-  final _transformController = TransformationController();
-  bool _zoomActivo = false;
-  bool _bloquearRotacion = false;
+  final TransformationController _controller = TransformationController();
+  bool _horizontal = true;
 
   @override
   void initState() {
     super.initState();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-
-    _transformController.addListener(() {
-      final z = _transformController.value.getMaxScaleOnAxis();
-      if ((z > 1.05) != _zoomActivo) {
-        setState(() => _zoomActivo = z > 1.05);
-      }
-    });
+    _aplicarOrientacion();
   }
 
-  @override
-  void dispose() {
-    _transformController.dispose();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
-    super.dispose();
-  }
-
-  void _resetZoom() {
-    _transformController.value = Matrix4.identity();
-  }
-
-  void _toggleRotacion() {
-    setState(() => _bloquearRotacion = !_bloquearRotacion);
-    if (_bloquearRotacion) {
+  void _aplicarOrientacion() {
+    if (_horizontal) {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ]);
     } else {
       SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
         DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
       ]);
     }
   }
 
   @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _dobleTap() {
+    final escalaActual = _controller.value.getMaxScaleOnAxis();
+    _controller.value = escalaActual > 1.1
+        ? Matrix4.identity()
+        : (Matrix4.identity()..scale(2.0));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.negro,
-      body: Stack(
-        children: [
-          // Visor con zoom
-          Positioned.fill(
-            child: InteractiveViewer(
-              transformationController: _transformController,
-              minScale: 0.5,
-              maxScale: 5.0,
-              boundaryMargin: const EdgeInsets.all(80),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: VisorNumerofonia(
-                    estrofas: widget.estrofas,
-                    escala: 1.3,
+      backgroundColor: Colors.black,
+      body: Theme(
+        // CLAVE: fuerza brillo oscuro para que el visor pinte claro
+        data: Theme.of(context).copyWith(brightness: Brightness.dark),
+        child: Stack(
+          children: [
+            // Partitura con zoom
+            Positioned.fill(
+              child: GestureDetector(
+                onDoubleTap: _dobleTap,
+                child: InteractiveViewer(
+                  transformationController: _controller,
+                  minScale: 0.5,
+                  maxScale: 5.0,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 56, 24, 48),
+                      child: VisorNumerofonia(
+                        estrofas: widget.estrofas,
+                        escala: 1.6,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
-          // Barra superior
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.7),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
+            // Barra superior flotante
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.close,
-                          color: AppColors.dorado),
-                      tooltip: 'Cerrar',
+                      icon: const Icon(Icons.close, color: AppColors.dorado),
                       onPressed: () => Navigator.pop(context),
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'NUMEROFONÍA',
-                      style: TextStyle(
-                        color: AppColors.dorado,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
+                    const Expanded(
+                      child: Text(
+                        'NUMEROFONÍA',
+                        style: TextStyle(
+                          color: AppColors.dorado,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 3,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
-                    const Spacer(),
-                    if (_zoomActivo)
-                      IconButton(
-                        icon: const Icon(Icons.center_focus_strong,
-                            color: AppColors.dorado),
-                        tooltip: 'Centrar',
-                        onPressed: _resetZoom,
-                      ),
                     IconButton(
                       icon: Icon(
-                        _bloquearRotacion
-                            ? Icons.screen_lock_rotation
-                            : Icons.screen_rotation,
+                        _horizontal
+                            ? Icons.screen_lock_landscape
+                            : Icons.screen_lock_portrait,
                         color: AppColors.dorado,
                       ),
-                      tooltip: _bloquearRotacion
-                          ? 'Permitir rotación'
-                          : 'Bloquear rotación',
-                      onPressed: _toggleRotacion,
+                      onPressed: () => setState(() {
+                        _horizontal = !_horizontal;
+                        _aplicarOrientacion();
+                      }),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
 
-          // Hint
-          if (!_zoomActivo)
+            // Hint inferior
             Positioned(
-              bottom: 16,
+              bottom: 12,
               left: 0,
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
+                    color: Colors.black87,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
                     'Pellizcá para zoom • Doble tap para acercar',
-                    style: TextStyle(
-                        color: AppColors.dorado, fontSize: 11),
+                    style: TextStyle(color: AppColors.dorado, fontSize: 12),
                   ),
                 ),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
