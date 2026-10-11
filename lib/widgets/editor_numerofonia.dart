@@ -4,15 +4,15 @@ import 'package:flutter/services.dart';
 import '../models/numerofonia.dart';
 import '../theme/colors.dart';
 
-/// Editor de numerofonía tipo Excel/PowerPoint: tabla de 2 hileras
-/// (7 arriba, 6 abajo) con celdas editables y anchos auto-ajustables.
 class EditorNumerofonia extends StatefulWidget {
-  final List<EstrofaNumerofonia> estrofas;
-  final VoidCallback? onChanged;
+  final List<EstrofaNumerofonia>? estrofas;
+  final List<EstrofaNumerofonia>? inicial;
+  final ValueChanged<List<EstrofaNumerofonia>>? onChanged;
 
   const EditorNumerofonia({
     super.key,
-    required this.estrofas,
+    this.estrofas,
+    this.inicial,
     this.onChanged,
   });
 
@@ -21,18 +21,25 @@ class EditorNumerofonia extends StatefulWidget {
 }
 
 class _EditorNumerofoniaState extends State<EditorNumerofonia> {
+  late List<EstrofaNumerofonia> _estrofas;
+
   @override
   void initState() {
     super.initState();
-    // Canción nueva: 3 partes vacías por defecto, como el cancionero.
-    if (widget.estrofas.every((e) => e.vacia)) {
-      while (widget.estrofas.length < 3) {
-        widget.estrofas.add(EstrofaNumerofonia.nueva());
+    _estrofas = widget.estrofas ?? widget.inicial ?? <EstrofaNumerofonia>[];
+    
+    if (_estrofas.isEmpty || _estrofas.every((e) => e.vacia)) {
+      _estrofas.clear();
+      while (_estrofas.length < 3) {
+        _estrofas.add(EstrofaNumerofonia.nueva());
       }
     }
   }
 
-  void _notify() => widget.onChanged?.call();
+  void _notify() {
+    // Notifica al padre con la lista actualizada
+    widget.onChanged?.call(_estrofas);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,23 +51,23 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (int i = 0; i < widget.estrofas.length; i++) ...[
+            for (int i = 0; i < _estrofas.length; i++) ...[
               _EditorEstrofa(
-                key: ValueKey('est-$i-${widget.estrofas[i].hashCode}'),
-                estrofa: widget.estrofas[i],
+                key: ValueKey('est-$i-${_estrofas[i].hashCode}'),
+                estrofa: _estrofas[i],
                 indice: i,
                 disponible: disponible,
                 onCelda: _notify,
                 onToggleBis: () => setState(() {
-                  widget.estrofas[i].bis = !widget.estrofas[i].bis;
+                  _estrofas[i].bis = !_estrofas[i].bis;
                   _notify();
                 }),
                 onAgregarColumna: () => setState(() {
-                  widget.estrofas[i].columnas.add(ColumnaNumerofonia());
+                  _estrofas[i].columnas.add(ColumnaNumerofonia());
                   _notify();
                 }),
                 onEliminar: () => setState(() {
-                  widget.estrofas.removeAt(i);
+                  _estrofas.removeAt(i);
                   _notify();
                 }),
               ),
@@ -78,7 +85,7 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
         height: 50,
         child: OutlinedButton.icon(
           onPressed: () => setState(() {
-            widget.estrofas.add(EstrofaNumerofonia.nueva());
+            _estrofas.add(EstrofaNumerofonia.nueva());
             _notify();
           }),
           icon: const Icon(Icons.add, color: AppColors.granate),
@@ -170,7 +177,6 @@ class _EditorEstrofa extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Cabecera: PARTE n + BIS + eliminar
         Row(
           children: [
             Text(
