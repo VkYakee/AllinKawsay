@@ -13,6 +13,7 @@ import '../services/player_service.dart';
 import '../services/usuario_service.dart';
 import '../theme/colors.dart';
 import '../widgets/tarjeta_video.dart';
+import '../widgets/visor_letras.dart';
 import '../widgets/visor_numerofonia.dart';
 import '../widgets/watermark_overlay.dart';
 
@@ -87,8 +88,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
 
     final nombreFinal = nombre ??
         DescargaService.nombreConTimestamp(widget.cancion.titulo, 'mp3');
-    final resultado =
-        await DescargaService.descargar(url, nombreFinal, mime);
+    final resultado = await DescargaService.descargar(url, nombreFinal, mime);
 
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -133,10 +133,14 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
         sb.writeln(e.texto);
       }
     }
-    if (c.letra.isNotEmpty) {
-      sb.writeln('');
-      sb.writeln('📝 Letra:');
-      sb.writeln(c.letra);
+    if (c.tieneLetra) {
+      for (int i = 0; i < c.letras.length; i++) {
+        final l = c.letras[i];
+        if (l.vacia) continue;
+        sb.writeln('');
+        sb.writeln('📝 ${l.titulo.isNotEmpty ? l.titulo : 'Letra ${i + 1}'}:');
+        sb.writeln(l.texto);
+      }
     }
     sb.writeln('');
     sb.writeln('— Enviado desde Allin Kawsay');
@@ -263,18 +267,18 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
               const SizedBox(height: 16),
             ],
 
-            // === AUDIO (Movido arriba, después de numerofonía) ===
+            // === AUDIO (después de la numerofonía) ===
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _audioPlayerCompacto(puedeDescargar),
             ),
             const SizedBox(height: 16),
 
-            // === LETRA (En menús desplegables) ===
-            if (c.letra.isNotEmpty) ...[
+            // === LETRAS (desplegable por letra con título) ===
+            if (c.tieneLetra) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _letrasDesplegables(context, c, onSurface),
+                child: VisorLetras(letras: c.letras),
               ),
               const SizedBox(height: 16),
             ],
@@ -374,7 +378,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
             ),
             const SizedBox(height: 16),
 
-            // === VIDEO YOUTUBE (Movido hasta el final) ===
+            // === VIDEO YOUTUBE (al final de todo) ===
             if (c.tieneVideo) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -389,79 +393,6 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  // === WIDGETS AUXILIARES ===
-
-  Widget _letrasDesplegables(BuildContext context, Cancion c, Color onSurface) {
-    // Dividir la letra por estrofas (asumiendo doble salto de línea o "PARTE"/"ESTROFA")
-    final lineas = c.letra.split('\n');
-    final estrofasLetra = <String>[];
-    String actual = '';
-    
-    for (var linea in lineas) {
-      if (linea.trim().isEmpty && actual.trim().isNotEmpty) {
-        estrofasLetra.add(actual.trim());
-        actual = '';
-      } else {
-        actual += '$linea\n';
-      }
-    }
-    if (actual.trim().isNotEmpty) estrofasLetra.add(actual.trim());
-
-    // Si no se pudo dividir, mostrar todo en uno
-    if (estrofasLetra.isEmpty) estrofasLetra.add(c.letra);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardColor(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          for (int i = 0; i < estrofasLetra.length; i++) ...[
-            ExpansionTile(
-              shape: const Border(),
-              collapsedShape: const Border(),
-              leading: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.granate.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.music_note, color: AppColors.granate, size: 18),
-              ),
-              title: Text(
-                'Estrofa ${i + 1}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.granate,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Text(
-                    estrofasLetra[i],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.9,
-                      fontStyle: FontStyle.italic,
-                      color: onSurface,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (i < estrofasLetra.length - 1)
-              Divider(height: 1, color: AppColors.dorado.withOpacity(0.1)),
-          ],
-        ],
       ),
     );
   }
@@ -497,13 +428,11 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
               ),
             ),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.granate.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(20),
-                border:
-                    Border.all(color: AppColors.granate.withOpacity(0.3)),
+                border: Border.all(color: AppColors.granate.withOpacity(0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -580,8 +509,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
           if (c.ritmo.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.granate.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
@@ -611,9 +539,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
   }
 
   Widget _seccionCard(BuildContext context,
-      {required IconData icono,
-      required String titulo,
-      required Widget child}) {
+      {required IconData icono, required String titulo, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -793,31 +719,26 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                               final dur =
                                   _player.player.duration ?? Duration.zero;
                               return Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   SliderTheme(
                                     data: SliderTheme.of(context).copyWith(
                                       activeTrackColor: AppColors.dorado,
                                       thumbColor: AppColors.dorado,
-                                      thumbShape:
-                                          const RoundSliderThumbShape(
-                                              enabledThumbRadius: 6),
-                                      overlayShape:
-                                          const RoundSliderOverlayShape(
-                                              overlayRadius: 14),
-                                      inactiveTrackColor: AppColors.dorado
-                                          .withOpacity(0.2),
+                                      thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 6),
+                                      overlayShape: const RoundSliderOverlayShape(
+                                          overlayRadius: 14),
+                                      inactiveTrackColor:
+                                          AppColors.dorado.withOpacity(0.2),
                                       trackHeight: 3,
                                     ),
                                     child: Slider(
-                                      value: pos.inSeconds
-                                          .toDouble()
-                                          .clamp(
-                                              0,
-                                              dur.inSeconds
-                                                  .toDouble()
-                                                  .clamp(1, double.infinity)),
+                                      value: pos.inSeconds.toDouble().clamp(
+                                          0,
+                                          dur.inSeconds
+                                              .toDouble()
+                                              .clamp(1, double.infinity)),
                                       max: dur.inSeconds
                                           .toDouble()
                                           .clamp(1, double.infinity),
@@ -831,8 +752,8 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                                     child: Text(
                                       '${_fmt(pos)} / ${_fmt(dur)}',
                                       style: TextStyle(
-                                          color: AppColors.dorado
-                                              .withOpacity(0.8),
+                                          color:
+                                              AppColors.dorado.withOpacity(0.8),
                                           fontSize: 11,
                                           letterSpacing: 0.5),
                                     ),
@@ -845,8 +766,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                             child: Text(
                               'Toca para escuchar',
                               style: TextStyle(
-                                  color:
-                                      AppColors.dorado.withOpacity(0.6),
+                                  color: AppColors.dorado.withOpacity(0.6),
                                   fontSize: 12,
                                   fontStyle: FontStyle.italic),
                             ),
@@ -927,8 +847,8 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
     );
   }
 
-  Widget _filaInfo(BuildContext context, IconData icono, String label,
-      String valor) {
+  Widget _filaInfo(
+      BuildContext context, IconData icono, String label, String valor) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -986,8 +906,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                       letterSpacing: 1)),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.edit,
-                    color: AppColors.granate, size: 18),
+                icon: const Icon(Icons.edit, color: AppColors.granate, size: 18),
                 onPressed: _editarNota,
               ),
             ],
@@ -1030,8 +949,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
           maxLines: 5,
           autofocus: true,
           decoration: const InputDecoration(
-            hintText:
-                'Ej: esta la toco con la 6 tapada, entrada en la 3ra...',
+            hintText: 'Ej: esta la toco con la 6 tapada, entrada en la 3ra...',
           ),
         ),
         actions: [
@@ -1091,8 +1009,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                         ? c.autorNombre[0].toUpperCase()
                         : '?',
                     style: const TextStyle(
-                        color: AppColors.dorado,
-                        fontWeight: FontWeight.bold),
+                        color: AppColors.dorado, fontWeight: FontWeight.bold),
                   ),
                 ),
                 title: Text(c.autorNombre,
@@ -1106,14 +1023,12 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                     const SizedBox(height: 4),
                     Text(c.texto,
                         style: TextStyle(
-                            color: onSurface.withOpacity(0.8),
-                            fontSize: 13)),
+                            color: onSurface.withOpacity(0.8), fontSize: 13)),
                     const SizedBox(height: 4),
                     Text(
                       _fmtFecha(c.fecha),
                       style: TextStyle(
-                          fontSize: 10,
-                          color: onSurface.withOpacity(0.4)),
+                          fontSize: 10, color: onSurface.withOpacity(0.4)),
                     ),
                   ],
                 ),
@@ -1121,8 +1036,8 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                     ? IconButton(
                         icon: const Icon(Icons.delete_outline,
                             color: AppColors.granate, size: 20),
-                        onPressed: () => ComentarioService()
-                            .eliminar(widget.cancion.id, c.id),
+                        onPressed: () =>
+                            ComentarioService().eliminar(widget.cancion.id, c.id),
                       )
                     : null,
               ),
@@ -1137,8 +1052,8 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border(
-            top: BorderSide(color: AppColors.dorado.withOpacity(0.3))),
+        border:
+            Border(top: BorderSide(color: AppColors.dorado.withOpacity(0.3))),
       ),
       child: SafeArea(
         top: false,
@@ -1160,8 +1075,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.send,
-                    color: AppColors.dorado, size: 20),
+                icon: const Icon(Icons.send, color: AppColors.dorado, size: 20),
                 onPressed: _enviarComentario,
               ),
             ),
