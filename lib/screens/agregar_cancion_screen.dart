@@ -363,11 +363,9 @@ Widget build(BuildContext context) {
           const SizedBox(height: 10),
 
           EditorNumerofonia(
-            estrofas: _numerofoniaEstrofas,
-            autor: _autor.text.trim(),
-            ritmo: _ritmo.text.trim(),
-            onChanged: (v) => _numerofoniaEstrofas = v,
-          ),
+  estrofas: _numerofoniaEstrofas,
+  onChanged: (v) => _numerofoniaEstrofas = v,
+),
           const SizedBox(height: 24),
 
           // === LETRA Y DESCRIPCIÓN ===
