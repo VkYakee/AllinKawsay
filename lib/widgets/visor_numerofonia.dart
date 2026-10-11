@@ -3,10 +3,6 @@ import 'package:flutter/material.dart';
 import '../models/numerofonia.dart';
 import '../theme/colors.dart';
 
-/// Visor de numerofonía estilo cancionero: tabla de 2 hileras
-/// (7 arriba, 6 abajo) x N columnas. Los anchos de columna se ajustan
-/// al contenido (como Excel) y la tabla se auto-escala para que la
-/// parte completa quepa en pantalla SIN deslizar.
 class VisorNumerofonia extends StatelessWidget {
   final List<EstrofaNumerofonia> estrofas;
   final double escala;
@@ -39,7 +35,7 @@ class VisorNumerofonia extends StatelessWidget {
                 titulo: romanoNumerofonia(i + 1),
                 conCabecera: validas.length > 1 || validas[i].bis,
               ),
-              if (i < validas.length - 1) SizedBox(height: 16 * escala),
+              if (i < validas.length - 1) SizedBox(height: 12 * escala),
             ],
           ],
         );
@@ -63,45 +59,48 @@ class _TablaEstrofa extends StatelessWidget {
     required this.conCabecera,
   });
 
-  // === Geometría tipo Excel ===
-  static const double _charW = 9.9; // ancho de carácter monospace
-  static const double _padH = 5.0; // padding horizontal mínimo por celda
+  // Tamaño base más pequeño para que entre más partitura
+  static const double _charW = 7.5; 
+  static const double _padH = 3.0;
 
   double _anchoCol(ColumnaNumerofonia c, double e) =>
-      (c.maxLen.clamp(1, 99) * _charW + _padH * 2 + 2) * e;
+      (c.maxLen.clamp(1, 99) * _charW + _padH * 2 + 1) * e;
 
   double _anchoBase() =>
-      22 + estrofa.columnas.fold<double>(0, (s, c) => s + _anchoCol(c, 1.0));
+      18 + estrofa.columnas.fold<double>(0, (s, c) => s + _anchoCol(c, 1.0));
 
   @override
   Widget build(BuildContext context) {
     final oscuro = Theme.of(context).brightness == Brightness.dark;
+    // FIX PANTALLA COMPLETA: Colores adaptables al tema
     final colorNota = oscuro ? const Color(0xFFE8E8E8) : AppColors.negro;
-    final colorLinea =
-        oscuro ? AppColors.dorado.withOpacity(0.35) : AppColors.granate.withOpacity(0.30);
+    final colorLinea = oscuro 
+        ? AppColors.dorado.withOpacity(0.25) 
+        : AppColors.granate.withOpacity(0.20);
 
-    // Auto-escala: la parte completa entra en pantalla sin deslizar.
+    // Auto-escala agresiva: SIEMPRE entra en pantalla sin scroll
     double e = escala;
     final base = _anchoBase();
     if (base > 0 && disponible > 0 && base * e > disponible) {
-      e = (disponible / base).clamp(0.55, escala);
+      e = disponible / base;
+      if (e < 0.4) e = 0.4; // Límite mínimo para que sea legible
     }
 
     final n = estrofa.columnas.length;
     final tabla = Table(
       columnWidths: {
-        0: FixedColumnWidth(22 * e),
+        0: FixedColumnWidth(18 * e),
         for (int j = 0; j < n; j++) j + 1: FixedColumnWidth(_anchoCol(estrofa.columnas[j], e)),
       },
       border: TableBorder.all(color: colorLinea, width: 1),
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
         TableRow(children: [
-          _etiqueta('7', e),
+          _etiqueta('7', e, oscuro),
           for (final c in estrofa.columnas) _nota(c.nota7, e, colorNota),
         ]),
         TableRow(children: [
-          _etiqueta('6', e),
+          _etiqueta('6', e, oscuro),
           for (final c in estrofa.columnas) _nota(c.nota6, e, colorNota),
         ]),
       ],
@@ -113,30 +112,31 @@ class _TablaEstrofa extends StatelessWidget {
       children: [
         if (conCabecera)
           Padding(
-            padding: EdgeInsets.only(bottom: 6 * e, left: 2),
+            padding: EdgeInsets.only(bottom: 4 * e, left: 2),
             child: Row(
               children: [
                 Text(
-                  'PARTE $titulo',
+                  'ESTROFA $titulo', // CAMBIO: PARTE -> ESTROFA
                   style: TextStyle(
                     color: oscuro ? AppColors.dorado : AppColors.granate,
                     fontWeight: FontWeight.bold,
-                    fontSize: 11 * e,
-                    letterSpacing: 2,
+                    fontSize: 10 * e,
+                    letterSpacing: 1.5,
                   ),
                 ),
                 const Spacer(),
-                if (estrofa.bis) _badgeBis(e),
+                if (estrofa.bis) _badgeBis(e, oscuro),
               ],
             ),
           ),
-        SingleChildScrollView(scrollDirection: Axis.horizontal, child: tabla),
+        // SIN SingleChildScrollView: La tabla se encoge para entrar completa
+        tabla,
       ],
     );
   }
 
-  Widget _etiqueta(String t, double e) => Container(
-        height: 30 * e,
+  Widget _etiqueta(String t, double e, bool oscuro) => Container(
+        height: 24 * e,
         color: AppColors.granate,
         alignment: Alignment.center,
         child: Text(
@@ -144,14 +144,14 @@ class _TablaEstrofa extends StatelessWidget {
           style: TextStyle(
             color: AppColors.dorado,
             fontWeight: FontWeight.bold,
-            fontSize: 12 * e,
+            fontSize: 10 * e,
             height: 1.0,
           ),
         ),
       );
 
   Widget _nota(String valor, double e, Color color) => Container(
-        height: 30 * e,
+        height: 24 * e,
         alignment: Alignment.center,
         padding: EdgeInsets.symmetric(horizontal: _padH * e),
         child: Text(
@@ -160,30 +160,30 @@ class _TablaEstrofa extends StatelessWidget {
             color: color,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',
-            fontSize: 15.5 * e,
+            fontSize: 12 * e,
             height: 1.0,
           ),
         ),
       );
 
-  Widget _badgeBis(double e) => Container(
-        padding: EdgeInsets.symmetric(horizontal: 8 * e, vertical: 3 * e),
+  Widget _badgeBis(double e, bool oscuro) => Container(
+        padding: EdgeInsets.symmetric(horizontal: 6 * e, vertical: 2 * e),
         decoration: BoxDecoration(
-          color: AppColors.dorado.withOpacity(0.18),
-          border: Border.all(color: AppColors.dorado.withOpacity(0.7)),
-          borderRadius: BorderRadius.circular(6),
+          color: AppColors.dorado.withOpacity(0.15),
+          border: Border.all(color: AppColors.dorado.withOpacity(0.6)),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.repeat, size: 11 * e, color: AppColors.granate),
-            SizedBox(width: 4 * e),
+            Icon(Icons.repeat, size: 9 * e, color: oscuro ? AppColors.dorado : AppColors.granate),
+            SizedBox(width: 3 * e),
             Text(
               'BIS',
               style: TextStyle(
-                color: AppColors.granate,
+                color: oscuro ? AppColors.dorado : AppColors.granate,
                 fontWeight: FontWeight.bold,
-                fontSize: 10 * e,
+                fontSize: 8 * e,
                 letterSpacing: 1,
               ),
             ),
