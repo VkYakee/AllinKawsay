@@ -1,18 +1,21 @@
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+
 import '../models/cancion.dart';
 import '../models/categoria.dart';
-import '../models/numerofonia.dart';
 import '../services/cancion_service.dart';
 import '../services/categoria_service.dart';
 import '../services/storage_service.dart';
 import '../theme/colors.dart';
+import '../widgets/editor_letras.dart';
 import '../widgets/editor_numerofonia.dart';
 
 class AgregarCancionScreen extends StatefulWidget {
   final Cancion? cancion;
+
   const AgregarCancionScreen({super.key, this.cancion});
 
   @override
@@ -20,584 +23,449 @@ class AgregarCancionScreen extends StatefulWidget {
 }
 
 class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
-  final _titulo = TextEditingController();
-  final _autor = TextEditingController();
-  final _ritmo = TextEditingController();
-  final _letra = TextEditingController();
-  final _descripcion = TextEditingController();
-  final _tagCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _tituloCtrl = TextEditingController();
+  final _autorCtrl = TextEditingController();
+  final _ritmoCtrl = TextEditingController();
+  final _regionCtrl = TextEditingController();
+  final _descripcionCtrl = TextEditingController();
   final _videoCtrl = TextEditingController();
+  final _tagsCtrl = TextEditingController();
 
   String _tipo = 'original';
   String _categoriaId = '';
-  final List<String> _tags = [];
   List<EstrofaNumerofonia> _numerofoniaEstrofas = [];
-  File? _audioNuevo;
-  String _audioUrlActual = '';
-  bool _guardando = false;
-  String _estado = '';
+  List<Letra> _letras = [];
+  String? _imagenUrl;
+  String? _audioUrl;
+  String? _audioNombre;
 
-  bool get _esEdicion => widget.cancion != null;
+  bool _subiendoImagen = false;
+  bool _subiendoAudio = false;
+  bool _guardando = false;
+
+  List<Categoria> _categorias = [];
 
   @override
   void initState() {
     super.initState();
-    if (_esEdicion) {
+    _cargarCategorias();
+    if (widget.cancion != null) {
       final c = widget.cancion!;
-      _titulo.text = c.titulo;
-      _autor.text = c.autor;
-      _ritmo.text = c.ritmo;
-      _letra.text = c.letra;
-      _descripcion.text = c.descripcion;
+      _tituloCtrl.text = c.titulo;
+      _autorCtrl.text = c.autor;
+      _ritmoCtrl.text = c.ritmo;
+      _regionCtrl.text = c.region;
+      _descripcionCtrl.text = c.descripcion;
       _videoCtrl.text = c.videoUrl;
+      _tagsCtrl.text = c.tags.join(', ');
       _tipo = c.tipo;
       _categoriaId = c.categoriaId;
-      _tags.addAll(c.tags);
-      _audioUrlActual = c.audioUrl;
-      _numerofoniaEstrofas =
-          c.estrofas.map((e) => e.copy()).toList();
+      _imagenUrl = c.imagenUrl.isNotEmpty ? c.imagenUrl : null;
+      _audioUrl = c.audioUrl.isNotEmpty ? c.audioUrl : null;
+      _numerofoniaEstrofas = c.estrofas.map((e) => e.copy()).toList();
+      _letras = c.letras.map((l) => l.copy()).toList();
     }
+    if (_letras.isEmpty) _letras.add(Letra());
+  }
+
+  Future<void> _cargarCategorias() async {
+    final stream = CategoriaService().listar();
+    stream.listen((lista) {
+      if (mounted) setState(() => _categorias = lista);
+    });
   }
 
   @override
   void dispose() {
-    _titulo.dispose();
-    _autor.dispose();
-    _ritmo.dispose();
-    _letra.dispose();
-    _descripcion.dispose();
-    _tagCtrl.dispose();
+    _tituloCtrl.dispose();
+    _autorCtrl.dispose();
+    _ritmoCtrl.dispose();
+    _regionCtrl.dispose();
+    _descripcionCtrl.dispose();
     _videoCtrl.dispose();
+    _tagsCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _elegirAudio() async {
-    final r = await FilePicker.platform.pickFiles(type: FileType.audio);
-    if (r != null && r.files.single.path != null) {
-      setState(() => _audioNuevo = File(r.files.single.path!));
+  Future<void> _seleccionarImagen() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (file == null) return;
+
+    setState(() => _subiendoImagen = true);
+    try {
+      final url = await StorageService()
+          .subirFoto(File(file.path), 'imagenes_canciones');
+      if (mounted) setState(() => _imagenUrl = url);
+    } catch (e) {
+      if (mounted) _error('No se pudo subir la imagen');
+    } finally {
+      if (mounted) setState(() => _subiendoImagen = false);
     }
   }
 
-  void _agregarTag() {
-    final t = _tagCtrl.text.trim().toLowerCase();
-    if (t.isEmpty) return;
-    if (!_tags.contains(t)) {
-      setState(() => _tags.add(t));
+  Future<void> _seleccionarAudio() async {
+    final res = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      allowMultiple: false,
+    );
+    if (res == null || res.files.isEmpty) return;
+    final path = res.files.single.path;
+    if (path == null) return;
+
+    setState(() => _subiendoAudio = true);
+    try {
+      final url = await StorageService()
+          .subirAudio(File(path), widget.cancion?.id ?? 'nueva');
+      if (mounted) {
+        setState(() {
+          _audioUrl = url;
+          _audioNombre = res.files.single.name;
+        });
+      }
+    } catch (e) {
+      if (mounted) _error('No se pudo subir el audio');
+    } finally {
+      if (mounted) setState(() => _subiendoAudio = false);
     }
-    _tagCtrl.clear();
+  }
+
+  void _error(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+    );
   }
 
   Future<void> _guardar() async {
-    if (_titulo.text.trim().isEmpty) {
-      _snack('El título es obligatorio');
+    if (!_formKey.currentState!.validate()) return;
+    final titulo = _tituloCtrl.text.trim();
+    if (titulo.isEmpty) {
+      _error('El título es obligatorio');
       return;
     }
-    setState(() {
-      _guardando = true;
-      _estado = _esEdicion ? 'Actualizando...' : 'Guardando...';
-    });
 
+    setState(() => _guardando = true);
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      final service = CancionService();
-      final storage = StorageService();
+      final tags = _tagsCtrl.text
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
 
-      String id = widget.cancion?.id ?? '';
-      String audioUrl = _audioUrlActual;
+      final letraPlana = _letras.map((l) => l.texto).join('\n\n');
 
-      if (!_esEdicion) {
-        id = await service.agregar(Cancion(
-          id: '',
-          titulo: _titulo.text.trim(),
-          autor: _autor.text.trim(),
-          tipo: _tipo,
-          ritmo: _ritmo.text.trim(),
-          region: '',
-          numerofonia: '',
-          estrofas: _numerofoniaEstrofas,
-          letra: _letra.text.trim(),
-          imagenUrl: '',
-          audioUrl: '',
-          videoUrl: _videoCtrl.text.trim(),
-          descripcion: _descripcion.text.trim(),
-          tags: _tags,
-          categoriaId: _categoriaId,
-          creadoPor: user.uid,
-          creadorNombre: user.displayName ?? user.email ?? 'Anónimo',
-        ));
-      }
-
-      if (_audioNuevo != null) {
-        setState(() => _estado = 'Subiendo audio...');
-        audioUrl = await storage.subirAudio(_audioNuevo!, id);
-      }
-
-      await service.actualizar(id, {
-        'titulo': _titulo.text.trim(),
-        'autor': _autor.text.trim(),
+      final data = {
+        'titulo': titulo,
+        'autor': _autorCtrl.text.trim(),
         'tipo': _tipo,
-        'ritmo': _ritmo.text.trim(),
-        'region': '',
+        'ritmo': _ritmoCtrl.text.trim(),
+        'region': _regionCtrl.text.trim(),
         'numerofonia': '',
-        'estrofas':
-            _numerofoniaEstrofas.map((e) => e.toMap()).toList(),
-        'letra': _letra.text.trim(),
-        'descripcion': _descripcion.text.trim(),
-        'tags': _tags,
-        'categoriaId': _categoriaId,
-        'imagenUrl': '',
-        'audioUrl': audioUrl,
+        'estrofas': _numerofoniaEstrofas.map((e) => e.toMap()).toList(),
+        'letra': letraPlana,
+        'letras': _letras.map((l) => l.toMap()).toList(),
+        'imagenUrl': _imagenUrl ?? '',
+        'audioUrl': _audioUrl ?? '',
         'videoUrl': _videoCtrl.text.trim(),
-      });
+        'descripcion': _descripcionCtrl.text.trim(),
+        'tags': tags,
+        'categoriaId': _categoriaId,
+      };
 
-      if (mounted) {
-        _snack(_esEdicion ? '¡Canción actualizada!' : '¡Canción guardada!');
-        Navigator.pop(context);
+      if (widget.cancion == null) {
+        data['creadoPor'] = ''; // lo rellena el service si querés
+        data['creadorNombre'] = '';
+        data['reproducciones'] = 0;
+        await CancionService().agregar(Cancion(
+          id: '',
+          titulo: data['titulo'] as String,
+          autor: data['autor'] as String,
+          tipo: data['tipo'] as String,
+          ritmo: data['ritmo'] as String,
+          region: data['region'] as String,
+          numerofonia: data['numerofonia'] as String,
+          estrofas: _numerofoniaEstrofas,
+          letra: letraPlana,
+          letras: _letras,
+          imagenUrl: data['imagenUrl'] as String,
+          audioUrl: data['audioUrl'] as String,
+          videoUrl: data['videoUrl'] as String,
+          descripcion: data['descripcion'] as String,
+          tags: tags,
+          categoriaId: _categoriaId,
+          creadoPor: '',
+          creadorNombre: '',
+        ));
+      } else {
+        await CancionService().actualizar(widget.cancion!.id, data);
       }
+
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      _snack('Error: $e');
+      if (mounted) _error('Error al guardar: $e');
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
   }
+  @override
+  Widget build(BuildContext context) {
+    final esEdicion = widget.cancion != null;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
-  void _snack(String m) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-  }
-
-@override
-Widget build(BuildContext context) {
-  final onSurface = Theme.of(context).colorScheme.onSurface;
-
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(_esEdicion ? 'EDITAR CANCIÓN' : 'AGREGAR CANCIÓN'),
-    ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      children: [
-        _header(onSurface, _esEdicion),
-        const SizedBox(height: 20),
-
-        // === INFO BÁSICA ===
-        _seccion(Icons.info_outline, 'INFORMACIÓN BÁSICA'),
-        const SizedBox(height: 10),
-
-        TextField(
-          controller: _titulo,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            labelText: 'Título *',
-            prefixIcon: Icon(Icons.music_note),
-            hintText: 'Ej: El Cóndor Pasa',
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _autor,
-          decoration: const InputDecoration(
-            labelText: 'Autor',
-            prefixIcon: Icon(Icons.person_outline),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Tipo
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.cardColor(context),
-            borderRadius: BorderRadius.circular(16),
-            border:
-                Border.all(color: AppColors.dorado.withOpacity(0.5)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.granate.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.category_outlined,
-                        color: AppColors.granate, size: 14),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text('Tipo',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.granate,
-                          letterSpacing: 1)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                      value: 'original', label: Text('Original')),
-                  ButtonSegment(
-                      value: 'adaptacion', label: Text('Adaptación')),
-                ],
-                selected: {_tipo},
-                onSelectionChanged: (s) =>
-                    setState(() => _tipo = s.first),
-                style: SegmentedButton.styleFrom(
-                  selectedBackgroundColor: AppColors.granate,
-                  selectedForegroundColor: AppColors.dorado,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        TextField(
-          controller: _ritmo,
-          decoration: const InputDecoration(
-            labelText: 'Ritmo',
-            prefixIcon: Icon(Icons.graphic_eq),
-            hintText: 'Ej: Huayño, Sikuri, Carnaval',
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Categoría
-        StreamBuilder<List<Categoria>>(
-          stream: CategoriaService().listar(),
-          builder: (context, snap) {
-            final categorias = snap.data ?? [];
-            return DropdownButtonFormField<String>(
-              value: _categoriaId.isEmpty ? null : _categoriaId,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Categoría',
-                prefixIcon: Icon(Icons.folder_outlined),
-              ),
-              dropdownColor: AppColors.cardColor(context),
-              borderRadius: BorderRadius.circular(16),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: '',
-                  child: Text('Sin categoría'),
-                ),
-                ...categorias.map((cat) => DropdownMenuItem<String>(
-                      value: cat.id,
-                      child: Text('${cat.emoji} ${cat.nombre}'),
-                    )),
-              ],
-              onChanged: (v) =>
-                  setState(() => _categoriaId = v ?? ''),
-            );
-          },
-        ),
-        const SizedBox(height: 24),
-
-        // === TAGS ===
-        _seccion(Icons.tag, 'TAGS PARA BÚSQUEDA'),
-        const SizedBox(height: 10),
-
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _tagCtrl,
-                decoration: const InputDecoration(
-                  hintText: 'Ej: carnaval, cusco, rápido',
-                  prefixIcon: Icon(Icons.tag),
-                ),
-                onSubmitted: (_) => _agregarTag(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                gradient: AppColors.gradienteGranate,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.granate.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                onPressed: _agregarTag,
-                icon: const Icon(Icons.add,
-                    color: AppColors.dorado, size: 22),
-                tooltip: 'Agregar tag',
-              ),
-            ),
-          ],
-        ),
-        if (_tags.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _tags
-                .map((t) => Chip(
-                      label: Text(t),
-                      labelStyle: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.dorado),
-                      deleteIcon: const Icon(Icons.close,
-                          size: 16, color: AppColors.dorado),
-                      onDeleted: () =>
-                          setState(() => _tags.remove(t)),
-                      backgroundColor: AppColors.granate,
-                      side: BorderSide.none,
-                    ))
-                .toList(),
-          ),
-        ],
-        const SizedBox(height: 24),
-
-          // === NUMEROFONÍA ===
-          _seccion(Icons.grid_on, 'NUMEROFONÍA'),
-          const SizedBox(height: 10),
-
-          EditorNumerofonia(
-  estrofas: _numerofoniaEstrofas,
-  onChanged: (v) => _numerofoniaEstrofas = v,
-),
-          const SizedBox(height: 24),
-
-          // === LETRA Y DESCRIPCIÓN ===
-          _seccion(Icons.text_fields, 'LETRA Y DESCRIPCIÓN'),
-          const SizedBox(height: 10),
-
-          TextField(
-            controller: _letra,
-            maxLines: 6,
-            style: TextStyle(color: onSurface, height: 1.5),
-            decoration: const InputDecoration(
-              labelText: 'Letra de la canción',
-              alignLabelWithHint: true,
-              hintText: 'Escribí la letra acá...',
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _descripcion,
-            maxLines: 3,
-            style: TextStyle(color: onSurface, height: 1.5),
-            decoration: const InputDecoration(
-              labelText: 'Descripción / notas',
-              alignLabelWithHint: true,
-              hintText: 'Detalles adicionales, historia, etc.',
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // === AUDIO ===
-          _seccion(Icons.audiotrack, 'AUDIO'),
-          const SizedBox(height: 10),
-
-          if (_audioNuevo != null)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: Colors.green.withOpacity(0.4), width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_circle,
-                        color: Colors.green, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Audio listo',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                                fontSize: 13)),
-                        const SizedBox(height: 2),
-                        Text(
-                          _audioNuevo!.path.split('/').last,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: onSurface.withOpacity(0.6)),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () =>
-                        setState(() => _audioNuevo = null),
-                  ),
-                ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(esEdicion ? 'Editar canción' : 'Nueva canción'),
+        actions: [
+          if (_guardando)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                    color: AppColors.dorado, strokeWidth: 2),
               ),
             )
           else
-            _botonConIcono(
-              icono: _audioUrlActual.isNotEmpty
-                  ? Icons.audiotrack
-                  : Icons.upload_file,
-              texto: _audioUrlActual.isNotEmpty
-                  ? 'Reemplazar audio actual'
-                  : 'Elegir audio (MP3)',
-              onTap: _guardando ? null : _elegirAudio,
+            IconButton(
+              icon: const Icon(Icons.check),
+              tooltip: 'Guardar',
+              onPressed: _guardar,
             ),
-          const SizedBox(height: 24),
-
-          // === VIDEO ===
-          _seccion(Icons.video_library_outlined, 'VIDEO (OPCIONAL)'),
-          const SizedBox(height: 10),
-
-          TextField(
-            controller: _videoCtrl,
-            keyboardType: TextInputType.url,
-            decoration: const InputDecoration(
-              labelText: 'Link de YouTube, Drive, etc.',
-              hintText: 'https://youtube.com/watch?v=...',
-              prefixIcon: Icon(Icons.link),
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Estado
-          if (_guardando)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.granate.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: AppColors.granate.withOpacity(0.2)),
-              ),
-              child: Row(
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _seccion('INFO BÁSICA', Icons.info_outline, [
+              _campo(_tituloCtrl, 'Título *', obligatorio: true),
+              const SizedBox(height: 12),
+              _campo(_autorCtrl, 'Autor'),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: AppColors.granate,
-                      strokeWidth: 2.5,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(_estado,
-                        style: const TextStyle(
-                            color: AppColors.granate,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
-                  ),
+                  Expanded(child: _campo(_ritmoCtrl, 'Ritmo')),
+                  const SizedBox(width: 12),
+                  Expanded(child: _campo(_regionCtrl, 'Región')),
                 ],
               ),
-            ),
-          if (_guardando) const SizedBox(height: 16),
+              const SizedBox(height: 16),
+              _selectorTipo(),
+              const SizedBox(height: 12),
+              _selectorCategoria(),
+              const SizedBox(height: 12),
+              _campo(_tagsCtrl, 'Tags (separados por coma)',
+                  hint: 'ej: huayño, festivo, tradicional'),
+            ]),
+            const SizedBox(height: 20),
 
-          // Botón guardar
-          SizedBox(
-            height: 54,
-            child: FilledButton.icon(
-              onPressed: _guardando ? null : _guardar,
-              icon: _guardando
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: AppColors.dorado,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(
-                _guardando
-                    ? 'GUARDANDO...'
-                    : (_esEdicion
-                        ? 'GUARDAR CAMBIOS'
-                        : 'GUARDAR CANCIÓN'),
-                style: const TextStyle(
-                    fontSize: 14,
+            _seccion('NUMEROFONÍA', Icons.grid_on, [
+              EditorNumerofonia(
+                estrofas: _numerofoniaEstrofas,
+                onChanged: (v) {
+                  setState(() => _numerofoniaEstrofas = v);
+                },
+              ),
+            ]),
+            const SizedBox(height: 20),
+
+            _seccion('LETRAS', Icons.lyrics_outlined, [
+              EditorLetras(letras: _letras),
+            ]),
+            const SizedBox(height: 20),
+
+            _seccion('DESCRIPCIÓN', Icons.notes, [
+              TextFormField(
+                controller: _descripcionCtrl,
+                maxLines: 4,
+                style: TextStyle(color: onSurface, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Descripción breve de la canción...',
+                  hintStyle: TextStyle(color: onSurface.withOpacity(0.4)),
+                  filled: true,
+                  fillColor: AppColors.granate.withOpacity(0.04),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(14),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 20),
+
+            _seccion('AUDIO', Icons.music_note, [
+              _bloqueAudio(onSurface),
+            ]),
+            const SizedBox(height: 20),
+
+            _seccion('IMAGEN (opcional)', Icons.image, [
+              _bloqueImagen(onSurface),
+            ]),
+            const SizedBox(height: 20),
+
+            _seccion('VIDEO YOUTUBE (opcional)', Icons.play_circle_outline, [
+              _campo(_videoCtrl, 'Link de YouTube',
+                  hint: 'https://youtube.com/watch?v=...'),
+            ]),
+            const SizedBox(height: 32),
+
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _guardando ? null : _guardar,
+                icon: const Icon(Icons.save, color: AppColors.dorado),
+                label: Text(
+                  esEdicion ? 'GUARDAR CAMBIOS' : 'CREAR CANCIÓN',
+                  style: const TextStyle(
+                    color: AppColors.dorado,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 2),
+                    letterSpacing: 2,
+                    fontSize: 13,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.granate,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _seccion(String titulo, IconData icono, List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.granate.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icono, color: AppColors.granate, size: 14),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                titulo,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.granate,
+                  fontSize: 12,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 14),
+          ...children,
         ],
       ),
     );
   }
 
-  Widget _header(Color onSurface, bool esEdicion) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.granate.withOpacity(0.08),
-            AppColors.dorado.withOpacity(0.05),
-          ],
+  Widget _campo(TextEditingController ctrl, String label,
+      {String? hint, bool obligatorio = false}) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return TextFormField(
+      controller: ctrl,
+      style: TextStyle(color: onSurface, fontSize: 14),
+      validator: obligatorio
+          ? (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null
+          : null,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        labelStyle: TextStyle(color: AppColors.granate, fontSize: 13),
+        hintStyle: TextStyle(color: onSurface.withOpacity(0.4), fontSize: 13),
+        filled: true,
+        fillColor: AppColors.granate.withOpacity(0.04),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.25)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+    );
+  }
+  Widget _selectorTipo() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.granate.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: AppColors.gradienteGranate,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.granate.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Icon(
-                esEdicion ? Icons.edit : Icons.music_note,
-                color: AppColors.dorado,
-                size: 22),
-          ),
-          const SizedBox(width: 14),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    esEdicion
-                        ? 'Editando canción'
-                        : 'Nueva canción',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: onSurface,
-                        fontSize: 15,
-                        letterSpacing: 0.3)),
-                const SizedBox(height: 2),
-                Text(
-                  esEdicion
-                      ? 'Modifica los datos de la canción'
-                      : 'Completa los datos del cancionero',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: onSurface.withOpacity(0.55)),
+            child: GestureDetector(
+              onTap: () => setState(() => _tipo = 'original'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _tipo == 'original'
+                      ? AppColors.granate
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
+                child: Text(
+                  'ORIGINAL',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color:
+                        _tipo == 'original' ? AppColors.dorado : AppColors.granate,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _tipo = 'adaptacion'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _tipo == 'adaptacion'
+                      ? AppColors.granate
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'ADAPTACIÓN',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _tipo == 'adaptacion'
+                        ? AppColors.dorado
+                        : AppColors.granate,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -605,67 +473,212 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget _seccion(IconData icono, String titulo) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: AppColors.granate.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icono, size: 13, color: AppColors.granate),
+  Widget _selectorCategoria() {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return DropdownButtonFormField<String>(
+      value: _categorias.any((c) => c.id == _categoriaId) ? _categoriaId : null,
+      isExpanded: true,
+      dropdownColor: AppColors.cardColor(context),
+      style: TextStyle(color: onSurface, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: 'Categoría',
+        labelStyle: TextStyle(color: AppColors.granate, fontSize: 13),
+        filled: true,
+        fillColor: AppColors.granate.withOpacity(0.04),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
-        const SizedBox(width: 10),
-        Text(titulo,
-            style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: AppColors.granate,
-                letterSpacing: 2)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+      items: [
+        const DropdownMenuItem<String>(
+          value: '',
+          child: Text('Sin categoría',
+              style: TextStyle(fontStyle: FontStyle.italic)),
+        ),
+        ..._categorias.map((c) => DropdownMenuItem<String>(
+              value: c.id,
+              child: Text('${c.emoji} ${c.nombre}'),
+            )),
       ],
+      onChanged: (v) => setState(() => _categoriaId = v ?? ''),
     );
   }
 
-  Widget _botonConIcono({
-    required IconData icono,
-    required String texto,
-    required VoidCallback? onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-          decoration: BoxDecoration(
-            color: AppColors.cardColor(context),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.dorado.withOpacity(0.5)),
-          ),
-          child: Row(
-            children: [
-              Icon(icono, color: AppColors.granate, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  texto,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
+  Widget _bloqueAudio(Color onSurface) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_audioUrl != null) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.dorado.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.dorado.withOpacity(0.4)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
                     color: AppColors.granate,
-                    letterSpacing: 0.5,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.audiotrack,
+                      color: AppColors.dorado, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Audio cargado',
+                        style: TextStyle(
+                          color: AppColors.granate,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      if (_audioNombre != null)
+                        Text(
+                          _audioNombre!,
+                          style: TextStyle(
+                            color: onSurface.withOpacity(0.7),
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close,
+                      color: AppColors.granate, size: 20),
+                  onPressed: () => setState(() {
+                    _audioUrl = null;
+                    _audioNombre = null;
+                  }),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: _subiendoAudio ? null : _seleccionarAudio,
+              icon: _subiendoAudio
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          color: AppColors.granate, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.upload_file, color: AppColors.granate),
+              label: Text(
+                _subiendoAudio ? 'SUBIENDO...' : 'SUBIR AUDIO (MP3)',
+                style: const TextStyle(
+                  color: AppColors.granate,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  fontSize: 11,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.granate.withOpacity(0.5)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+  Widget _bloqueImagen(Color onSurface) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_imagenUrl != null) ...[
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.network(
+                  _imagenUrl!,
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 180,
+                    color: AppColors.granate.withOpacity(0.1),
+                    child: const Icon(Icons.broken_image,
+                        color: AppColors.granate, size: 48),
                   ),
                 ),
               ),
-              Icon(Icons.arrow_forward_ios,
-                  size: 14, color: AppColors.granate.withOpacity(0.5)),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.granate,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.close,
+                        color: AppColors.dorado, size: 18),
+                    onPressed: () => setState(() => _imagenUrl = null),
+                  ),
+                ),
+              ),
             ],
           ),
+          const SizedBox(height: 12),
+        ],
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: _subiendoImagen ? null : _seleccionarImagen,
+            icon: _subiendoImagen
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        color: AppColors.granate, strokeWidth: 2),
+                  )
+                : const Icon(Icons.add_photo_alternate_outlined,
+                    color: AppColors.granate),
+            label: Text(
+              _subiendoImagen
+                  ? 'SUBIENDO...'
+                  : (_imagenUrl != null
+                      ? 'CAMBIAR IMAGEN'
+                      : 'AGREGAR IMAGEN (opcional)'),
+              style: const TextStyle(
+                color: AppColors.granate,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
+                fontSize: 11,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: AppColors.granate.withOpacity(0.5)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
