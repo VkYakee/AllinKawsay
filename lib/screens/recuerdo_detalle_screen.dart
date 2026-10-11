@@ -22,7 +22,9 @@ class RecuerdoDetalleScreen extends StatefulWidget {
 class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
   Usuario? _usuario;
   VideoPlayerController? _videoController;
-  int _videoActual = 0;
+  int _videoActual = -1;
+  bool _videoCargando = false;
+  String? _errorVideo;
 
   @override
   void initState() {
@@ -37,21 +39,62 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
 
   @override
   void dispose() {
+    _videoController?.removeListener(_onVideoStateChanged);
     _videoController?.dispose();
     super.dispose();
   }
 
-  void _inicializarVideo(int index) {
-    _videoController?.dispose();
-    if (index < widget.recuerdo.videos.length) {
+  void _onVideoStateChanged() {
+    if (!mounted) return;
+    if (_videoController!.value.hasError) {
+      setState(() {
+        _errorVideo = 'Error al cargar el video';
+        _videoCargando = false;
+      });
+    }
+  }
+
+  Future<void> _inicializarVideo(int index) async {
+    if (index >= widget.recuerdo.videos.length) return;
+
+    if (_videoActual == index && _videoController != null) {
+      setState(() {
+        _videoController!.value.isPlaying
+            ? _videoController!.pause()
+            : _videoController!.play();
+      });
+      return;
+    }
+
+    _videoController?.removeListener(_onVideoStateChanged);
+    await _videoController?.dispose();
+
+    setState(() {
+      _videoCargando = true;
+      _errorVideo = null;
+      _videoActual = index;
+    });
+
+    try {
       _videoController = VideoPlayerController.networkUrl(
         Uri.parse(widget.recuerdo.videos[index]),
-      )..initialize().then((_) {
-          setState(() {
-            _videoActual = index;
-          });
-          _videoController!.play();
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
+
+      _videoController!.addListener(_onVideoStateChanged);
+      await _videoController!.initialize();
+
+      if (mounted) {
+        setState(() => _videoCargando = false);
+        _videoController!.play();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorVideo = 'No se pudo cargar el video';
+          _videoCargando = false;
         });
+      }
     }
   }
 
@@ -94,7 +137,8 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
       MaterialPageRoute(
         builder: (_) => FotoFullscreenScreen(
           url: url,
-          titulo: '${widget.recuerdo.titulo} (${index + 1}/${widget.recuerdo.fotos.length})',
+          titulo:
+              '${widget.recuerdo.titulo} (${index + 1}/${widget.recuerdo.fotos.length})',
           puedeDescargar: _usuario?.puedeDescargar ?? false,
         ),
       ),
@@ -107,7 +151,7 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
         SnackBar(
           content: Row(
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
@@ -115,11 +159,11 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
                   strokeWidth: 2.5,
                 ),
               ),
-              SizedBox(width: 12),
-              Text('Descargando...'),
+              const SizedBox(width: 12),
+              const Text('Descargando...'),
             ],
           ),
-          duration: Duration(seconds: 30),
+          duration: const Duration(seconds: 30),
         ),
       );
     }
@@ -154,13 +198,21 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
       }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final r = widget.recuerdo;
     final puedeDescargar = _usuario?.puedeDescargar ?? false;
     final nota = _usuario?.notaRecuerdo(r.id) ?? '';
     final onSurface = Theme.of(context).colorScheme.onSurface;
+
+    int itemCount = 0;
+    itemCount++;
+    itemCount++;
+    if (r.descripcion.isNotEmpty) itemCount += 2;
+    if (r.tieneVideos) itemCount += 2;
+    if (r.tieneFotos) itemCount += 2;
+    if (nota.isNotEmpty) itemCount += 2;
+    itemCount++;
 
     return Scaffold(
       appBar: AppBar(
@@ -178,75 +230,106 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
       ),
       body: WatermarkOverlay(
         opacity: 0.04,
-        child: ListView(
+        child: ListView.builder(
           padding: const EdgeInsets.all(16),
-          children: [
-            // Header
-            _heroTitulo(r, onSurface),
-            const SizedBox(height: 20),
+          itemCount: itemCount,
+          itemBuilder: (context, index) {
+            int currentIndex = 0;
 
-            // Descripción
-            if (r.descripcion.isNotEmpty) ...[
-              _seccionCard(
-                context,
-                icono: Icons.notes,
-                titulo: 'Descripción',
-                child: Text(
-                  r.descripcion,
-                  style: TextStyle(
-                    fontSize: 15,
-                    height: 1.6,
-                    color: onSurface,
+            if (index == currentIndex++) {
+              return _heroTitulo(r, onSurface);
+            }
+
+            if (index == currentIndex++) {
+              return const SizedBox(height: 20);
+            }
+
+            if (r.descripcion.isNotEmpty) {
+              if (index == currentIndex++) {
+                return _seccionCard(
+                  context,
+                  icono: Icons.notes,
+                  titulo: 'Descripción',
+                  child: Text(
+                    r.descripcion,
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.6,
+                      color: onSurface,
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                );
+              }
+              if (index == currentIndex++) {
+                return const SizedBox(height: 16);
+              }
+            }
 
-            // Videos
-            if (r.tieneVideos) ...[
-              _seccionCard(
-                context,
-                icono: Icons.video_library,
-                titulo: 'VIDEOS (${r.videos.length})',
-                child: Column(
-                  children: [
-                    for (int i = 0; i < r.videos.length; i++) ...[
-                      _videoCard(r.videos[i], i),
-                      if (i < r.videos.length - 1) const SizedBox(height: 12),
+            if (r.tieneVideos) {
+              if (index == currentIndex++) {
+                return _seccionCard(
+                  context,
+                  icono: Icons.video_library,
+                  titulo: 'VIDEOS (${r.videos.length})',
+                  child: Column(
+                    children: [
+                      for (int i = 0; i < r.videos.length; i++) ...[
+                        _videoCard(r.videos[i], i),
+                        if (i < r.videos.length - 1)
+                          const SizedBox(height: 12),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                  ),
+                );
+              }
+              if (index == currentIndex++) {
+                return const SizedBox(height: 16);
+              }
+            }
 
-            // Fotos (galería grande)
-            if (r.tieneFotos) ...[
-              _seccionCard(
-                context,
-                icono: Icons.photo_library,
-                titulo: 'FOTOS (${r.fotos.length})',
-                child: Column(
-                  children: [
-                    for (int i = 0; i < r.fotos.length; i++) ...[
-                      _fotoCard(r.fotos[i], i, puedeDescargar),
-                      if (i < r.fotos.length - 1) const SizedBox(height: 12),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+            if (r.tieneFotos) {
+              if (index == currentIndex++) {
+                return _seccionCard(
+                  context,
+                  icono: Icons.photo_library,
+                  titulo: 'FOTOS (${r.fotos.length})',
+                  child: SizedBox(
+                    height: 320.0 * r.fotos.length + 12.0 * (r.fotos.length - 1),
+                    child: ListView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: r.fotos.length,
+                      itemBuilder: (context, i) {
+                        return Padding(
+                          padding: EdgeInsets.only(
+                              bottom: i < r.fotos.length - 1 ? 12 : 0),
+                          child: _fotoCard(
+                              r.fotos[i], i, puedeDescargar),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              }
+              if (index == currentIndex++) {
+                return const SizedBox(height: 16);
+              }
+            }
 
-            // Nota personal
-            if (nota.isNotEmpty) ...[
-              _notaPersonalCard(context, nota, onSurface),
-              const SizedBox(height: 16),
-            ],
+            if (nota.isNotEmpty) {
+              if (index == currentIndex++) {
+                return _notaPersonalCard(context, nota, onSurface);
+              }
+              if (index == currentIndex++) {
+                return const SizedBox(height: 16);
+              }
+            }
 
-            const SizedBox(height: 16),
-          ],
+            if (index == currentIndex++) {
+              return const SizedBox(height: 16);
+            }
+
+            return const SizedBox.shrink();
+          },
         ),
       ),
     );
@@ -320,9 +403,10 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
       ),
     );
   }
-
   Widget _seccionCard(BuildContext context,
-      {required IconData icono, required String titulo, required Widget child}) {
+      {required IconData icono,
+      required String titulo,
+      required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -361,6 +445,9 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
 
   Widget _videoCard(String url, int index) {
     final esActual = _videoActual == index && _videoController != null;
+    final inicializado =
+        esActual && _videoController!.value.isInitialized;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.black,
@@ -369,88 +456,102 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
       ),
       child: Column(
         children: [
-          esActual && _videoController!.value.isInitialized
-              ? AspectRatio(
-                  aspectRatio: _videoController!.value.aspectRatio,
-                  child: VideoPlayer(_videoController!),
-                )
-              : AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Stack(
-                    children: [
-                      Container(
-                        color: Colors.black87,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.videocam,
-                                  size: 48, color: AppColors.dorado),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Video ${index + 1}',
-                                style: const TextStyle(
-                                  color: AppColors.dorado,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned.fill(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _inicializarVideo(index),
-                            child: Center(
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppColors.granate,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.play_arrow,
-                                    color: AppColors.dorado, size: 32),
-                              ),
+          AspectRatio(
+            aspectRatio: inicializado
+                ? _videoController!.value.aspectRatio
+                : 16 / 9,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (inicializado)
+                  VideoPlayer(_videoController!)
+                else
+                  Container(
+                    color: Colors.black87,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.videocam,
+                              size: 48, color: AppColors.dorado),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Video ${index + 1}',
+                            style: const TextStyle(
+                              color: AppColors.dorado,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                if (_videoCargando && _videoActual == index)
+                  const CircularProgressIndicator(color: AppColors.dorado),
+
+                if (_errorVideo != null && _videoActual == index)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          color: Colors.red, size: 32),
+                      const SizedBox(height: 8),
+                      Text(
+                        _errorVideo!,
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
-                ),
-          if (esActual)
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      _videoController!.value.isPlaying
-                          ? Icons.pause
-                          : Icons.play_arrow,
-                      color: AppColors.dorado,
-                      size: 32,
+
+                if (!inicializado &&
+                    !_videoCargando &&
+                    (_videoActual != index || _errorVideo != null))
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _inicializarVideo(index),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.granate,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.play_arrow,
+                            color: AppColors.dorado, size: 32),
+                      ),
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _videoController!.value.isPlaying
-                            ? _videoController!.pause()
-                            : _videoController!.play();
-                      });
-                    },
                   ),
-                ],
-              ),
+
+                if (inicializado && !_videoCargando)
+                  Positioned(
+                    bottom: 12,
+                    child: IconButton(
+                      icon: Icon(
+                        _videoController!.value.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
+                        color: AppColors.dorado,
+                        size: 32,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _videoController!.value.isPlaying
+                              ? _videoController!.pause()
+                              : _videoController!.play();
+                        });
+                      },
+                    ),
+                  ),
+              ],
             ),
+          ),
         ],
       ),
     );
   }
-
   Widget _fotoCard(String url, int index, bool puedeDescargar) {
     return Stack(
       children: [
@@ -463,6 +564,8 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
               width: double.infinity,
               height: 300,
               fit: BoxFit.cover,
+              memCacheWidth: 800,
+              memCacheHeight: 600,
               placeholder: (_, __) => Container(
                 height: 300,
                 color: AppColors.granate.withOpacity(0.1),
@@ -487,7 +590,7 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
               onTap: () => _descargarFoto(url),
               child: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.black54,
                   shape: BoxShape.circle,
                 ),
@@ -523,8 +626,8 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
               color: AppColors.dorado.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child:
-                const Icon(Icons.sticky_note_2, color: AppColors.granate, size: 14),
+            child: const Icon(Icons.sticky_note_2,
+                color: AppColors.granate, size: 14),
           ),
           const SizedBox(width: 10),
           Expanded(
