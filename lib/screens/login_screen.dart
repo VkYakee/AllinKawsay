@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../theme/colors.dart';
-import '../widgets/logo.dart';
 import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -55,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await AuthService().loginConGoogle();
       if (user == null && mounted) {
-        // Usuario canceló: no hacer nada
+        // Usuario canceló
       }
     } on FirebaseAuthException catch (e) {
       String msg = 'No se pudo iniciar sesión con Google';
@@ -117,6 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // ══════ LOGO REAL ══════
                   Container(
                     width: 130,
                     height: 130,
@@ -124,37 +124,59 @@ class _LoginScreenState extends State<LoginScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.dorado.withOpacity(0.25),
+                          color: AppColors.dorado.withOpacity(0.35),
                           blurRadius: 30,
                           spreadRadius: 4,
                         ),
                       ],
                     ),
-                    child: const SikuriLogo(size: 130),
-                  ),
-                  const SizedBox(height: 28),
-                  const Text(
-                    'SIKURIS',
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.dorado,
-                      letterSpacing: 10,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/logo.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.granate,
+                          child: const Icon(Icons.music_note,
+                              color: AppColors.dorado, size: 60),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
+                  const SizedBox(height: 28),
+
+                  // ══════ TEXTOS NUEVOS ══════
+                  const Text(
                     'ALLIN KAWSAY',
                     style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.dorado.withOpacity(0.65),
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.dorado,
                       letterSpacing: 6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Bienvenidos a la app',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.dorado.withOpacity(0.85),
+                      letterSpacing: 3,
                       fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'C.I.A.C. Allin Kawsay · Juliaca - Perú',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.dorado.withOpacity(0.55),
+                      letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 40),
 
-                  // Card de login
+                  // ══════ CARD DE LOGIN ══════
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -179,9 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
                           style: const TextStyle(
-                            color: AppColors.negro,
-                            fontSize: 15,
-                          ),
+                              color: AppColors.negro, fontSize: 15),
                           decoration: InputDecoration(
                             labelText: 'Email',
                             labelStyle: const TextStyle(
@@ -217,9 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _pass,
                           obscureText: !_verPassword,
                           style: const TextStyle(
-                            color: AppColors.negro,
-                            fontSize: 15,
-                          ),
+                              color: AppColors.negro, fontSize: 15),
                           decoration: InputDecoration(
                             labelText: 'Contraseña',
                             labelStyle: const TextStyle(
@@ -235,7 +253,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 _verPassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                color: AppColors.granate.withOpacity(0.6),
+                                color:
+                                    AppColors.granate.withOpacity(0.6),
                               ),
                               onPressed: () => setState(
                                   () => _verPassword = !_verPassword),
@@ -256,6 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 28),
+
                         // Botón ENTRAR
                         SizedBox(
                           width: double.infinity,
@@ -289,7 +309,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
 
-                        // ══════ Separador "o" ══════
+                        // Separador
                         const SizedBox(height: 20),
                         Row(
                           children: [
@@ -304,8 +324,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Text(
                                 'o',
                                 style: TextStyle(
-                                  color: AppColors.negro
-                                      .withOpacity(0.4),
+                                  color:
+                                      AppColors.negro.withOpacity(0.4),
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -320,7 +340,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // ══════ Botón Google ══════
+                        // Botón Google con icono de colores
                         SizedBox(
                           width: double.infinity,
                           height: 54,
@@ -330,8 +350,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : _loginGoogle,
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                  color: AppColors.negro
-                                      .withOpacity(0.15),
+                                  color:
+                                      AppColors.negro.withOpacity(0.15),
                                   width: 1.5),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
@@ -347,30 +367,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                       strokeWidth: 2.5,
                                     ),
                                   )
-                                : Row(
+                                : const Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.center,
                                     children: [
-                                      Container(
-                                        width: 22,
-                                        height: 22,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.white,
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            'G',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF4285F4),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      const Text(
+                                      _GoogleIcon(),
+                                      SizedBox(width: 12),
+                                      Text(
                                         'Continuar con Google',
                                         style: TextStyle(
                                           fontSize: 14,
@@ -428,6 +431,52 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Icono de Google con los 4 colores de la marca.
+class _GoogleIcon extends StatelessWidget {
+  const _GoogleIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 22,
+      height: 22,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+          ),
+          ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (bounds) => const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF4285F4), // azul
+                Color(0xFFEA4335), // rojo
+                Color(0xFFFBBC05), // amarillo
+                Color(0xFF34A853), // verde
+              ],
+            ).createShader(bounds),
+            child: const Text(
+              'G',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                height: 1.0,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
