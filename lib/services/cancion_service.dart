@@ -5,16 +5,23 @@ import 'actividad_service.dart';
 class CancionService {
   final _db = FirebaseFirestore.instance;
 
+  /// Lista todas las canciones ordenadas por fecha de creación DESC
+  /// (las más nuevas primero). Ordenamos en Dart para no perder
+  /// documentos viejos que no tengan el campo `fechaCreacion`.
   Stream<List<Cancion>> listar() {
-    return _db
-        .collection('canciones')
-        .orderBy('fechaCreacion', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs.map(Cancion.fromDoc).toList());
+    return _db.collection('canciones').snapshots().map((snap) {
+      final lista = snap.docs.map(Cancion.fromDoc).toList();
+      lista.sort((a, b) {
+        final fa = a.fechaCreacion ?? DateTime(2000);
+        final fb = b.fechaCreacion ?? DateTime(2000);
+        return fb.compareTo(fa);
+      });
+      return lista;
+    });
   }
 
   Future<String> agregar(Cancion c) async {
-    final ref = await _db.collection('canciones').add(c.toMap());
+    final ref = await _db.collection('canciones').add(c.toMapCrear());
     ActividadService.registrar(
       'crear_cancion',
       'Subió la canción "${c.titulo}"',
@@ -32,7 +39,6 @@ class CancionService {
   }
 
   Future<void> eliminar(String id) async {
-    // Intentar leer el título antes de borrar
     String titulo = id;
     try {
       final doc = await _db.collection('canciones').doc(id).get();
