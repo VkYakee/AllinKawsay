@@ -74,13 +74,11 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
   List<Cancion> get _cancionesFiltradas {
     if (_query.isEmpty) return [];
     return _canciones.where((c) {
-      // Buscar en campos básicos
       if (c.titulo.toLowerCase().contains(_query)) return true;
       if (c.autor.toLowerCase().contains(_query)) return true;
       if (c.ritmo.toLowerCase().contains(_query)) return true;
       if (c.letra.toLowerCase().contains(_query)) return true;
       if (c.tags.any((t) => t.toLowerCase().contains(_query))) return true;
-      // Buscar dentro de cada letra con título (nuevo sistema)
       if (c.letras.any((l) => l.texto.toLowerCase().contains(_query))) {
         return true;
       }
@@ -109,106 +107,105 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
             r.descripcion.toLowerCase().contains(_query))
         .toList();
   }
-
-  void _abrirEvento(Evento e) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).cardColor,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) {
-        final onSurface = Theme.of(context).colorScheme.onSurface;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
+void _abrirEvento(Evento e) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Theme.of(context).cardColor,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (_) {
+      final onSurface = Theme.of(context).colorScheme.onSurface;
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.dorado,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.dorado,
-                      borderRadius: BorderRadius.circular(2),
+                      color: AppColors.granate.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.event,
+                        color: AppColors.granate, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      e.titulo,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: onSurface,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.granate.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.event,
-                          color: AppColors.granate, size: 18),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        e.titulo,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: onSurface,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _filaDetalle(Icons.calendar_today,
-                    '${e.fecha.day}/${e.fecha.month}/${e.fecha.year}',
-                    onSurface),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _filaDetalle(Icons.calendar_today,
+                  '${e.fecha.day}/${e.fecha.month}/${e.fecha.year}',
+                  onSurface),
+              const SizedBox(height: 8),
+              _filaDetalle(
+                Icons.access_time,
+                '${e.fecha.hour.toString().padLeft(2, '0')}:${e.fecha.minute.toString().padLeft(2, '0')}',
+                onSurface,
+              ),
+              if (e.lugar.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                _filaDetalle(
-                  Icons.access_time,
-                  '${e.fecha.hour.toString().padLeft(2, '0')}:${e.fecha.minute.toString().padLeft(2, '0')}',
-                  onSurface,
-                ),
-                if (e.lugar.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _filaDetalle(Icons.place, e.lugar, onSurface),
-                ],
-                if (e.descripcion.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    e.descripcion,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: onSurface.withOpacity(0.8),
-                    ),
-                  ),
-                ],
+                _filaDetalle(Icons.place, e.lugar, onSurface),
               ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _filaDetalle(IconData icono, String texto, Color onSurface) {
-    return Row(
-      children: [
-        Icon(icono, size: 15, color: AppColors.granate),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            texto,
-            style: TextStyle(fontSize: 14, color: onSurface),
+              if (e.descripcion.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  e.descripcion,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: onSurface.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-      ],
-    );
-  }
+      );
+    },
+  );
+}
+
+Widget _filaDetalle(IconData icono, String texto, Color onSurface) {
+  return Row(
+    children: [
+      Icon(icono, size: 15, color: AppColors.granate),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          texto,
+          style: TextStyle(fontSize: 14, color: onSurface),
+        ),
+      ),
+    ],
+  );
+}
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
@@ -334,17 +331,17 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         if (canciones.isNotEmpty) ...[
-          _tituloSeccion('Canciones', canciones.length),
+          _tituloSeccion(context, 'Canciones', canciones.length),
           ...canciones.map((c) => _itemCancion(c, onSurface)),
           const SizedBox(height: 12),
         ],
         if (eventos.isNotEmpty) ...[
-          _tituloSeccion('Eventos', eventos.length),
+          _tituloSeccion(context, 'Eventos', eventos.length),
           ...eventos.map((e) => _itemEvento(e, onSurface)),
           const SizedBox(height: 12),
         ],
         if (recuerdos.isNotEmpty) ...[
-          _tituloSeccion('Recuerdos', recuerdos.length),
+          _tituloSeccion(context, 'Recuerdos', recuerdos.length),
           ...recuerdos.map((r) => _itemRecuerdo(r, onSurface)),
         ],
         const SizedBox(height: 24),
@@ -352,7 +349,8 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
     );
   }
 
-  Widget _tituloSeccion(String texto, int cantidad) {
+  Widget _tituloSeccion(BuildContext context, String texto, int cantidad) {
+    final color = AppColors.seccionTitulo(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
       child: Row(
@@ -361,17 +359,17 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
             width: 4,
             height: 16,
             decoration: BoxDecoration(
-              color: AppColors.granate,
+              color: color,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(width: 8),
           Text(
             texto.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: AppColors.granate,
+              color: color,
               letterSpacing: 2,
             ),
           ),
@@ -384,10 +382,10 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text('$cantidad',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.granate)),
+                    color: color)),
           ),
         ],
       ),
@@ -406,55 +404,12 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
             MaterialPageRoute(
                 builder: (_) => CancionDetalleScreen(cancion: c)),
           ),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.cardColor(context),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: AppColors.dorado.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.gradienteGranate,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.music_note,
-                      color: AppColors.dorado, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(c.titulo,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: onSurface,
-                              fontSize: 14),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${c.ritmo}${c.autor.isNotEmpty ? ' · ${c.autor}' : ''}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: onSurface.withOpacity(0.55)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right,
-                    color: AppColors.dorado.withOpacity(0.6),
-                    size: 20),
-              ],
-            ),
+          child: _cardItem(
+            context,
+            Icons.music_note,
+            c.titulo,
+            '${c.ritmo}${c.autor.isNotEmpty ? ' · ${c.autor}' : ''}',
+            onSurface,
           ),
         ),
       ),
@@ -469,55 +424,12 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () => _abrirEvento(e),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.cardColor(context),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: AppColors.dorado.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.gradienteGranate,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.event,
-                      color: AppColors.dorado, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(e.titulo,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: onSurface,
-                              fontSize: 14),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${e.fecha.day}/${e.fecha.month}/${e.fecha.year} · ${e.lugar}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: onSurface.withOpacity(0.55)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right,
-                    color: AppColors.dorado.withOpacity(0.6),
-                    size: 20),
-              ],
-            ),
+          child: _cardItem(
+            context,
+            Icons.event,
+            e.titulo,
+            '${e.fecha.day}/${e.fecha.month}/${e.fecha.year} · ${e.lugar}',
+            onSurface,
           ),
         ),
       ),
@@ -536,55 +448,69 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
             MaterialPageRoute(
                 builder: (_) => RecuerdoDetalleScreen(recuerdo: r)),
           ),
-          child: Container(
-            padding: const EdgeInsets.all(12),
+          child: _cardItem(
+            context,
+            Icons.photo_library,
+            r.titulo,
+            '${r.fotos.length} foto(s)${r.videos.isNotEmpty ? ' · ${r.videos.length} video(s)' : ''}',
+            onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _cardItem(
+    BuildContext context,
+    IconData icono,
+    String titulo,
+    String subtitulo,
+    Color onSurface,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: AppColors.cardColor(context),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: AppColors.dorado.withOpacity(0.2)),
+              gradient: AppColors.gradienteGranate,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
+            child: Icon(icono, color: AppColors.dorado, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.gradienteGranate,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.photo_library,
-                      color: AppColors.dorado, size: 20),
+                Text(titulo,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: onSurface,
+                        fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 3),
+                Text(
+                  subtitulo,
+                  style: TextStyle(
+                      fontSize: 12, color: onSurface.withOpacity(0.55)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(r.titulo,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: onSurface,
-                              fontSize: 14),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${r.fotos.length} foto(s)${r.videos.isNotEmpty ? ' · ${r.videos.length} video(s)' : ''}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: onSurface.withOpacity(0.55)),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right,
-                    color: AppColors.dorado.withOpacity(0.6),
-                    size: 20),
               ],
             ),
           ),
-        ),
+          Icon(Icons.chevron_right,
+              color: AppColors.dorado.withOpacity(0.6), size: 20),
+        ],
       ),
     );
   }
