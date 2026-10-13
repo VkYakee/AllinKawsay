@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -145,8 +148,40 @@ jobs:
             exit 1
           fi
 
-      - name: Upload APK
+      - name: Upload APK (artifact de Actions)
         uses: actions/upload-artifact@v4
         with:
           name: sikuris-apk-v${{ steps.version.outputs.version }}.${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Crear prerelease en GitHub con el APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN=${{ github.run_number }}
+          VERSION=${{ steps.version.outputs.version }}
+          TAG="v${VERSION}.${RUN}"
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          SIZE=$(stat -c%s $APK)
+          SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $SIZE/1048576}")
+
+          cat > /tmp/notas.md <<EOF
+          ## 🔨 Build ${VERSION}.${RUN}
+
+          - **Versión:** ${VERSION}.${RUN}
+          - **Build number:** ${RUN}
+          - **Tamaño:** ${SIZE_MB} MB
+          - **Commit:** ${{ github.sha }}
+          - **Fecha:** $(date +'%Y-%m-%d %H:%M UTC')
+
+          Esta es una versión **de prueba**. Un administrador debe
+          aprobarla desde la app para que los usuarios reciban el aviso.
+          EOF
+
+          gh release create "$TAG" "$APK" \
+            --title "v${VERSION}.${RUN}" \
+            --notes-file /tmp/notas.md \
+            --prerelease
+
+          echo "✅ Prerelease creada: $TAG"
+          echo "📎 URL APK: https://github.com/yeo-drake/AllinKawsay/releases/download/$TAG/app-release.apk"
