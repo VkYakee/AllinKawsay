@@ -4,6 +4,11 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      motivo:
+        description: 'Motivo del lanzamiento (ej: nuevas features, fix importante)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -126,6 +131,21 @@ jobs:
           echo "📦 Versión base detectada: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Determinar tipo de release
+        id: tipo
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🎯 Lanzamiento MANUAL → release estable"
+            echo "es_prerelease=false" >> $GITHUB_OUTPUT
+            echo "emoji=🚀" >> $GITHUB_OUTPUT
+            echo "etiqueta=LANZAMIENTO OFICIAL" >> $GITHUB_OUTPUT
+          else
+            echo "🔨 Push automático → prerelease (NO visible en el panel admin)"
+            echo "es_prerelease=true" >> $GITHUB_OUTPUT
+            echo "emoji=🔬" >> $GITHUB_OUTPUT
+            echo "etiqueta=BUILD DE PRUEBA" >> $GITHUB_OUTPUT
+          fi
+
       - name: Get dependencies
         run: flutter pub get
 
@@ -154,7 +174,7 @@ jobs:
           name: sikuris-apk-v${{ steps.version.outputs.version }}.${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Crear prerelease en GitHub con el APK
+      - name: Crear release en GitHub
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -164,9 +184,12 @@ jobs:
           APK="build/app/outputs/flutter-apk/app-release.apk"
           SIZE=$(stat -c%s $APK)
           SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $SIZE/1048576}")
+          MOTIVO="${{ github.event.inputs.motivo }}"
+          TIPO="${{ steps.tipo.outputs.etiqueta }}"
+          EMOJI="${{ steps.tipo.outputs.emoji }}"
 
           cat > /tmp/notas.md <<EOF
-          ## 🔨 Build ${VERSION}.${RUN}
+          ${EMOJI} **${TIPO}**
 
           - **Versión:** ${VERSION}.${RUN}
           - **Build number:** ${RUN}
@@ -174,14 +197,19 @@ jobs:
           - **Commit:** ${{ github.sha }}
           - **Fecha:** $(date +'%Y-%m-%d %H:%M UTC')
 
-          Esta es una versión **de prueba**. Un administrador debe
-          aprobarla desde la app para que los usuarios reciban el aviso.
+          ${MOTIVO:+**Motivo:** ${MOTIVO}}
           EOF
 
-          gh release create "$TAG" "$APK" \
-            --title "v${VERSION}.${RUN}" \
-            --notes-file /tmp/notas.md \
-            --prerelease
-
-          echo "✅ Prerelease creada: $TAG"
-          echo "📎 URL APK: https://github.com/yeo-drake/AllinKawsay/releases/download/$TAG/app-release.apk"
+          if [ "${{ steps.tipo.outputs.es_prerelease }}" = "true" ]; then
+            gh release create "$TAG" "$APK" \
+              --title "v${VERSION}.${RUN} (prueba)" \
+              --notes-file /tmp/notas.md \
+              --prerelease
+            echo "✅ Prerelease creada: $TAG (NO aparece en el panel admin)"
+          else
+            gh release create "$TAG" "$APK" \
+              --title "v${VERSION}.${RUN}" \
+              --notes-file /tmp/notas.md
+            echo "✅ Release ESTABLE creado: $TAG"
+            echo "🎯 Ahora aparecerá en el panel admin para aprobar"
+          fi
