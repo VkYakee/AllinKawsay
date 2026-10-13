@@ -30,6 +30,7 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
   bool _soloFavoritos = false;
   _OrdenCancion _orden = _OrdenCancion.titulo;
   bool _ascendente = true;
+  bool _refreshing = false;
 
   @override
   void initState() {
@@ -42,6 +43,13 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
     if (mounted) setState(() => _esAdmin = a);
   }
 
+  Future<void> _onRefresh() async {
+    setState(() => _refreshing = true);
+    await _chequearAdmin();
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) setState(() => _refreshing = false);
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -52,27 +60,33 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Eliminar canción'),
-        content: Text('¿Eliminar "${c.titulo}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Eliminar canción', style: TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold)),
+        content: Text('¿Eliminar "${c.titulo}"? Esta acción no se puede deshacer.'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Eliminar')),
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
         ],
       ),
     );
-    if (ok == true) await _service.eliminar(c.id);
+    if (ok == true) {
+      await _service.eliminar(c.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Canción "${c.titulo}" eliminada')),
+        );
+      }
+    }
   }
 
   void _editar(Cancion c) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => AgregarCancionScreen(cancion: c),
-      ),
+      MaterialPageRoute(builder: (_) => AgregarCancionScreen(cancion: c)),
     );
   }
 
@@ -97,11 +111,7 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Ordenar por',
-                style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5)),
+            const Text('Ordenar por', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
             const SizedBox(height: 12),
             _itemOrden('Título (A-Z)', _OrdenCancion.titulo),
             _itemOrden('Autor (A-Z)', _OrdenCancion.autor),
@@ -121,9 +131,7 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.granate
-              : AppColors.granate.withOpacity(0.08),
+          color: selected ? AppColors.granate : AppColors.granate.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
@@ -132,15 +140,11 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
           size: 20,
         ),
       ),
-      title: Text(label,
-          style: TextStyle(
-              fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+      title: Text(label, style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
       trailing: selected
           ? IconButton(
               icon: Icon(
-                _ascendente
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
+                _ascendente ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
                 color: AppColors.granate,
               ),
               onPressed: () {
@@ -152,8 +156,7 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
       onTap: () {
         setState(() {
           _orden = valor;
-          if (valor == _OrdenCancion.fecha ||
-              valor == _OrdenCancion.reproducciones) {
+          if (valor == _OrdenCancion.fecha || valor == _OrdenCancion.reproducciones) {
             _ascendente = false;
           } else {
             _ascendente = true;
@@ -163,15 +166,17 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
       },
     );
   }
-
-  List<Cancion> _filtrar(List<Cancion> lista, List<String> favoritos) {
+List<Cancion> _filtrar(List<Cancion> lista, List<String> favoritos) {
     var r = lista;
+
     if (_soloFavoritos) {
       r = r.where((c) => favoritos.contains(c.id)).toList();
     }
+
     if (_categoriaFiltro != null && _categoriaFiltro!.isNotEmpty) {
       r = r.where((c) => c.categoriaId == _categoriaFiltro).toList();
     }
+
     if (_query.isNotEmpty) {
       final q = _query.toLowerCase();
       r = r.where((c) =>
@@ -180,9 +185,11 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
           c.ritmo.toLowerCase().contains(q) ||
           c.tags.any((t) => t.toLowerCase().contains(q))).toList();
     }
+
     if (_tagFiltro != null) {
       r = r.where((c) => c.tags.contains(_tagFiltro)).toList();
     }
+
     r.sort((a, b) {
       int cmp;
       switch (_orden) {
@@ -204,6 +211,7 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
       }
       return _ascendente ? cmp : -cmp;
     });
+
     return r;
   }
 
@@ -230,311 +238,275 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  final onSurface = Theme.of(context).colorScheme.onSurface;
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text('CANCIONERO'),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.sort),
-          tooltip: 'Ordenar',
-          onPressed: _abrirMenuOrden,
-        ),
-        const SizedBox(width: 4),
-      ],
-    ),
-    floatingActionButton: _esAdmin
-        ? FloatingActionButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const AgregarCancionScreen()),
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('CANCIONERO', style: TextStyle(letterSpacing: 2)),
+            const SizedBox(width: 8),
+            StreamBuilder<List<Cancion>>(
+              stream: _service.listar(),
+              builder: (context, snap) {
+                if (!snap.hasData) return const SizedBox.shrink();
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.dorado.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${snap.data!.length}',
+                    style: const TextStyle(
+                      color: AppColors.dorado,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
             ),
-            child: const Icon(Icons.add, size: 26),
-          )
-        : null,
-    body: WatermarkOverlay(
-      opacity: 0.04,
-      child: StreamBuilder<Usuario?>(
-        stream: UsuarioService().miUsuario(),
-        builder: (context, userSnap) {
-          final favs = userSnap.data?.favoritos ?? <String>[];
-          return ValueListenableBuilder<EstadoPlayer>(
-            valueListenable: PlayerService().estado,
-            builder: (context, estado, _) {
-              return Column(
-                children: [
-                  // === BUSCADOR ===
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (v) => setState(() => _query = v),
-                      decoration: InputDecoration(
-                        hintText: 'Buscar canción, autor, ritmo...',
-                        prefixIcon: const Icon(Icons.search,
-                            color: AppColors.granate, size: 22),
-                        suffixIcon: _query.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear,
-                                    size: 20),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  setState(() => _query = '');
-                                },
-                              )
-                            : null,
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sort),
+            tooltip: 'Ordenar',
+            onPressed: _abrirMenuOrden,
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      floatingActionButton: _esAdmin
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AgregarCancionScreen()),
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('NUEVA'),
+            )
+          : null,
+      body: WatermarkOverlay(
+        opacity: 0.04,
+        child: RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: AppColors.dorado,
+          child: StreamBuilder<Usuario?>(
+            stream: UsuarioService().miUsuario(),
+            builder: (context, userSnap) {
+              final favs = userSnap.data?.favoritos ?? <String>[];
+
+              return ValueListenableBuilder<EstadoPlayer>(
+                valueListenable: PlayerService().estado,
+                builder: (context, estado, _) {
+                  return Column(
+                    children: [
+                      // === BUSCADOR ===
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: TextField(
+                          controller: _searchCtrl,
+                          onChanged: (v) => setState(() => _query = v),
+                          decoration: InputDecoration(
+                            hintText: 'Buscar canción, autor, ritmo...',
+                            prefixIcon: const Icon(Icons.search, color: AppColors.granate, size: 22),
+                            suffixIcon: _query.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 20),
+                                    onPressed: () {
+                                      _searchCtrl.clear();
+                                      setState(() => _query = '');
+                                    },
+                                  )
+                                : null,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  // === INFO ORDEN ===
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppColors.granate.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Icon(Icons.sort,
-                              size: 11, color: AppColors.granate),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Ordenado por ${_nombreOrden()} ${_ascendente ? '↑' : '↓'}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: onSurface.withOpacity(0.55),
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: StreamBuilder<List<Cancion>>(
-                      stream: _service.listar(),
-                      builder: (context, snap) {
-                        if (snap.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.granate));
-                        }
-                        if (snap.hasError) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text('Error: ${snap.error}',
-                                  textAlign: TextAlign.center),
-                            ),
-                          );
-                        }
-                        final lista = snap.data ?? [];
-                        if (lista.isEmpty) {
-                          return _emptyState(onSurface);
-                        }
-
-                        final tags = _todosLosTags(lista);
-                        final filtradas = _filtrar(lista, favs);
-                        final hayFavs = favs.isNotEmpty;
-
-                        return Column(
+                      // === INFO ORDEN ===
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+                        child: Row(
                           children: [
-                            StreamBuilder<List<Categoria>>(
-                              stream: CategoriaService().listar(),
-                              builder: (context, catSnap) {
-                                final cats = catSnap.data ?? [];
-                                return Column(
-                                  children: [
-                                    if (cats.isNotEmpty)
-                                      SizedBox(
-                                        height: 38,
-                                        child: ListView(
-                                          scrollDirection:
-                                              Axis.horizontal,
-                                          padding: const EdgeInsets
-                                              .symmetric(
-                                              horizontal: 16),
-                                          children: [
-                                            for (final cat in cats)
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets
-                                                        .only(right: 8),
-                                                child: FilterChip(
-                                                  label: Text(
-                                                      '${cat.emoji} ${cat.nombre}'),
-                                                  selected:
-                                                      _categoriaFiltro ==
-                                                          cat.id,
-                                                  selectedColor:
-                                                      AppColors
-                                                          .granate,
-                                                  labelStyle:
-                                                      TextStyle(
-                                                    color: _categoriaFiltro ==
-                                                            cat.id
-                                                        ? AppColors
-                                                            .dorado
-                                                        : onSurface,
-                                                    fontSize: 12,
-                                                    fontWeight:
-                                                        FontWeight.w600,
-                                                  ),
-                                                  onSelected: (sel) =>
-                                                      setState(() =>
-                                                          _categoriaFiltro =
-                                                              sel
-                                                                  ? cat.id
-                                                                  : null),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    SizedBox(
-                                      height: 38,
-                                      child: ListView(
-                                        scrollDirection:
-                                            Axis.horizontal,
-                                        padding: const EdgeInsets
-                                            .symmetric(horizontal: 16),
-                                        children: [
-                                          FilterChip(
-                                            avatar: Icon(
-                                              _soloFavoritos
-                                                  ? Icons.favorite
-                                                  : Icons
-                                                      .favorite_border,
-                                              size: 16,
-                                              color: _soloFavoritos
-                                                  ? AppColors.granate
-                                                  : onSurface
-                                                      .withOpacity(0.5),
-                                            ),
-                                            label:
-                                                const Text('Favoritos'),
-                                            selected: _soloFavoritos,
-                                            selectedColor: AppColors
-                                                .dorado
-                                                .withOpacity(0.4),
-                                            labelStyle: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight:
-                                                  FontWeight.w600,
-                                              color: onSurface,
-                                            ),
-                                            onSelected: (sel) =>
-                                                setState(() =>
-                                                    _soloFavoritos =
-                                                        sel),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          if (_tagFiltro != null) ...[
-                                            ActionChip(
-                                              avatar: const Icon(
-                                                  Icons.close,
-                                                  size: 16),
-                                              label:
-                                                  const Text('Limpiar'),
-                                              onPressed: () =>
-                                                  setState(() =>
-                                                      _tagFiltro =
-                                                          null),
-                                              backgroundColor:
-                                                  AppColors.granate
-                                                      .withOpacity(0.2),
-                                            ),
-                                            const SizedBox(width: 8),
-                                          ],
-                                          for (final t in tags)
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets
-                                                      .only(right: 8),
-                                              child: FilterChip(
-                                                label: Text(t),
-                                                selected:
-                                                    _tagFiltro == t,
-                                                selectedColor:
-                                                    AppColors.granate,
-                                                labelStyle: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight:
-                                                      FontWeight.w600,
-                                                  color:
-                                                      _tagFiltro == t
-                                                          ? AppColors
-                                                              .dorado
-                                                          : onSurface,
-                                                ),
-                                                onSelected: (sel) =>
-                                                    setState(() =>
-                                                        _tagFiltro =
-                                                            sel
-                                                                ? t
-                                                                : null),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                );
-                              },
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: AppColors.granate.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.sort, size: 11, color: AppColors.granate),
                             ),
-                            Expanded(
-                              child: filtradas.isEmpty
-                                  ? Center(
-                                      child: Text(
-                                        _soloFavoritos && !hayFavs
-                                            ? 'Aún no marcaste favoritos'
-                                            : 'Sin resultados',
-                                        style: TextStyle(
-                                            color: onSurface
-                                                .withOpacity(0.5),
-                                            fontStyle:
-                                                FontStyle.italic),
-                                      ),
-                                    )
-                                  : ListView.builder(
-                                      padding: const EdgeInsets
-                                          .fromLTRB(16, 4, 16, 100),
-                                      itemCount: filtradas.length,
-                                      itemBuilder: (context, i) {
-                                        return _tarjetaCancion(
-                                          context,
-                                          filtradas[i],
-                                          i,
-                                          favs,
-                                          estado,
-                                          onSurface,
-                                        );
-                                      },
-                                    ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Ordenado por ${_nombreOrden()} ${_ascendente ? '↑' : '↓'}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: onSurface.withOpacity(0.55),
+                                letterSpacing: 0.3,
+                              ),
                             ),
                           ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                        ),
+                      ),
+                      Expanded(
+                        child: StreamBuilder<List<Cancion>>(
+                          stream: _service.listar(),
+                          builder: (context, snap) {
+                            if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+                              return const _LoadingSkeleton();
+                            }
+
+                            if (snap.hasError) {
+                              return _ErrorWidget(
+                                error: snap.error.toString(),
+                                onRetry: () => setState(() {}),
+                              );
+                            }
+
+                            final lista = snap.data ?? [];
+
+                            if (lista.isEmpty) {
+                              return _emptyState(onSurface);
+                            }
+
+                            final tags = _todosLosTags(lista);
+                            final filtradas = _filtrar(lista, favs);
+                            final hayFavs = favs.isNotEmpty;
+
+                            return Column(
+                              children: [
+                                StreamBuilder<List<Categoria>>(
+                                  stream: CategoriaService().listar(),
+                                  builder: (context, catSnap) {
+                                    final cats = catSnap.data ?? [];
+                                    return Column(
+                                      children: [
+                                        if (cats.isNotEmpty)
+                                          SizedBox(
+                                            height: 38,
+                                            child: ListView(
+                                              scrollDirection: Axis.horizontal,
+                                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                                              children: [
+                                                for (final cat in cats)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(right: 8),
+                                                    child: FilterChip(
+                                                      label: Text('${cat.emoji} ${cat.nombre}'),
+                                                      selected: _categoriaFiltro == cat.id,
+                                                      selectedColor: AppColors.granate,
+                                                      labelStyle: TextStyle(
+                                                        color: _categoriaFiltro == cat.id ? AppColors.dorado : onSurface,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                      onSelected: (sel) => setState(() => _categoriaFiltro = sel ? cat.id : null),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        SizedBox(
+                                          height: 38,
+                                          child: ListView(
+                                            scrollDirection: Axis.horizontal,
+                                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                                            children: [
+                                              FilterChip(
+                                                avatar: Icon(
+                                                  _soloFavoritos ? Icons.favorite : Icons.favorite_border,
+                                                  size: 16,
+                                                  color: _soloFavoritos ? AppColors.granate : onSurface.withOpacity(0.5),
+                                                ),
+                                                label: const Text('Favoritos'),
+                                                selected: _soloFavoritos,
+                                                selectedColor: AppColors.dorado.withOpacity(0.4),
+                                                labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: onSurface),
+                                                onSelected: (sel) => setState(() => _soloFavoritos = sel),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              if (_tagFiltro != null) ...[
+                                                ActionChip(
+                                                  avatar: const Icon(Icons.close, size: 16),
+                                                  label: const Text('Limpiar'),
+                                                  onPressed: () => setState(() => _tagFiltro = null),
+                                                  backgroundColor: AppColors.granate.withOpacity(0.2),
+                                                ),
+                                                const SizedBox(width: 8),
+                                              ],
+                                              for (final t in tags)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(right: 8),
+                                                  child: FilterChip(
+                                                    label: Text(t),
+                                                    selected: _tagFiltro == t,
+                                                    selectedColor: AppColors.granate,
+                                                    labelStyle: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: _tagFiltro == t ? AppColors.dorado : onSurface,
+                                                    ),
+                                                    onSelected: (sel) => setState(() => _tagFiltro = sel ? t : null),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                Expanded(
+                                  child: filtradas.isEmpty
+                                      ? Center(
+                                          child: Text(
+                                            _soloFavoritos && !hayFavs ? 'Aún no marcaste favoritos' : 'Sin resultados',
+                                            style: TextStyle(color: onSurface.withOpacity(0.5), fontStyle: FontStyle.italic),
+                                          ),
+                                        )
+                                      : ListView.builder(
+                                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                                          itemCount: filtradas.length,
+                                          itemBuilder: (context, i) {
+                                            return TweenAnimationBuilder<double>(
+                                              tween: Tween(begin: 0.0, end: 1.0),
+                                              duration: Duration(milliseconds: 300 + (i * 50)),
+                                              curve: Curves.easeOut,
+                                              builder: (context, value, child) {
+                                                return Opacity(
+                                                  opacity: value,
+                                                  child: Transform.translate(
+                                                    offset: Offset(0, 20 * (1 - value)),
+                                                    child: child,
+                                                  ),
+                                                );
+                                              },
+                                              child: _tarjetaCancion(context, filtradas[i], i, favs, estado, onSurface),
+                                            );
+                                          },
+                                        ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+        ),
       ),
-    ),
-  );
-}
-
-  Widget _tarjetaCancion(
+    );
+  }
+Widget _tarjetaCancion(
     BuildContext context,
     Cancion c,
     int index,
@@ -555,8 +527,7 @@ Widget build(BuildContext context) {
           borderRadius: BorderRadius.circular(18),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => CancionDetalleScreen(cancion: c)),
+            MaterialPageRoute(builder: (_) => CancionDetalleScreen(cancion: c)),
           ),
           child: Container(
             padding: const EdgeInsets.all(12),
@@ -564,9 +535,7 @@ Widget build(BuildContext context) {
               color: AppColors.cardColor(context),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: sonando
-                    ? AppColors.dorado.withOpacity(0.6)
-                    : AppColors.dorado.withOpacity(0.2),
+                color: sonando ? AppColors.dorado.withOpacity(0.6) : AppColors.dorado.withOpacity(0.2),
                 width: sonando ? 1.5 : 1,
               ),
               boxShadow: [
@@ -586,16 +555,11 @@ Widget build(BuildContext context) {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      gradient: reproduciendo
-                          ? AppColors.gradienteDorado
-                          : AppColors.gradienteGranate,
+                      gradient: reproduciendo ? AppColors.gradienteDorado : AppColors.gradienteGranate,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: (reproduciendo
-                                  ? AppColors.dorado
-                                  : AppColors.granate)
-                              .withOpacity(0.3),
+                          color: (reproduciendo ? AppColors.dorado : AppColors.granate).withOpacity(0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -604,18 +568,11 @@ Widget build(BuildContext context) {
                     child: cargando
                         ? const Padding(
                             padding: EdgeInsets.all(14),
-                            child: CircularProgressIndicator(
-                              color: AppColors.dorado,
-                              strokeWidth: 2.5,
-                            ),
+                            child: CircularProgressIndicator(color: AppColors.dorado, strokeWidth: 2.5),
                           )
                         : Icon(
-                            reproduciendo
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            color: reproduciendo
-                                ? AppColors.granate
-                                : AppColors.dorado,
+                            reproduciendo ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            color: reproduciendo ? AppColors.granate : AppColors.dorado,
                             size: 30,
                           ),
                   ),
@@ -640,10 +597,7 @@ Widget build(BuildContext context) {
                       const SizedBox(height: 3),
                       Text(
                         '${c.ritmo}${c.autor.isNotEmpty ? ' · ${c.autor}' : ''}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: onSurface.withOpacity(0.55),
-                        ),
+                        style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -651,27 +605,19 @@ Widget build(BuildContext context) {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color:
-                                  AppColors.granate.withOpacity(0.08),
+                              color: AppColors.granate.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.play_arrow,
-                                    size: 10,
-                                    color: AppColors.granate),
+                                const Icon(Icons.play_arrow, size: 10, color: AppColors.granate),
                                 const SizedBox(width: 2),
                                 Text(
                                   '${c.reproducciones}',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.granate,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: const TextStyle(fontSize: 10, color: AppColors.granate, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -679,23 +625,17 @@ Widget build(BuildContext context) {
                           if (c.tieneCategoria)
                             Padding(
                               padding: const EdgeInsets.only(left: 6),
-                              child: Icon(Icons.folder_outlined,
-                                  size: 12,
-                                  color: onSurface.withOpacity(0.35)),
+                              child: Icon(Icons.folder_outlined, size: 12, color: onSurface.withOpacity(0.35)),
                             ),
                           if (c.tieneNumerofonia)
                             Padding(
                               padding: const EdgeInsets.only(left: 6),
-                              child: Icon(Icons.grid_on,
-                                  size: 12,
-                                  color: onSurface.withOpacity(0.35)),
+                              child: Icon(Icons.grid_on, size: 12, color: onSurface.withOpacity(0.35)),
                             ),
                           if (c.audioUrl.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(left: 6),
-                              child: Icon(Icons.audiotrack,
-                                  size: 12,
-                                  color: onSurface.withOpacity(0.35)),
+                              child: Icon(Icons.audiotrack, size: 12, color: onSurface.withOpacity(0.35)),
                             ),
                         ],
                       ),
@@ -706,21 +646,16 @@ Widget build(BuildContext context) {
                 IconButton(
                   icon: Icon(
                     esFav ? Icons.favorite : Icons.favorite_border,
-                    color: esFav
-                        ? AppColors.granate
-                        : onSurface.withOpacity(0.3),
+                    color: esFav ? AppColors.granate : onSurface.withOpacity(0.3),
                     size: 22,
                   ),
-                  onPressed: () =>
-                      UsuarioService().toggleFavorito(c.id),
+                  onPressed: () => UsuarioService().toggleFavorito(c.id),
                 ),
                 // Menú admin
                 if (_esAdmin)
                   PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert,
-                        color: onSurface.withOpacity(0.5), size: 22),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                    icon: Icon(Icons.more_vert, color: onSurface.withOpacity(0.5), size: 22),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     onSelected: (v) {
                       if (v == 'editar') {
                         _editar(c);
@@ -728,14 +663,14 @@ Widget build(BuildContext context) {
                         _eliminar(c);
                       }
                     },
-                    itemBuilder: (_) => const [
+                    itemBuilder: (_) => [
                       PopupMenuItem(
                         value: 'editar',
                         child: Row(
                           children: [
-                            Icon(Icons.edit, size: 20),
-                            SizedBox(width: 10),
-                            Text('Editar'),
+                            Icon(Icons.edit, size: 20, color: AppColors.granate),
+                            const SizedBox(width: 10),
+                            const Text('Editar'),
                           ],
                         ),
                       ),
@@ -743,11 +678,9 @@ Widget build(BuildContext context) {
                         value: 'eliminar',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline,
-                                size: 20, color: Colors.red),
-                            SizedBox(width: 10),
-                            Text('Eliminar',
-                                style: TextStyle(color: Colors.red)),
+                            const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                            const SizedBox(width: 10),
+                            const Text('Eliminar', style: TextStyle(color: Colors.red)),
                           ],
                         ),
                       ),
@@ -776,26 +709,112 @@ Widget build(BuildContext context) {
                 color: AppColors.granate.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.library_music,
-                  size: 48,
-                  color: AppColors.granate.withOpacity(0.4)),
+              child: Icon(Icons.library_music, size: 64, color: AppColors.granate.withOpacity(0.4)),
             ),
             const SizedBox(height: 20),
-            const Text('Aún no hay canciones',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.granate,
-                    letterSpacing: 0.5)),
+            const Text(
+              'Aún no hay canciones',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.granate, letterSpacing: 0.5),
+            ),
             const SizedBox(height: 8),
             Text(
-              _esAdmin
-                  ? 'Toca el botón + para agregar la primera'
-                  : 'El admin aún no ha subido canciones',
+              _esAdmin ? 'Toca el botón NUEVA para agregar la primera' : 'El admin aún no ha subido canciones',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: onSurface.withOpacity(0.55),
-                  fontSize: 13),
+              style: TextStyle(color: onSurface.withOpacity(0.55), fontSize: 14, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class _LoadingSkeleton extends StatelessWidget {
+  const _LoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.cardColor(context),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(width: 180, height: 16, color: Colors.grey.withOpacity(0.1)),
+                      const SizedBox(height: 6),
+                      Container(width: 120, height: 12, color: Colors.grey.withOpacity(0.1)),
+                      const SizedBox(height: 8),
+                      Container(width: 60, height: 14, color: Colors.grey.withOpacity(0.1)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ErrorWidget extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+
+  const _ErrorWidget({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Error al cargar canciones',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('REINTENTAR'),
             ),
           ],
         ),
