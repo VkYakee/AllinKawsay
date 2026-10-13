@@ -10,20 +10,22 @@ class WatermarkOverlay extends StatelessWidget {
   const WatermarkOverlay({
     super.key,
     required this.child,
-    this.opacity = 0.08,
-    this.logoSize = 100,
+    this.opacity = 0.05,
+    this.logoSize = 150,
     this.rotation = -30,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final adjustedOpacity = isDark ? opacity * 1.8 : opacity;
+    // En modo oscuro el logo tiene fondo blanco y resalta más,
+    // así que bajamos aún más la opacidad.
+    final adjustedOpacity = isDark ? opacity * 0.35 : opacity;
     final screenSize = MediaQuery.of(context).size;
-    
-    // Calcular cuántos logos necesitamos para cubrir la pantalla
+
     final diagonal = math.sqrt(
-      screenSize.width * screenSize.width + screenSize.height * screenSize.height,
+      screenSize.width * screenSize.width +
+          screenSize.height * screenSize.height,
     );
     final logosPerRow = (diagonal / logoSize).ceil() + 2;
     final logosPerColumn = (diagonal / logoSize).ceil() + 2;
@@ -45,17 +47,20 @@ class WatermarkOverlay extends StatelessWidget {
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: logosPerRow,
                       childAspectRatio: 1.0,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 24,
+                      mainAxisSpacing: 24,
                     ),
                     itemCount: logosPerRow * logosPerColumn,
                     itemBuilder: (context, index) {
                       return Opacity(
                         opacity: adjustedOpacity,
-                        child: Image.asset(
-                          'assets/logo.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/logo.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
+                          ),
                         ),
                       );
                     },
