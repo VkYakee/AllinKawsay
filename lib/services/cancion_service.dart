@@ -54,6 +54,7 @@ class CancionService {
     );
   }
 
+  /// Incrementa reproducciones de forma ATÓMICA (evita race conditions).
   Future<void> incrementarReproduccion(String id) async {
     try {
       await _db.collection('canciones').doc(id).update({
@@ -62,29 +63,39 @@ class CancionService {
     } catch (_) {}
   }
 
+  /// Cuenta cuántas canciones subió el usuario.
+  /// Traemos TODAS y filtramos en Dart, porque muchas canciones viejas
+  /// tienen `creadoPor` guardado con distintos formatos o vacío.
   Future<int> contarPorUsuario(String uid) async {
+    if (uid.isEmpty) return 0;
     try {
-      final snap = await _db
-          .collection('canciones')
-          .where('creadoPor', isEqualTo: uid)
-          .count()
-          .get();
-      return snap.count ?? 0;
+      final snap = await _db.collection('canciones').get();
+      int total = 0;
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        final creadoPor = (d['creadoPor'] ?? '').toString().trim();
+        if (creadoPor == uid) total++;
+      }
+      return total;
     } catch (_) {
       return 0;
     }
   }
 
+  /// Suma todas las reproducciones de las canciones subidas por el usuario.
+  /// Mismo criterio que `contarPorUsuario` (filtramos en Dart).
   Future<int> totalReproduccionesDeUsuario(String uid) async {
+    if (uid.isEmpty) return 0;
     try {
-      final snap = await _db
-          .collection('canciones')
-          .where('creadoPor', isEqualTo: uid)
-          .get();
+      final snap = await _db.collection('canciones').get();
       int total = 0;
       for (final doc in snap.docs) {
-        final r = doc.data()['reproducciones'];
-        if (r is int) total += r;
+        final d = doc.data();
+        final creadoPor = (d['creadoPor'] ?? '').toString().trim();
+        if (creadoPor == uid) {
+          final r = d['reproducciones'];
+          if (r is int) total += r;
+        }
       }
       return total;
     } catch (_) {
