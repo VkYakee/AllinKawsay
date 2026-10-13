@@ -107,7 +107,6 @@ Future<void> _guardar() async {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('No hay usuario autenticado');
 
-      // Subir fotos nuevas a Cloudinary
       final fotosSubidas = <String>[];
       for (int i = 0; i < _fotosNuevas.length; i++) {
         setState(() => _progreso = 'Subiendo foto ${i + 1}/${_fotosNuevas.length}...');
@@ -115,7 +114,6 @@ Future<void> _guardar() async {
         fotosSubidas.add(url);
       }
 
-      // Subir videos nuevos a Cloudinary
       final videosSubidos = <String>[];
       for (int i = 0; i < _videosNuevos.length; i++) {
         setState(() => _progreso = 'Subiendo video ${i + 1}/${_videosNuevos.length}...');
@@ -123,7 +121,6 @@ Future<void> _guardar() async {
         videosSubidos.add(url);
       }
 
-      // Combinar URLs existentes + nuevas
       final todasFotos = [..._fotosUrls, ...fotosSubidas];
       final todosVideos = [..._videosUrls, ...videosSubidos];
 
@@ -238,9 +235,15 @@ Future<void> _guardar() async {
                   ),
                   const SizedBox(height: 32),
                   FilledButton.icon(
-                    onPressed: _guardar,
-                    icon: const Icon(Icons.save),
-                    label: Text(_esEdicion ? 'ACTUALIZAR' : 'GUARDAR'),
+                    onPressed: _guardando ? null : _guardar,
+                    icon: _guardando
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.save),
+                    label: Text(_guardando ? 'GUARDANDO...' : (_esEdicion ? 'ACTUALIZAR' : 'GUARDAR')),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: AppColors.granate,
@@ -354,7 +357,6 @@ Widget _pantallaProgreso() {
               children: [
                 for (int i = 0; i < archivosNuevos.length; i++)
                   _previewItem(
-                    index: i,
                     esNuevo: true,
                     esImagen: esImagen,
                     file: archivosNuevos[i],
@@ -362,7 +364,6 @@ Widget _pantallaProgreso() {
                   ),
                 for (int i = 0; i < urlsExistentes.length; i++)
                   _previewItem(
-                    index: i,
                     esNuevo: false,
                     esImagen: esImagen,
                     url: urlsExistentes[i],
@@ -376,7 +377,6 @@ Widget _pantallaProgreso() {
   }
 
   Widget _previewItem({
-    required int index,
     required bool esNuevo,
     required bool esImagen,
     File? file,
