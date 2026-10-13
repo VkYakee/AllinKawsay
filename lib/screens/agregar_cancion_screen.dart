@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,7 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   bool _cargandoCategorias = true;
 
   List<Categoria> _categorias = [];
+  StreamSubscription<List<Categoria>>? _categoriasSub;
 
   @override
   void initState() {
@@ -70,24 +72,26 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
     if (_letras.isEmpty) _letras.add(Letra());
   }
 
-  Future<void> _cargarCategorias() async {
-    try {
-      final stream = CategoriaService().listar();
-      stream.listen((lista) {
+  void _cargarCategorias() {
+    _categoriasSub?.cancel();
+    _categoriasSub = CategoriaService().listar().listen(
+      (lista) {
         if (mounted) {
           setState(() {
             _categorias = lista;
             _cargandoCategorias = false;
           });
         }
-      });
-    } catch (e) {
-      if (mounted) setState(() => _cargandoCategorias = false);
-    }
+      },
+      onError: (_) {
+        if (mounted) setState(() => _cargandoCategorias = false);
+      },
+    );
   }
 
   @override
   void dispose() {
+    _categoriasSub?.cancel();
     _tituloCtrl.dispose();
     _autorCtrl.dispose();
     _ritmoCtrl.dispose();
@@ -100,12 +104,14 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
 
   Future<void> _seleccionarImagen() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final file = await picker.pickImage(
+        source: ImageSource.gallery, imageQuality: 85);
     if (file == null) return;
 
     setState(() => _subiendoImagen = true);
     try {
-      final url = await StorageService().subirFoto(File(file.path), 'imagenes_canciones');
+      final url = await StorageService()
+          .subirFoto(File(file.path), 'imagenes_canciones');
       if (mounted) setState(() => _imagenUrl = url);
     } catch (e) {
       if (mounted) _error('No se pudo subir la imagen: $e');
@@ -115,14 +121,18 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   }
 
   Future<void> _seleccionarAudio() async {
-    final res = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: false);
-    if (res == null || res.files.isEmpty || res.files.single.path == null) return;
-    
+    final res = await FilePicker.platform
+        .pickFiles(type: FileType.audio, allowMultiple: false);
+    if (res == null || res.files.isEmpty || res.files.single.path == null) {
+      return;
+    }
+
     final path = res.files.single.path!;
     setState(() => _subiendoAudio = true);
-    
+
     try {
-      final url = await StorageService().subirAudio(File(path), widget.cancion?.id ?? 'nueva');
+      final url = await StorageService()
+          .subirAudio(File(path), widget.cancion?.id ?? 'nueva');
       if (mounted) {
         setState(() {
           _audioUrl = url;
@@ -145,7 +155,7 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
 
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _error('Debes iniciar sesión para guardar');
@@ -154,8 +164,20 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
 
     setState(() => _guardando = true);
     try {
-      final tags = _tagsCtrl.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+      final tags = _tagsCtrl.text
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
       final letraPlana = _letras.map((l) => l.texto).join('\n\n');
+
+      // En edición conservamos el creador original. En creación, el actual.
+      final esEdicion = widget.cancion != null;
+      final creadoPor =
+          esEdicion ? widget.cancion!.creadoPor : user.uid;
+      final creadorNombre = esEdicion
+          ? widget.cancion!.creadorNombre
+          : (user.displayName ?? user.email ?? 'Usuario');
 
       final cancion = Cancion(
         id: widget.cancion?.id ?? '',
@@ -174,31 +196,16 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
         descripcion: _descripcionCtrl.text.trim(),
         tags: tags,
         categoriaId: _categoriaId,
-        creadoPor: user.uid,
-        creadorNombre: user.displayName ?? user.email ?? 'Usuario',
+        creadoPor: creadoPor,
+        creadorNombre: creadorNombre,
         reproducciones: widget.cancion?.reproducciones ?? 0,
       );
 
-      if (widget.cancion == null) {
-        await CancionService().agregar(cancion);
+      if (esEdicion) {
+        await CancionService()
+            .actualizar(widget.cancion!.id, cancion.toMapEditar());
       } else {
-        final data = {
-          'titulo': cancion.titulo,
-          'autor': cancion.autor,
-          'tipo': cancion.tipo,
-          'ritmo': cancion.ritmo,
-          'region': cancion.region,
-          'estrofas': cancion.estrofas.map((e) => e.toMap()).toList(),
-          'letra': cancion.letra,
-          'letras': cancion.letras.map((l) => l.toMap()).toList(),
-          'imagenUrl': cancion.imagenUrl,
-          'audioUrl': cancion.audioUrl,
-          'videoUrl': cancion.videoUrl,
-          'descripcion': cancion.descripcion,
-          'tags': cancion.tags,
-          'categoriaId': cancion.categoriaId,
-        };
-        await CancionService().actualizar(widget.cancion!.id, data);
+        await CancionService().agregar(cancion);
       }
 
       if (mounted) Navigator.pop(context, true);
@@ -208,7 +215,7 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
       if (mounted) setState(() => _guardando = false);
     }
   }
-@override
+  @override
   Widget build(BuildContext context) {
     final esEdicion = widget.cancion != null;
     final onSurface = Theme.of(context).colorScheme.onSurface;
@@ -220,7 +227,12 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
           if (_guardando)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: AppColors.dorado, strokeWidth: 2)),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                    color: AppColors.dorado, strokeWidth: 2),
+              ),
             )
           else
             IconButton(
@@ -250,16 +262,26 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               const SizedBox(height: 16),
               _selectorTipo(),
               const SizedBox(height: 12),
-              _cargandoCategorias ? const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(color: AppColors.granate, strokeWidth: 2))) : _selectorCategoria(),
+              _cargandoCategorias
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(
+                            color: AppColors.granate, strokeWidth: 2),
+                      ),
+                    )
+                  : _selectorCategoria(),
               const SizedBox(height: 12),
-              _campo(_tagsCtrl, 'Tags', hint: 'ej: huayño, festivo, tradicional'),
+              _campo(_tagsCtrl, 'Tags',
+                  hint: 'ej: huayño, festivo, tradicional'),
             ]),
             const SizedBox(height: 20),
 
             _seccion('NUMEROFONÍA', Icons.grid_on, [
               EditorNumerofonia(
                 estrofas: _numerofoniaEstrofas,
-                onChanged: (v) => setState(() => _numerofoniaEstrofas = v),
+                onChanged: (v) =>
+                    setState(() => _numerofoniaEstrofas = v),
               ),
             ]),
             const SizedBox(height: 20),
@@ -276,10 +298,13 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
                 style: TextStyle(color: onSurface, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Descripción breve de la canción...',
-                  hintStyle: TextStyle(color: onSurface.withOpacity(0.4)),
+                  hintStyle:
+                      TextStyle(color: onSurface.withOpacity(0.4)),
                   filled: true,
                   fillColor: AppColors.granate.withOpacity(0.04),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none),
                   contentPadding: const EdgeInsets.all(14),
                 ),
               ),
@@ -289,11 +314,14 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
             _seccion('AUDIO', Icons.music_note, [_bloqueAudio(onSurface)]),
             const SizedBox(height: 20),
 
-            _seccion('IMAGEN (opcional)', Icons.image, [_bloqueImagen(onSurface)]),
+            _seccion('IMAGEN (opcional)', Icons.image,
+                [_bloqueImagen(onSurface)]),
             const SizedBox(height: 20),
 
-            _seccion('VIDEO YOUTUBE (opcional)', Icons.play_circle_outline, [
-              _campo(_videoCtrl, 'Link de YouTube', hint: 'https://youtube.com/watch?v=...'),
+            _seccion('VIDEO YOUTUBE (opcional)',
+                Icons.play_circle_outline, [
+              _campo(_videoCtrl, 'Link de YouTube',
+                  hint: 'https://youtube.com/watch?v=...'),
             ]),
             const SizedBox(height: 32),
 
@@ -302,14 +330,26 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               height: 56,
               child: FilledButton.icon(
                 onPressed: _guardando ? null : _guardar,
-                icon: _guardando ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppColors.dorado, strokeWidth: 2)) : const Icon(Icons.save, color: AppColors.dorado),
+                icon: _guardando
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: AppColors.dorado, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save, color: AppColors.dorado),
                 label: Text(
                   esEdicion ? 'GUARDAR CAMBIOS' : 'CREAR CANCIÓN',
-                  style: const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.bold, letterSpacing: 2, fontSize: 14),
+                  style: const TextStyle(
+                      color: AppColors.dorado,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      fontSize: 14),
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.granate,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ),
@@ -335,11 +375,19 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: AppColors.granate.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: AppColors.granate.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Icon(icono, color: AppColors.granate, size: 14),
               ),
               const SizedBox(width: 10),
-              Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.granate, fontSize: 12, letterSpacing: 2)),
+              Text(titulo,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.granate,
+                      fontSize: 12,
+                      letterSpacing: 2)),
             ],
           ),
           const SizedBox(height: 14),
@@ -349,21 +397,28 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
     );
   }
 
-  Widget _campo(TextEditingController ctrl, String label, {String? hint, bool obligatorio = false}) {
+  Widget _campo(TextEditingController ctrl, String label,
+      {String? hint, bool obligatorio = false}) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     return TextFormField(
       controller: ctrl,
       style: TextStyle(color: onSurface, fontSize: 14),
-      validator: obligatorio ? (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null : null,
+      validator: obligatorio
+          ? (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null
+          : null,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: TextStyle(color: AppColors.granate, fontSize: 13),
-        hintStyle: TextStyle(color: onSurface.withOpacity(0.4), fontSize: 13),
+        labelStyle: const TextStyle(color: AppColors.granate, fontSize: 13),
+        hintStyle:
+            TextStyle(color: onSurface.withOpacity(0.4), fontSize: 13),
         filled: true,
         fillColor: AppColors.granate.withOpacity(0.04),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
     );
   }
@@ -371,7 +426,10 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   Widget _selectorTipo() {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: AppColors.granate.withOpacity(0.04), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: AppColors.granate.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Row(
         children: [
           Expanded(
@@ -380,10 +438,22 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _tipo == 'original' ? AppColors.granate : Colors.transparent,
+                  color: _tipo == 'original'
+                      ? AppColors.granate
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text('ORIGINAL', textAlign: TextAlign.center, style: TextStyle(color: _tipo == 'original' ? AppColors.dorado : AppColors.granate, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1)),
+                child: Text(
+                  'ORIGINAL',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: _tipo == 'original'
+                          ? AppColors.dorado
+                          : AppColors.granate,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      letterSpacing: 1),
+                ),
               ),
             ),
           ),
@@ -394,10 +464,22 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _tipo == 'adaptacion' ? AppColors.granate : Colors.transparent,
+                  color: _tipo == 'adaptacion'
+                      ? AppColors.granate
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text('ADAPTACIÓN', textAlign: TextAlign.center, style: TextStyle(color: _tipo == 'adaptacion' ? AppColors.dorado : AppColors.granate, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1)),
+                child: Text(
+                  'ADAPTACIÓN',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: _tipo == 'adaptacion'
+                          ? AppColors.dorado
+                          : AppColors.granate,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      letterSpacing: 1),
+                ),
               ),
             ),
           ),
@@ -409,21 +491,32 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   Widget _selectorCategoria() {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     return DropdownButtonFormField<String>(
-      value: _categorias.any((c) => c.id == _categoriaId) ? _categoriaId : null,
+      value: _categorias.any((c) => c.id == _categoriaId)
+          ? _categoriaId
+          : null,
       isExpanded: true,
       dropdownColor: AppColors.cardColor(context),
       style: TextStyle(color: onSurface, fontSize: 14),
       decoration: InputDecoration(
         labelText: 'Categoría',
-        labelStyle: TextStyle(color: AppColors.granate, fontSize: 13),
+        labelStyle: const TextStyle(color: AppColors.granate, fontSize: 13),
         filled: true,
         fillColor: AppColors.granate.withOpacity(0.04),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<String>(value: '', child: Text('Sin categoría', style: TextStyle(fontStyle: FontStyle.italic))),
-        ..._categorias.map((c) => DropdownMenuItem<String>(value: c.id, child: Text('${c.emoji} ${c.nombre}'))),
+        const DropdownMenuItem<String>(
+          value: '',
+          child: Text('Sin categoría', style: TextStyle(fontStyle: FontStyle.italic)),
+        ),
+        ..._categorias.map((c) => DropdownMenuItem<String>(
+              value: c.id,
+              child: Text('${c.emoji} ${c.nombre}'),
+            )),
       ],
       onChanged: (v) => setState(() => _categoriaId = v ?? ''),
     );
@@ -436,21 +529,51 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
         if (_audioUrl != null) ...[
           Container(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: AppColors.dorado.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.dorado.withOpacity(0.4))),
+            decoration: BoxDecoration(
+              color: AppColors.dorado.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+              border:
+                  Border.all(color: AppColors.dorado.withOpacity(0.4)),
+            ),
             child: Row(
               children: [
-                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.granate, borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.audiotrack, color: AppColors.dorado, size: 18)),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: AppColors.granate,
+                      borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.audiotrack,
+                      color: AppColors.dorado, size: 18),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Audio cargado', style: TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
-                      if (_audioNombre != null) Text(_audioNombre!, style: TextStyle(color: onSurface.withOpacity(0.7), fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const Text('Audio cargado',
+                          style: TextStyle(
+                              color: AppColors.granate,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              letterSpacing: 1)),
+                      if (_audioNombre != null)
+                        Text(_audioNombre!,
+                            style: TextStyle(
+                                color: onSurface.withOpacity(0.7),
+                                fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.close, color: AppColors.granate, size: 20), onPressed: () => setState(() { _audioUrl = null; _audioNombre = null; })),
+                IconButton(
+                  icon: const Icon(Icons.close,
+                      color: AppColors.granate, size: 20),
+                  onPressed: () => setState(() {
+                    _audioUrl = null;
+                    _audioNombre = null;
+                  }),
+                ),
               ],
             ),
           ),
@@ -460,9 +583,28 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
             height: 48,
             child: OutlinedButton.icon(
               onPressed: _subiendoAudio ? null : _seleccionarAudio,
-              icon: _subiendoAudio ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: AppColors.granate, strokeWidth: 2)) : const Icon(Icons.upload_file, color: AppColors.granate),
-              label: Text(_subiendoAudio ? 'SUBIENDO...' : 'SUBIR AUDIO (MP3)', style: const TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 11)),
-              style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.granate.withOpacity(0.5)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              icon: _subiendoAudio
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          color: AppColors.granate, strokeWidth: 2))
+                  : const Icon(Icons.upload_file,
+                      color: AppColors.granate),
+              label: Text(
+                _subiendoAudio ? 'SUBIENDO...' : 'SUBIR AUDIO (MP3)',
+                style: const TextStyle(
+                    color: AppColors.granate,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    fontSize: 11),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                    color: AppColors.granate.withOpacity(0.5)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
             ),
           ),
         ],
@@ -479,13 +621,30 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-                child: Image.network(_imagenUrl!, width: double.infinity, height: 180, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(height: 180, color: AppColors.granate.withOpacity(0.1), child: const Icon(Icons.broken_image, color: AppColors.granate, size: 48))),
+                child: Image.network(
+                  _imagenUrl!,
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 180,
+                    color: AppColors.granate.withOpacity(0.1),
+                    child: const Icon(Icons.broken_image,
+                        color: AppColors.granate, size: 48),
+                  ),
+                ),
               ),
               Positioned(
-                top: 8, right: 8,
+                top: 8,
+                right: 8,
                 child: Container(
-                  decoration: BoxDecoration(color: AppColors.granate, shape: BoxShape.circle),
-                  child: IconButton(icon: const Icon(Icons.close, color: AppColors.dorado, size: 18), onPressed: () => setState(() => _imagenUrl = null)),
+                  decoration: const BoxDecoration(
+                      color: AppColors.granate, shape: BoxShape.circle),
+                  child: IconButton(
+                    icon: const Icon(Icons.close,
+                        color: AppColors.dorado, size: 18),
+                    onPressed: () => setState(() => _imagenUrl = null),
+                  ),
                 ),
               ),
             ],
@@ -497,9 +656,32 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
           height: 48,
           child: OutlinedButton.icon(
             onPressed: _subiendoImagen ? null : _seleccionarImagen,
-            icon: _subiendoImagen ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: AppColors.granate, strokeWidth: 2)) : const Icon(Icons.add_photo_alternate_outlined, color: AppColors.granate),
-            label: Text(_subiendoImagen ? 'SUBIENDO...' : (_imagenUrl != null ? 'CAMBIAR IMAGEN' : 'AGREGAR IMAGEN (opcional)'), style: const TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 11)),
-            style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.granate.withOpacity(0.5)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+            icon: _subiendoImagen
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        color: AppColors.granate, strokeWidth: 2))
+                : const Icon(Icons.add_photo_alternate_outlined,
+                    color: AppColors.granate),
+            label: Text(
+              _subiendoImagen
+                  ? 'SUBIENDO...'
+                  : (_imagenUrl != null
+                      ? 'CAMBIAR IMAGEN'
+                      : 'AGREGAR IMAGEN (opcional)'),
+              style: const TextStyle(
+                  color: AppColors.granate,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  fontSize: 11),
+            ),
+            style: OutlinedButton.styleFrom(
+              side:
+                  BorderSide(color: AppColors.granate.withOpacity(0.5)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
           ),
         ),
       ],
