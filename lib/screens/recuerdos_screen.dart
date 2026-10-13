@@ -167,7 +167,15 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
                         ),
                       );
                     },
-                    child: _tarjetaRecuerdo(context, lista[i], esAdmin, onSurface),
+                    child: _TarjetaRecuerdo(
+                      parentContext: context,
+                      r: lista[i],
+                      esAdmin: esAdmin,
+                      onSurface: onSurface,
+                      onVerDetalle: _verDetalle,
+                      onEditar: _editar,
+                      onEliminar: _eliminar,
+                    ),
                   );
                 },
               );
