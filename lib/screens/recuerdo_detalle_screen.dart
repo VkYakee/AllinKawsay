@@ -4,9 +4,9 @@ import '../models/usuario.dart';
 import '../services/usuario_service.dart';
 import '../theme/colors.dart';
 import '../widgets/watermark_overlay.dart';
+import '../widgets/recuerdo/galeria_fotos.dart';
 import '../widgets/recuerdo/hero_titulo.dart';
 import '../widgets/recuerdo/video_player_card.dart';
-import '../widgets/recuerdo/galeria_fotos.dart';
 
 class RecuerdoDetalleScreen extends StatefulWidget {
   final Recuerdo recuerdo;
@@ -31,7 +31,9 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
   }
 
   Future<void> _editarNota() async {
-    final ctrl = TextEditingController(text: _usuario?.notaRecuerdo(widget.recuerdo.id) ?? '');
+    final ctrl = TextEditingController(
+      text: _usuario?.notaRecuerdo(widget.recuerdo.id) ?? '',
+    );
     
     final ok = await showDialog<bool>(
       context: context,
@@ -41,22 +43,29 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
           controller: ctrl,
           maxLines: 5,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Ej: yo estoy en la tercera foto...'),
+          decoration: const InputDecoration(
+            hintText: 'Ej: yo estoy en la tercera foto, qué lindo día...',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Guardar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Guardar'),
+          ),
         ],
       ),
     );
-
+    
     if (ok == true) {
       await UsuarioService().guardarNotaRecuerdo(widget.recuerdo.id, ctrl.text);
       await _cargarUsuario();
     }
   }
-
-  @override
+@override
   Widget build(BuildContext context) {
     final r = widget.recuerdo;
     final puedeDescargar = _usuario?.puedeDescargar ?? false;
@@ -86,13 +95,24 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
             const SizedBox(height: 20),
             
             if (r.descripcion.isNotEmpty) ...[
-              _seccionCard(Icons.notes, 'DESCRIPCIÓN', Text(r.descripcion, style: TextStyle(fontSize: 15, height: 1.6, color: onSurface))),
+              _seccionCard(
+                context,
+                icono: Icons.notes,
+                titulo: 'DESCRIPCIÓN',
+                child: Text(
+                  r.descripcion,
+                  style: TextStyle(fontSize: 15, height: 1.6, color: onSurface),
+                ),
+              ),
               const SizedBox(height: 16),
             ],
 
             if (r.tieneVideos) ...[
-              _seccionCard(Icons.video_library, 'VIDEOS (${r.videos.length})', 
-                Column(
+              _seccionCard(
+                context,
+                icono: Icons.video_library,
+                titulo: 'VIDEOS (${r.videos.length})',
+                child: Column(
                   children: [
                     for (int i = 0; i < r.videos.length; i++) ...[
                       VideoPlayerCard(url: r.videos[i], index: i),
@@ -105,8 +125,11 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
             ],
 
             if (r.tieneFotos) ...[
-              _seccionCard(Icons.photo_library, 'FOTOS (${r.fotos.length})', 
-                GaleriaFotos(
+              _seccionCard(
+                context,
+                icono: Icons.photo_library,
+                titulo: 'FOTOS (${r.fotos.length})',
+                child: GaleriaFotos(
                   fotos: r.fotos,
                   tituloRecuerdo: r.titulo,
                   puedeDescargar: puedeDescargar,
@@ -116,7 +139,7 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
             ],
 
             if (nota.isNotEmpty) ...[
-              _notaPersonalCard(nota, onSurface),
+              _notaPersonalCard(context, nota, onSurface),
               const SizedBox(height: 16),
             ],
             const SizedBox(height: 16),
@@ -125,8 +148,12 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
       ),
     );
   }
-
-  Widget _seccionCard(IconData icono, String titulo, Widget child) {
+Widget _seccionCard(
+    BuildContext context, {
+    required IconData icono,
+    required String titulo,
+    required Widget child,
+  }) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -148,7 +175,15 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
                 child: Icon(icono, color: AppColors.granate, size: 14),
               ),
               const SizedBox(width: 10),
-              Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.granate, fontSize: 13, letterSpacing: 2)),
+              Text(
+                titulo,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.granate,
+                  fontSize: 13,
+                  letterSpacing: 2,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -158,11 +193,16 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
     );
   }
 
-  Widget _notaPersonalCard(String nota, Color onSurface) {
+  Widget _notaPersonalCard(BuildContext context, String nota, Color onSurface) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.dorado.withOpacity(0.1), AppColors.dorado.withOpacity(0.05)]),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.dorado.withOpacity(0.1),
+            AppColors.dorado.withOpacity(0.05),
+          ],
+        ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
       ),
@@ -171,7 +211,10 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: AppColors.dorado.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: AppColors.dorado.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: const Icon(Icons.sticky_note_2, color: AppColors.granate, size: 14),
           ),
           const SizedBox(width: 10),
@@ -179,9 +222,25 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Mi nota personal', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.granate, fontSize: 13, letterSpacing: 1)),
+                const Text(
+                  'Mi nota personal',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.granate,
+                    fontSize: 13,
+                    letterSpacing: 1,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(nota, style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: onSurface, height: 1.5)),
+                Text(
+                  nota,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: onSurface,
+                    height: 1.5,
+                  ),
+                ),
               ],
             ),
           ),
