@@ -107,14 +107,21 @@ jobs:
           cat lib/version_build.dart
 
       - name: Leer versión de version.dart
-        id: version
-        run: |
-          MAJOR=$(grep "static const String major" lib/version.dart | grep -oP "'\K[^']+")
-          MINOR=$(grep "static const String minor" lib/version.dart | grep -oP "'\K[^']+")
-          PATCH=$(grep "static const String patch" lib/version.dart | grep -oP "'\K[^']+")
-          VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "📦 Versión base detectada: $VERSION"
+  id: version
+  run: |
+    MAJOR=$(awk -F"'" '/static const String major/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+    MINOR=$(awk -F"'" '/static const String minor/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+    PATCH=$(awk -F"'" '/static const String patch/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+
+    if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ]; then
+      echo "❌ No se pudieron leer las versiones. Revisá lib/version.dart"
+      echo "MAJOR='$MAJOR' MINOR='$MINOR' PATCH='$PATCH'"
+      exit 1
+    fi
+
+    VERSION="${MAJOR}.${MINOR}.${PATCH}"
+    echo "📦 Versión base detectada: $VERSION"
+    echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Get dependencies
         run: flutter pub get
