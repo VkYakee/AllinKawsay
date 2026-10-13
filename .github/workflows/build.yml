@@ -64,6 +64,19 @@ jobs:
             echo "✅ MainActivity custom copiado"
           fi
 
+      - name: Mostrar SHA-1 del keystore (para Firebase)
+        run: |
+          if [ -f "android_config/sikuris.keystore" ]; then
+            echo "═══════════════════════════════════════════════════════"
+            echo "  SHA-1 (pegar en Firebase Console → Project Settings)"
+            echo "═══════════════════════════════════════════════════════"
+            keytool -list -v \
+              -keystore android_config/sikuris.keystore \
+              -alias sikuris \
+              -storepass sikuris2026 2>/dev/null | grep -E "SHA1:|SHA-1:" || echo "⚠️ No se pudo leer SHA-1"
+            echo "═══════════════════════════════════════════════════════"
+          fi
+
       - name: Configurar keystore de release
         run: |
           if [ -f "android_config/sikuris.keystore" ]; then
