@@ -3,17 +3,19 @@ import '../models/recuerdo.dart';
 import '../models/usuario.dart';
 import '../services/usuario_service.dart';
 import '../theme/colors.dart';
-import '../widgets/watermark_overlay.dart';
+import '../widgets/comunes/seccion_card.dart';
 import '../widgets/recuerdo/galeria_fotos.dart';
 import '../widgets/recuerdo/hero_titulo.dart';
 import '../widgets/recuerdo/video_player_card.dart';
+import '../widgets/watermark_overlay.dart';
 
 class RecuerdoDetalleScreen extends StatefulWidget {
   final Recuerdo recuerdo;
   const RecuerdoDetalleScreen({super.key, required this.recuerdo});
 
   @override
-  State<RecuerdoDetalleScreen> createState() => _RecuerdoDetalleScreenState();
+  State<RecuerdoDetalleScreen> createState() =>
+      _RecuerdoDetalleScreenState();
 }
 
 class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
@@ -34,7 +36,7 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
     final ctrl = TextEditingController(
       text: _usuario?.notaRecuerdo(widget.recuerdo.id) ?? '',
     );
-    
+
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -59,141 +61,99 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
         ],
       ),
     );
-    
+
     if (ok == true) {
-      await UsuarioService().guardarNotaRecuerdo(widget.recuerdo.id, ctrl.text);
+      await UsuarioService()
+          .guardarNotaRecuerdo(widget.recuerdo.id, ctrl.text);
       await _cargarUsuario();
     }
   }
 @override
-  Widget build(BuildContext context) {
-    final r = widget.recuerdo;
-    final puedeDescargar = _usuario?.puedeDescargar ?? false;
-    final nota = _usuario?.notaRecuerdo(r.id) ?? '';
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+Widget build(BuildContext context) {
+  final r = widget.recuerdo;
+  final puedeDescargar = _usuario?.puedeDescargar ?? false;
+  final nota = _usuario?.notaRecuerdo(r.id) ?? '';
+  final onSurface = Theme.of(context).colorScheme.onSurface;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(r.titulo),
-        actions: [
-          IconButton(
-            icon: Icon(
-              nota.isEmpty ? Icons.sticky_note_2_outlined : Icons.sticky_note_2,
-              color: nota.isEmpty ? null : AppColors.dorado,
-            ),
-            tooltip: 'Mi nota',
-            onPressed: _editarNota,
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(r.titulo),
+      actions: [
+        IconButton(
+          icon: Icon(
+            nota.isEmpty
+                ? Icons.sticky_note_2_outlined
+                : Icons.sticky_note_2,
+            color: nota.isEmpty ? null : AppColors.dorado,
           ),
-        ],
-      ),
-      body: WatermarkOverlay(
-        opacity: 0.04,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            HeroTitulo(recuerdo: r, onSurface: onSurface),
-            const SizedBox(height: 20),
-            
-            if (r.descripcion.isNotEmpty) ...[
-              _seccionCard(
-                context,
-                icono: Icons.notes,
-                titulo: 'DESCRIPCIÓN',
-                child: Text(
-                  r.descripcion,
-                  style: TextStyle(fontSize: 15, height: 1.6, color: onSurface),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+          tooltip: 'Mi nota',
+          onPressed: _editarNota,
+        ),
+      ],
+    ),
+    body: WatermarkOverlay(
+      opacity: 0.04,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          HeroTitulo(recuerdo: r, onSurface: onSurface),
+          const SizedBox(height: 20),
 
-            if (r.tieneVideos) ...[
-              _seccionCard(
-                context,
-                icono: Icons.video_library,
-                titulo: 'VIDEOS (${r.videos.length})',
-                child: Column(
-                  children: [
-                    for (int i = 0; i < r.videos.length; i++) ...[
-                      VideoPlayerCard(url: r.videos[i], index: i),
-                      if (i < r.videos.length - 1) const SizedBox(height: 12),
-                    ],
-                  ],
-                ),
+          if (r.descripcion.isNotEmpty) ...[
+            SeccionCard(
+              icono: Icons.notes,
+              titulo: 'DESCRIPCIÓN',
+              child: Text(
+                r.descripcion,
+                style: TextStyle(
+                    fontSize: 15, height: 1.6, color: onSurface),
               ),
-              const SizedBox(height: 16),
-            ],
-
-            if (r.tieneFotos) ...[
-              _seccionCard(
-                context,
-                icono: Icons.photo_library,
-                titulo: 'FOTOS (${r.fotos.length})',
-                child: GaleriaFotos(
-                  fotos: r.fotos,
-                  tituloRecuerdo: r.titulo,
-                  puedeDescargar: puedeDescargar,
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            if (nota.isNotEmpty) ...[
-              _notaPersonalCard(context, nota, onSurface),
-              const SizedBox(height: 16),
-            ],
+            ),
             const SizedBox(height: 16),
           ],
-        ),
-      ),
-    );
-  }
-Widget _seccionCard(
-    BuildContext context, {
-    required IconData icono,
-    required String titulo,
-    required Widget child,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.granate.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icono, color: AppColors.granate, size: 14),
+
+          if (r.tieneVideos) ...[
+            SeccionCard(
+              icono: Icons.video_library,
+              titulo: 'VIDEOS (${r.videos.length})',
+              child: Column(
+                children: [
+                  for (int i = 0; i < r.videos.length; i++) ...[
+                    VideoPlayerCard(url: r.videos[i], index: i),
+                    if (i < r.videos.length - 1)
+                      const SizedBox(height: 12),
+                  ],
+                ],
               ),
-              const SizedBox(width: 10),
-              Text(
-                titulo,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.granate,
-                  fontSize: 13,
-                  letterSpacing: 2,
-                ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (r.tieneFotos) ...[
+            SeccionCard(
+              icono: Icons.photo_library,
+              titulo: 'FOTOS (${r.fotos.length})',
+              child: GaleriaFotos(
+                fotos: r.fotos,
+                tituloRecuerdo: r.titulo,
+                puedeDescargar: puedeDescargar,
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (nota.isNotEmpty) ...[
+            _notaPersonalCard(context, nota, onSurface),
+            const SizedBox(height: 16),
+          ],
+          const SizedBox(height: 16),
         ],
       ),
-    );
-  }
-
-  Widget _notaPersonalCard(BuildContext context, String nota, Color onSurface) {
+    ),
+  );
+}
+  Widget _notaPersonalCard(
+      BuildContext context, String nota, Color onSurface) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -215,7 +175,8 @@ Widget _seccionCard(
               color: AppColors.dorado.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.sticky_note_2, color: AppColors.granate, size: 14),
+            child: const Icon(Icons.sticky_note_2,
+                color: AppColors.granate, size: 14),
           ),
           const SizedBox(width: 10),
           Expanded(
