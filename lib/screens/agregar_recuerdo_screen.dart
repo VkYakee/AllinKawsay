@@ -1,9 +1,8 @@
 import 'dart:io';
-
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
 import '../models/recuerdo.dart';
 import '../services/recuerdo_service.dart';
 import '../services/storage_service.dart';
@@ -11,7 +10,6 @@ import '../theme/colors.dart';
 
 class AgregarRecuerdoScreen extends StatefulWidget {
   final Recuerdo? recuerdo;
-
   const AgregarRecuerdoScreen({super.key, this.recuerdo});
 
   @override
@@ -19,609 +17,429 @@ class AgregarRecuerdoScreen extends StatefulWidget {
 }
 
 class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
-  final _titulo = TextEditingController();
-  final _descripcion = TextEditingController();
-
-  final List<File> _fotosNuevas = [];
-  final List<String> _fotosExistentes = [];
-
-  final List<File> _videosNuevos = [];
-  final List<String> _videosExistentes = [];
-
+  final _formKey = GlobalKey<FormState>();
+  final _tituloCtrl = TextEditingController();
+  final _descripcionCtrl = TextEditingController();
+  final _service = RecuerdoService();
+  final _storage = StorageService();
+  
+  List<String> _fotosUrls = [];
+  List<String> _videosUrls = [];
+  List<File> _fotosNuevas = [];
+  List<File> _videosNuevos = [];
   bool _guardando = false;
-  String _estado = '';
-
+  String _progreso = '';
   bool get _esEdicion => widget.recuerdo != null;
 
   @override
   void initState() {
     super.initState();
     if (_esEdicion) {
-      final r = widget.recuerdo!;
-      _titulo.text = r.titulo;
-      _descripcion.text = r.descripcion;
-      _fotosExistentes.addAll(r.fotos);
-      _videosExistentes.addAll(r.videos);
+      _tituloCtrl.text = widget.recuerdo!.titulo;
+      _descripcionCtrl.text = widget.recuerdo!.descripcion;
+      _fotosUrls = List.from(widget.recuerdo!.fotos);
+      _videosUrls = List.from(widget.recuerdo!.videos);
     }
   }
 
   @override
   void dispose() {
-    _titulo.dispose();
-    _descripcion.dispose();
+    _tituloCtrl.dispose();
+    _descripcionCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _elegirFotos() async {
+  Future<void> _agregarFoto() async {
     final picker = ImagePicker();
-    final lista = await picker.pickMultiImage(imageQuality: 70);
-    if (lista.isNotEmpty) {
+    final imagen = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1080,
+      imageQuality: 85,
+    );
+    if (imagen != null) {
       setState(() {
-        _fotosNuevas.addAll(lista.map((x) => File(x.path)));
+        _fotosNuevas.add(File(imagen.path));
       });
     }
   }
 
-  Future<void> _tomarFoto() async {
-    final picker = ImagePicker();
-    final foto = await picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 70,
+  Future<void> _agregarVideo() async {
+    final resultado = await FilePicker.platform.pickFiles(
+      type: FileType.video,
+      allowMultiple: false,
     );
-    if (foto != null) {
-      setState(() => _fotosNuevas.add(File(foto.path)));
-    }
-  }
-
-  Future<void> _elegirVideos() async {
-    final picker = ImagePicker();
-    final lista = await picker.pickMultipleMedia();
-    final videos = lista.where((x) => x.path.toLowerCase().endsWith('.mp4') ||
-        x.path.toLowerCase().endsWith('.mov') ||
-        x.path.toLowerCase().endsWith('.avi'));
-    if (videos.isNotEmpty) {
+    if (resultado != null && resultado.files.isNotEmpty) {
       setState(() {
-        _videosNuevos.addAll(videos.map((x) => File(x.path)));
+        _videosNuevos.add(File(resultado.files.first.path!));
       });
     }
   }
 
-  Future<void> _grabarVideo() async {
-    final picker = ImagePicker();
-    final video = await picker.pickVideo(
-      source: ImageSource.camera,
-      maxDuration: const Duration(minutes: 5),
-    );
-    if (video != null) {
-      setState(() => _videosNuevos.add(File(video.path)));
-    }
+  void _eliminarFoto(int index, bool esNueva) {
+    setState(() {
+      if (esNueva) {
+        _fotosNuevas.removeAt(index);
+      } else {
+        _fotosUrls.removeAt(index - _fotosNuevas.length);
+      }
+    });
   }
-  Future<void> _guardar() async {
-    if (_titulo.text.trim().isEmpty) {
-      _snack('El título es obligatorio');
-      return;
-    }
 
-    if (_fotosExistentes.isEmpty &&
-        _fotosNuevas.isEmpty &&
-        _videosExistentes.isEmpty &&
-        _videosNuevos.isEmpty) {
-      _snack('Agrega al menos una foto o video');
-      return;
-    }
+  void _eliminarVideo(int index, bool esNuevo) {
+    setState(() {
+      if (esNuevo) {
+        _videosNuevos.removeAt(index);
+      } else {
+        _videosUrls.removeAt(index - _videosNuevos.length);
+      }
+    });
+  }
+Future<void> _guardar() async {
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _guardando = true;
-      _estado = 'Subiendo archivos...';
+      _progreso = 'Subiendo archivos...';
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      final storage = StorageService();
-      final service = RecuerdoService();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No hay usuario autenticado');
 
-      final urlsFotos = <String>[..._fotosExistentes];
-      final urlsVideos = <String>[..._videosExistentes];
-
-      final carpeta = 'recuerdos/${DateTime.now().millisecondsSinceEpoch}';
-
-      // Subir fotos
+      // Subir fotos nuevas a Cloudinary
+      final fotosSubidas = <String>[];
       for (int i = 0; i < _fotosNuevas.length; i++) {
-        setState(() =>
-            _estado = 'Subiendo foto ${i + 1} de ${_fotosNuevas.length}...');
-        final url = await storage.subirFoto(_fotosNuevas[i], carpeta);
-        urlsFotos.add(url);
+        setState(() => _progreso = 'Subiendo foto ${i + 1}/${_fotosNuevas.length}...');
+        final url = await _storage.subirFoto(_fotosNuevas[i], 'recuerdos');
+        fotosSubidas.add(url);
       }
 
-      // Subir videos
+      // Subir videos nuevos a Cloudinary
+      final videosSubidos = <String>[];
       for (int i = 0; i < _videosNuevos.length; i++) {
-        setState(() =>
-            _estado = 'Subiendo video ${i + 1} de ${_videosNuevos.length}...');
-        final url = await storage.subirFoto(_videosNuevos[i], carpeta);
-        urlsVideos.add(url);
+        setState(() => _progreso = 'Subiendo video ${i + 1}/${_videosNuevos.length}...');
+        final url = await _storage.subirVideo(_videosNuevos[i], 'recuerdos');
+        videosSubidos.add(url);
       }
 
-      setState(() => _estado = 'Guardando...');
+      // Combinar URLs existentes + nuevas
+      final todasFotos = [..._fotosUrls, ...fotosSubidas];
+      final todosVideos = [..._videosUrls, ...videosSubidos];
+
+      setState(() => _progreso = 'Guardando en base de datos...');
+
+      final nuevoRecuerdo = Recuerdo(
+        id: _esEdicion ? widget.recuerdo!.id : '',
+        titulo: _tituloCtrl.text.trim(),
+        descripcion: _descripcionCtrl.text.trim(),
+        fotos: todasFotos,
+        videos: todosVideos,
+        fecha: _esEdicion ? widget.recuerdo!.fecha : null,
+        fechaCreacion: _esEdicion ? widget.recuerdo!.fechaCreacion : null,
+        creadoPor: user.uid,
+        creadorNombre: user.displayName ?? 'Usuario',
+      );
 
       if (_esEdicion) {
-        await service.actualizar(widget.recuerdo!.id, {
-          'titulo': _titulo.text.trim(),
-          'descripcion': _descripcion.text.trim(),
-          'fotos': urlsFotos,
-          'videos': urlsVideos,
-        });
+        await _service.actualizar(widget.recuerdo!.id, nuevoRecuerdo);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Recuerdo actualizado correctamente'),
+              backgroundColor: AppColors.dorado,
+            ),
+          );
+        }
       } else {
-        await service.agregar(Recuerdo(
-          id: '',
-          titulo: _titulo.text.trim(),
-          descripcion: _descripcion.text.trim(),
-          fotos: urlsFotos,
-          videos: urlsVideos,
-          creadoPor: user.uid,
-          creadorNombre: user.displayName ?? user.email ?? 'Anónimo',
-        ));
+        await _service.agregar(nuevoRecuerdo);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Recuerdo creado correctamente'),
+              backgroundColor: AppColors.dorado,
+            ),
+          );
+        }
       }
 
-      if (mounted) {
-        _snack(_esEdicion
-            ? '¡Recuerdo actualizado!'
-            : '¡Recuerdo guardado!');
-        Navigator.pop(context);
-      }
+      if (mounted) Navigator.pop(context);
     } catch (e) {
-      _snack('Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      if (mounted) setState(() => _guardando = false);
+      if (mounted) {
+        setState(() {
+          _guardando = false;
+          _progreso = '';
+        });
+      }
     }
   }
-
-  void _snack(String m) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-  }
-  @override
+@override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final totalFotos = _fotosExistentes.length + _fotosNuevas.length;
-    final totalVideos = _videosExistentes.length + _videosNuevos.length;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(_esEdicion ? 'EDITAR RECUERDO' : 'AGREGAR RECUERDO'),
+        title: Text(_esEdicion ? 'EDITAR RECUERDO' : 'NUEVO RECUERDO'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          _header(onSurface, _esEdicion),
-          const SizedBox(height: 20),
-
-          _seccion(Icons.info_outline, 'INFORMACIÓN'),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _titulo,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Título *',
-              prefixIcon: Icon(Icons.title),
-              hintText: 'Ej: Viaje a Puno 2024',
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _descripcion,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Descripción',
-              prefixIcon: Icon(Icons.notes),
-              alignLabelWithHint: true,
-              hintText: 'Qué pasó, quiénes fueron, anécdotas...',
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // FOTOS
-          Row(
-            children: [
-              _seccion(Icons.photo_library, 'FOTOS'),
-              const Spacer(),
-              if (totalFotos > 0)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.granate.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '$totalFotos foto${totalFotos > 1 ? "s" : ""}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.granate,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _botonMedia(
-                  Icons.photo_library_outlined,
-                  'Galería',
-                  _guardando ? null : _elegirFotos,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _botonMedia(
-                  Icons.camera_alt_outlined,
-                  'Cámara',
-                  _guardando ? null : _tomarFoto,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (totalFotos > 0)
-            SizedBox(
-              height: 120,
+      body: _guardando
+          ? _pantallaProgreso()
+          : Form(
+              key: _formKey,
               child: ListView(
-                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.all(16),
                 children: [
-                  for (int i = 0; i < _fotosExistentes.length; i++)
-                    _previewMedia(
-                      onDelete: () =>
-                          setState(() => _fotosExistentes.removeAt(i)),
-                      child: Image.network(
-                        _fotosExistentes[i],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: AppColors.grisClaro,
-                          child: const Icon(Icons.broken_image,
-                              color: AppColors.granate),
-                        ),
-                      ),
+                  TextFormField(
+                    controller: _tituloCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Título *',
+                      hintText: 'Ej: Fiesta patronal 2024',
+                      prefixIcon: Icon(Icons.title),
+                      border: OutlineInputBorder(),
                     ),
-                  for (int i = 0; i < _fotosNuevas.length; i++)
-                    _previewMedia(
-                      onDelete: () => setState(() => _fotosNuevas.removeAt(i)),
-                      child: Image.file(
-                        _fotosNuevas[i],
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                ],
-              ),
-            )
-          else
-            _emptyMedia('Sin fotos aún', Icons.photo_library_outlined, onSurface),
-          const SizedBox(height: 24),
-
-          // VIDEOS
-          Row(
-            children: [
-              _seccion(Icons.video_library, 'VIDEOS'),
-              const Spacer(),
-              if (totalVideos > 0)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.granate.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    validator: (v) => v == null || v.trim().isEmpty ? 'El título es obligatorio' : null,
                   ),
-                  child: Text(
-                    '$totalVideos video${totalVideos > 1 ? "s" : ""}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.granate,
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _descripcionCtrl,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Descripción',
+                      hintText: 'Cuenta la historia detrás de este recuerdo...',
+                      prefixIcon: Icon(Icons.description),
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _botonMedia(
-                  Icons.video_library_outlined,
-                  'Galería',
-                  _guardando ? null : _elegirVideos,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _botonMedia(
-                  Icons.videocam_outlined,
-                  'Grabar',
-                  _guardando ? null : _grabarVideo,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (totalVideos > 0)
-            SizedBox(
-              height: 120,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (int i = 0; i < _videosExistentes.length; i++)
-                    _previewMedia(
-                      onDelete: () =>
-                          setState(() => _videosExistentes.removeAt(i)),
-                      child: Container(
-                        color: Colors.black87,
-                        child: const Center(
-                          child: Icon(Icons.videocam,
-                              color: AppColors.dorado, size: 32),
-                        ),
-                      ),
-                    ),
-                  for (int i = 0; i < _videosNuevos.length; i++)
-                    _previewMedia(
-                      onDelete: () => setState(() => _videosNuevos.removeAt(i)),
-                      child: Container(
-                        color: Colors.black87,
-                        child: const Center(
-                          child: Icon(Icons.videocam,
-                              color: AppColors.dorado, size: 32),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            )
-          else
-            _emptyMedia(
-                'Sin videos aún', Icons.video_library_outlined, onSurface),
-          const SizedBox(height: 32),
-          if (_guardando)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.granate.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(16),
-                border:
-                    Border.all(color: AppColors.granate.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: AppColors.granate,
-                      strokeWidth: 2.5,
-                    ),
+                  const SizedBox(height: 24),
+                  _seccionMultimedia(
+                    titulo: 'FOTOS',
+                    icono: Icons.photo_library,
+                    urlsExistentes: _fotosUrls,
+                    archivosNuevos: _fotosNuevas,
+                    onAgregar: _agregarFoto,
+                    onEliminar: _eliminarFoto,
+                    esImagen: true,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(_estado,
-                        style: const TextStyle(
-                            color: AppColors.granate,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 24),
+                  _seccionMultimedia(
+                    titulo: 'VIDEOS',
+                    icono: Icons.video_library,
+                    urlsExistentes: _videosUrls,
+                    archivosNuevos: _videosNuevos,
+                    onAgregar: _agregarVideo,
+                    onEliminar: _eliminarVideo,
+                    esImagen: false,
+                  ),
+                  const SizedBox(height: 32),
+                  FilledButton.icon(
+                    onPressed: _guardar,
+                    icon: const Icon(Icons.save),
+                    label: Text(_esEdicion ? 'ACTUALIZAR' : 'GUARDAR'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppColors.granate,
+                    ),
                   ),
                 ],
               ),
             ),
-          if (_guardando) const SizedBox(height: 16),
-
-          SizedBox(
-            height: 54,
-            child: FilledButton.icon(
-              onPressed: _guardando ? null : _guardar,
-              icon: _guardando
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: AppColors.dorado,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(
-                _guardando
-                    ? 'SUBIENDO...'
-                    : (_esEdicion
-                        ? 'GUARDAR CAMBIOS'
-                        : 'GUARDAR RECUERDO'),
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
-
-  Widget _header(Color onSurface, bool esEdicion) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.granate.withOpacity(0.08),
-            AppColors.dorado.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.25)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: AppColors.gradienteGranate,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.granate.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Icon(
-              esEdicion ? Icons.photo_library : Icons.add_photo_alternate,
-              color: AppColors.dorado,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    esEdicion ? 'Editando recuerdo' : 'Nuevo recuerdo',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: onSurface,
-                        fontSize: 15,
-                        letterSpacing: 0.3)),
-                const SizedBox(height: 2),
-                Text(
-                  esEdicion
-                      ? 'Modifica las fotos/videos o los datos'
-                      : 'Comparte fotos, videos y anécdotas del grupo',
-                  style: TextStyle(
-                      fontSize: 12, color: onSurface.withOpacity(0.55)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _seccion(IconData icono, String titulo) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: AppColors.granate.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icono, size: 13, color: AppColors.granate),
-        ),
-        const SizedBox(width: 10),
-        Text(titulo,
-            style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: AppColors.granate,
-                letterSpacing: 2)),
-      ],
-    );
-  }
-
-  Widget _botonMedia(IconData icono, String texto, VoidCallback? onTap) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.cardColor(context),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.dorado.withOpacity(0.5)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icono, color: AppColors.granate, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                texto,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.granate,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _previewMedia({
-    required VoidCallback onDelete,
-    required Widget child,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: SizedBox(
-              width: 120,
-              height: 120,
-              child: child,
-            ),
-          ),
-          Positioned(
-            top: 6,
-            right: 6,
-            child: GestureDetector(
-              onTap: onDelete,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
-                ),
-                child:
-                    const Icon(Icons.close, size: 14, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _emptyMedia(String texto, IconData icono, Color onSurface) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.granate.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.granate.withOpacity(0.2),
-          style: BorderStyle.solid,
-        ),
-      ),
+Widget _pantallaProgreso() {
+    return Center(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icono, color: onSurface.withOpacity(0.3), size: 36),
+          const CircularProgressIndicator(color: AppColors.dorado),
+          const SizedBox(height: 24),
+          Text(
+            _progreso,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.granate,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
-            texto,
-            style: TextStyle(
-                color: onSurface.withOpacity(0.5),
-                fontSize: 13,
-                fontStyle: FontStyle.italic),
+            'Por favor espera...',
+            style: TextStyle(color: Colors.grey[600]),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _seccionMultimedia({
+    required String titulo,
+    required IconData icono,
+    required List<String> urlsExistentes,
+    required List<File> archivosNuevos,
+    required VoidCallback onAgregar,
+    required Function(int, bool) onEliminar,
+    required bool esImagen,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.granate.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icono, color: AppColors.granate, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '$titulo (${urlsExistentes.length + archivosNuevos.length})',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.granate,
+                  letterSpacing: 1,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onAgregar,
+                icon: const Icon(Icons.add_circle, color: AppColors.dorado),
+                tooltip: 'Agregar ${esImagen ? "foto" : "video"}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (urlsExistentes.isEmpty && archivosNuevos.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      esImagen ? Icons.photo_camera_outlined : Icons.videocam_outlined,
+                      size: 40,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sin ${esImagen ? "fotos" : "videos"} aún',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (int i = 0; i < archivosNuevos.length; i++)
+                  _previewItem(
+                    index: i,
+                    esNuevo: true,
+                    esImagen: esImagen,
+                    file: archivosNuevos[i],
+                    onEliminar: () => onEliminar(i, true),
+                  ),
+                for (int i = 0; i < urlsExistentes.length; i++)
+                  _previewItem(
+                    index: i,
+                    esNuevo: false,
+                    esImagen: esImagen,
+                    url: urlsExistentes[i],
+                    onEliminar: () => onEliminar(i, false),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _previewItem({
+    required int index,
+    required bool esNuevo,
+    required bool esImagen,
+    File? file,
+    String? url,
+    required VoidCallback onEliminar,
+  }) {
+    return Stack(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey.withOpacity(0.2),
+            border: Border.all(
+              color: esNuevo ? AppColors.dorado : AppColors.dorado.withOpacity(0.3),
+              width: esNuevo ? 2 : 1,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: esImagen
+                ? (file != null
+                    ? Image.file(file, fit: BoxFit.cover)
+                    : Image.network(url!, fit: BoxFit.cover))
+                : Center(
+                    child: Icon(
+                      Icons.videocam,
+                      color: AppColors.dorado,
+                      size: 32,
+                    ),
+                  ),
+          ),
+        ),
+        if (esNuevo)
+          Positioned(
+            top: 2,
+            left: 2,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: AppColors.dorado,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cloud_upload, color: Colors.white, size: 14),
+            ),
+          ),
+        Positioned(
+          top: -4,
+          right: -4,
+          child: GestureDetector(
+            onTap: onEliminar,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
