@@ -11,7 +11,7 @@ class WatermarkOverlay extends StatelessWidget {
     super.key,
     required this.child,
     this.opacity = 0.05,
-    this.logoSize = 150,
+    this.logoSize = 90,
     this.rotation = -30,
   });
 
@@ -23,12 +23,14 @@ class WatermarkOverlay extends StatelessWidget {
     final adjustedOpacity = isDark ? opacity * 0.35 : opacity;
     final screenSize = MediaQuery.of(context).size;
 
-    final diagonal = math.sqrt(
-      screenSize.width * screenSize.width +
-          screenSize.height * screenSize.height,
-    );
-    final logosPerRow = (diagonal / logoSize).ceil() + 2;
-    final logosPerColumn = (diagonal / logoSize).ceil() + 2;
+    // Contenedor GIGANTE: 3x la dimensión mayor para que al rotar
+    // siga cubriendo las esquinas de la pantalla.
+    final maxDim = math.max(screenSize.width, screenSize.height);
+    final containerSize = maxDim * 3;
+
+    // Cuántos logos caben en el contenedor (con +1 de margen).
+    final cols = (containerSize / logoSize).ceil() + 1;
+    final rows = (containerSize / logoSize).ceil() + 1;
 
     return Stack(
       fit: StackFit.expand,
@@ -40,17 +42,19 @@ class WatermarkOverlay extends StatelessWidget {
               child: Transform.rotate(
                 angle: rotation * math.pi / 180,
                 child: SizedBox(
-                  width: diagonal * 1.5,
-                  height: diagonal * 1.5,
+                  width: containerSize,
+                  height: containerSize,
                   child: GridView.builder(
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: logosPerRow,
+                    padding: EdgeInsets.zero,
+                    gridDelegate:
+                        SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: cols,
                       childAspectRatio: 1.0,
-                      crossAxisSpacing: 24,
-                      mainAxisSpacing: 24,
+                      crossAxisSpacing: 2,
+                      mainAxisSpacing: 2,
                     ),
-                    itemCount: logosPerRow * logosPerColumn,
+                    itemCount: cols * rows,
                     itemBuilder: (context, index) {
                       return Opacity(
                         opacity: adjustedOpacity,
