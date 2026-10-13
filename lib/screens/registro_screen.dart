@@ -131,22 +131,39 @@ class _RegistroScreenState extends State<RegistroScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // ══════ LOGO REAL ══════
                   Container(
-                    padding: const EdgeInsets.all(18),
+                    width: 110,
+                    height: 110,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.08),
-                      border: Border.all(
-                          color: AppColors.dorado.withOpacity(0.3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.dorado.withOpacity(0.3),
+                          blurRadius: 24,
+                          spreadRadius: 3,
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.person_add_alt_1,
-                        size: 42, color: AppColors.dorado),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/logo.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.granate,
+                          child: const Icon(Icons.person_add_alt_1,
+                              color: AppColors.dorado, size: 50),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
+
+                  // ══════ TEXTOS ══════
                   const Text(
                     'ÚNETE AL GRUPO',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: AppColors.dorado,
                       letterSpacing: 4,
@@ -157,24 +174,44 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     'Crea tu cuenta para acceder al cancionero',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.dorado.withOpacity(0.6),
+                      color: AppColors.dorado.withOpacity(0.65),
                       fontSize: 12,
                       letterSpacing: 1,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 4),
+                  Text(
+                    'C.I.A.C. Allin Kawsay · Juliaca - Perú',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.dorado.withOpacity(0.4),
+                      fontSize: 10,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
 
+                  // ══════ CARD DE REGISTRO ══════
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: AppColors.blanco,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                          color: AppColors.dorado.withOpacity(0.25)),
+                        color: AppColors.dorado.withOpacity(0.4),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
-                        // ══════ Botón Google (rápido) ══════
+                        // Botón Google
                         SizedBox(
                           width: double.infinity,
                           height: 52,
@@ -184,13 +221,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
                                 : _registrarConGoogle,
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                  color: AppColors.dorado
-                                      .withOpacity(0.5),
+                                  color:
+                                      AppColors.negro.withOpacity(0.15),
                                   width: 1.5),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              backgroundColor: Colors.white,
+                              backgroundColor: AppColors.blanco,
                             ),
                             child: _loadingGoogle
                                 ? const SizedBox(
@@ -201,30 +238,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
                                       strokeWidth: 2.5,
                                     ),
                                   )
-                                : Row(
+                                : const Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.center,
                                     children: [
-                                      Container(
-                                        width: 22,
-                                        height: 22,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.white,
-                                        ),
-                                        child: const Center(
-                                          child: Text(
-                                            'G',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF4285F4),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      const Text(
+                                      _GoogleIcon(),
+                                      SizedBox(width: 12),
+                                      Text(
                                         'Registrarme con Google',
                                         style: TextStyle(
                                           fontSize: 14,
@@ -242,7 +262,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           children: [
                             Expanded(
                               child: Divider(
-                                  color: AppColors.dorado
+                                  color: AppColors.granate
                                       .withOpacity(0.2)),
                             ),
                             Padding(
@@ -251,15 +271,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
                               child: Text(
                                 'o con email',
                                 style: TextStyle(
-                                  color: AppColors.dorado
-                                      .withOpacity(0.6),
+                                  color:
+                                      AppColors.negro.withOpacity(0.4),
                                   fontSize: 11,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
                             Expanded(
                               child: Divider(
-                                  color: AppColors.dorado
+                                  color: AppColors.granate
                                       .withOpacity(0.2)),
                             ),
                           ],
@@ -270,31 +291,35 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           controller: _nombre,
                           textCapitalization:
                               TextCapitalization.words,
-                          style: const TextStyle(color: Colors.white),
-                          decoration:
-                              _deco('Nombre completo', Icons.person),
+                          style: const TextStyle(
+                              color: AppColors.negro, fontSize: 15),
+                          decoration: _deco(
+                              'Nombre completo', Icons.person),
                         ),
                         const SizedBox(height: 14),
                         TextField(
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(
+                              color: AppColors.negro, fontSize: 15),
                           decoration: _deco('Email', Icons.email),
                         ),
                         const SizedBox(height: 14),
                         TextField(
                           controller: _pass,
                           obscureText: !_verPass,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(
+                              color: AppColors.negro, fontSize: 15),
                           decoration: _deco(
-                              'Contraseña (mín. 6)', Icons.lock).copyWith(
+                              'Contraseña (mín. 6)', Icons.lock)
+                              .copyWith(
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _verPass
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
                                 color:
-                                    AppColors.dorado.withOpacity(0.6),
+                                    AppColors.granate.withOpacity(0.6),
                               ),
                               onPressed: () => setState(
                                   () => _verPass = !_verPass),
@@ -305,7 +330,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
                         TextField(
                           controller: _pass2,
                           obscureText: !_verPass,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(
+                              color: AppColors.negro, fontSize: 15),
                           decoration: _deco('Repetir contraseña',
                               Icons.lock_outline),
                         ),
@@ -315,6 +341,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           height: 54,
                           child: FilledButton(
                             onPressed: _loading ? null : _registrar,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.granate,
+                              foregroundColor: AppColors.dorado,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
                             child: _loading
                                 ? const SizedBox(
                                     width: 22,
@@ -362,13 +395,81 @@ class _RegistroScreenState extends State<RegistroScreen> {
     );
   }
 
+  /// Decoration para los campos de texto con label DORADO/GRANATE
+  /// explícito, para que sea visible en cualquier modo.
   InputDecoration _deco(String label, IconData icono) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: AppColors.dorado.withOpacity(0.8)),
-      prefixIcon:
-          Icon(icono, color: AppColors.dorado.withOpacity(0.8), size: 20),
-      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+      labelStyle: const TextStyle(
+        color: AppColors.granate,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
+      floatingLabelStyle: const TextStyle(
+        color: AppColors.granate,
+        fontWeight: FontWeight.bold,
+        fontSize: 13,
+      ),
+      prefixIcon: Icon(icono, color: AppColors.granate, size: 20),
+      filled: true,
+      fillColor: AppColors.grisClaro,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.dorado, width: 2),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide:
+            BorderSide(color: AppColors.dorado.withOpacity(0.5)),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+    );
+  }
+}
+
+/// Icono de Google con los 4 colores de la marca.
+class _GoogleIcon extends StatelessWidget {
+  const _GoogleIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 22,
+      height: 22,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+          ),
+          ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (bounds) => const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF4285F4),
+                Color(0xFFEA4335),
+                Color(0xFFFBBC05),
+                Color(0xFF34A853),
+              ],
+            ).createShader(bounds),
+            child: const Text(
+              'G',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                height: 1.0,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
