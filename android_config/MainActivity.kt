@@ -78,6 +78,37 @@ class MainActivity : AudioServiceActivity() {
                             result.error("ERROR", e.message, null)
                         }
                     }
+                    "instalarApk" -> {
+                        try {
+                            val path = call.argument<String>("path")
+                            if (path == null) {
+                                result.error("NO_PATH", "Falta la ruta del APK", null)
+                                return@setMethodCallHandler
+                            }
+                            val file = File(path)
+                            if (!file.exists()) {
+                                result.error("NO_FILE", "El APK no existe", null)
+                                return@setMethodCallHandler
+                            }
+                            val uri = FileProvider.getUriForFile(
+                                this,
+                                "$packageName.fileprovider",
+                                file
+                            )
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(
+                                    uri,
+                                    "application/vnd.android.package-archive"
+                                )
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("ERROR", e.message, null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -90,7 +121,6 @@ class MainActivity : AudioServiceActivity() {
     ): Uri? {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ → usar MediaStore
                 val values = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, nombre)
                     put(MediaStore.MediaColumns.MIME_TYPE, mime)
@@ -112,7 +142,6 @@ class MainActivity : AudioServiceActivity() {
                 }
                 uri
             } else {
-                // Android 9 e inferior → escribir directo a Download
                 @Suppress("DEPRECATION")
                 val dir = Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS
