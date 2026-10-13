@@ -12,7 +12,20 @@
           "package_name": "com.sikuris.sikuris_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "603260146479-4mqhr15p8bp0n63rqno60s6c6erhq462.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sikuris.sikuris_app",
+            "certificate_hash": "fae94f1e0a4f54ad29163939e87eda225792ca32"
+          }
+        },
+        {
+          "client_id": "603260146479-l9q7qm3vq9ueluggdijr5i8bm8hm6p82.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCZpSNJUwgWW4zsqXwpzn2QSDOAthn5Jac"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "603260146479-l9q7qm3vq9ueluggdijr5i8bm8hm6p82.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
