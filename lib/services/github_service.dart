@@ -67,6 +67,7 @@ class ReleaseInfo {
     );
   }
 }
+
 class GithubService {
   static const _repo = 'yeo-drake/AllinKawsay';
 
@@ -95,9 +96,13 @@ class GithubService {
         .toList();
   }
 
-  /// Devuelve solo las releases que tengan un APK adjunto.
-  static Future<List<ReleaseInfo>> listarConApk({int limite = 20}) async {
+  /// Devuelve SOLO releases estables (NO prereleases) que tengan APK.
+  /// Estos son los que un admin puede aprobar desde el panel.
+  /// Las prereleases (pushes automáticos) quedan ocultas.
+  static Future<List<ReleaseInfo>> listarEstables({int limite = 20}) async {
     final todas = await listarReleases(limite: limite);
-    return todas.where((r) => r.tieneApk).toList();
+    return todas
+        .where((r) => r.tieneApk && !r.prerelease)
+        .toList();
   }
 }
