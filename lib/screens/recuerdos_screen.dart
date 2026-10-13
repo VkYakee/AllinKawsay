@@ -177,6 +177,7 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
       ),
     );
   }
+}
 class _TarjetaRecuerdo extends StatelessWidget {
   final BuildContext parentContext;
   final Recuerdo r;
