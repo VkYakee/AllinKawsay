@@ -133,12 +133,10 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
           child: StreamBuilder<List<Recuerdo>>(
             stream: _service.listar(),
             builder: (context, snap) {
-              // Estado de carga inicial
               if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
                 return const _LoadingSkeleton();
               }
               
-              // Estado de error
               if (snap.hasError) {
                 return _ErrorWidget(
                   error: snap.error.toString(),
@@ -148,12 +146,10 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
               
               final lista = snap.data ?? [];
               
-              // Estado vacío
               if (lista.isEmpty) {
                 return _EmptyWidget(esAdmin: esAdmin, onSurface: onSurface);
               }
               
-              // Lista de recuerdos
               return ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                 itemCount: lista.length,
@@ -181,253 +177,266 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
       ),
     );
   }
-}
-// Widget para la tarjeta de recuerdo
-Widget _tarjetaRecuerdo(BuildContext context, Recuerdo r, bool esAdmin, Color onSurface) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppColors.cardColor(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _verDetalle(r),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header con imagen principal
-            Stack(
-              children: [
-                // Imagen de portada
-                if (r.tieneFotos)
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    child: Hero(
-                      tag: 'recuerdo_${r.id}_foto',
-                      child: CachedNetworkImage(
-                        imageUrl: r.fotos.first,
-                        width: double.infinity,
-                        height: 220,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 600,
-                        memCacheHeight: 400,
-                        placeholder: (_, __) => Container(
-                          height: 220,
-                          color: AppColors.granate.withOpacity(0.1),
-                          child: const Center(
-                            child: CircularProgressIndicator(color: AppColors.granate),
-                          ),
-                        ),
-                        errorWidget: (_, __, ___) => Container(
-                          height: 220,
-                          color: AppColors.granate.withOpacity(0.1),
-                          child: const Icon(Icons.broken_image, color: AppColors.granate, size: 48),
-                        ),
-                      ),
-                    ),
-                  )
-                else if (r.tieneVideos)
-                  Container(
-                    height: 220,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.black87, Colors.black54],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.videocam, size: 56, color: AppColors.dorado),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Video',
-                            style: TextStyle(
-                              color: AppColors.dorado,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    height: 220,
-                    color: AppColors.granate.withOpacity(0.1),
-                    child: const Center(
-                      child: Icon(Icons.photo_library, size: 64, color: AppColors.granate),
-                    ),
-                  ),
+class _TarjetaRecuerdo extends StatelessWidget {
+  final BuildContext parentContext;
+  final Recuerdo r;
+  final bool esAdmin;
+  final Color onSurface;
+  final Function(Recuerdo) onVerDetalle;
+  final Function(Recuerdo) onEditar;
+  final Function(Recuerdo) onEliminar;
 
-                // Badge de cantidad mejorado
-                if (r.tieneFotos || r.tieneVideos)
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.75),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withOpacity(0.2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (r.tieneFotos) ...[
-                            const Icon(Icons.photo, size: 14, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${r.fotos.length}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                          if (r.tieneFotos && r.tieneVideos) const SizedBox(width: 8),
-                          if (r.tieneVideos) ...[
-                            const Icon(Icons.videocam, size: 14, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${r.videos.length}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
+  const _TarjetaRecuerdo({
+    required this.parentContext,
+    required this.r,
+    required this.esAdmin,
+    required this.onSurface,
+    required this.onVerDetalle,
+    required this.onEditar,
+    required this.onEliminar,
+  });
 
-                // Menú admin
-                if (esAdmin)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: PopupMenuButton<String>(
-                      icon: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.75),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.2)),
-                        ),
-                        child: const Icon(Icons.more_vert, color: Colors.white, size: 20),
-                      ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      onSelected: (v) {
-                        if (v == 'editar') _editar(r);
-                        else if (v == 'eliminar') _eliminar(r);
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'editar',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit, size: 20, color: AppColors.granate),
-                              const SizedBox(width: 10),
-                              const Text('Editar'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'eliminar',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                              const SizedBox(width: 10),
-                              const Text('Eliminar', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-
-            // Contenido de la tarjeta
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    r.titulo,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: onSurface,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(Icons.person_outline, size: 12, color: onSurface.withOpacity(0.45)),
-                      const SizedBox(width: 4),
-                      Text(r.creadorNombre, style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55))),
-                      if (r.fecha != null) ...[
-                        const SizedBox(width: 12),
-                        Icon(Icons.calendar_today, size: 11, color: onSurface.withOpacity(0.45)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${r.fecha!.day}/${r.fecha!.month}/${r.fecha!.year}',
-                          style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55)),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (r.descripcion.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      r.descripcion,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, color: onSurface.withOpacity(0.7), height: 1.4),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text('VER RECUERDO', style: TextStyle(color: AppColors.granate, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_forward, size: 14, color: AppColors.granate),
-                    ],
-                  ),
-                ],
-              ),
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.cardColor(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.dorado.withOpacity(0.25)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
+        child: InkWell(
+          onTap: () => onVerDetalle(r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  if (r.tieneFotos)
+                    ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      child: Hero(
+                        tag: 'recuerdo_${r.id}_foto',
+                        child: CachedNetworkImage(
+                          imageUrl: r.fotos.first,
+                          width: double.infinity,
+                          height: 220,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 600,
+                          memCacheHeight: 400,
+                          placeholder: (_, __) => Container(
+                            height: 220,
+                            color: AppColors.granate.withOpacity(0.1),
+                            child: const Center(
+                              child: CircularProgressIndicator(color: AppColors.granate),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            height: 220,
+                            color: AppColors.granate.withOpacity(0.1),
+                            child: const Icon(Icons.broken_image, color: AppColors.granate, size: 48),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (r.tieneVideos)
+                    Container(
+                      height: 220,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.black87, Colors.black54],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.videocam, size: 56, color: AppColors.dorado),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Video',
+                              style: TextStyle(
+                                color: AppColors.dorado,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      height: 220,
+                      color: AppColors.granate.withOpacity(0.1),
+                      child: const Center(
+                        child: Icon(Icons.photo_library, size: 64, color: AppColors.granate),
+                      ),
+                    ),
+
+                  if (r.tieneFotos || r.tieneVideos)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.75),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (r.tieneFotos) ...[
+                              const Icon(Icons.photo, size: 14, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${r.fotos.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                            if (r.tieneFotos && r.tieneVideos) const SizedBox(width: 8),
+                            if (r.tieneVideos) ...[
+                              const Icon(Icons.videocam, size: 14, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${r.videos.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  if (esAdmin)
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: PopupMenuButton<String>(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.75),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withOpacity(0.2)),
+                          ),
+                          child: const Icon(Icons.more_vert, color: Colors.white, size: 20),
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        onSelected: (v) {
+                          if (v == 'editar') onEditar(r);
+                          else if (v == 'eliminar') onEliminar(r);
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'editar',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, size: 20, color: AppColors.granate),
+                                const SizedBox(width: 10),
+                                const Text('Editar'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'eliminar',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                const SizedBox(width: 10),
+                                const Text('Eliminar', style: TextStyle(color: Colors.red)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.titulo,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: onSurface,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.person_outline, size: 12, color: onSurface.withOpacity(0.45)),
+                        const SizedBox(width: 4),
+                        Text(r.creadorNombre, style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55))),
+                        if (r.fecha != null) ...[
+                          const SizedBox(width: 12),
+                          Icon(Icons.calendar_today, size: 11, color: onSurface.withOpacity(0.45)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${r.fecha!.day}/${r.fecha!.month}/${r.fecha!.year}',
+                            style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55)),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (r.descripcion.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        r.descripcion,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, color: onSurface.withOpacity(0.7), height: 1.4),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text('VER RECUERDO', style: TextStyle(color: AppColors.granate, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_forward, size: 14, color: AppColors.granate),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
-// Widget de carga inicial (skeleton/shimmer)
 class _LoadingSkeleton extends StatelessWidget {
   const _LoadingSkeleton();
 
@@ -475,7 +484,6 @@ class _LoadingSkeleton extends StatelessWidget {
   }
 }
 
-// Widget de error con botón de reintentar
 class _ErrorWidget extends StatelessWidget {
   final String error;
   final VoidCallback onRetry;
@@ -522,7 +530,6 @@ class _ErrorWidget extends StatelessWidget {
   }
 }
 
-// Widget de estado vacío
 class _EmptyWidget extends StatelessWidget {
   final bool esAdmin;
   final Color onSurface;
