@@ -8,11 +8,17 @@ class FotoFullscreenScreen extends StatefulWidget {
   final String url;
   final String titulo;
   final bool puedeDescargar;
+
+  /// Tag del Hero compartido con la galería origen (opcional).
+  /// Si es null o vacío, no se envuelve en Hero.
+  final String? heroTag;
+
   const FotoFullscreenScreen({
     super.key,
     required this.url,
     this.titulo = '',
     this.puedeDescargar = false,
+    this.heroTag,
   });
 
   @override
@@ -126,13 +132,37 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
     }
   }
 
+  Widget _imagenConHero() {
+    final imagen = CachedNetworkImage(
+      imageUrl: widget.url,
+      fit: BoxFit.contain,
+      placeholder: (_, __) => const Center(
+        child: CircularProgressIndicator(color: AppColors.dorado),
+      ),
+      errorWidget: (_, __, ___) => const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.broken_image,
+                color: AppColors.dorado, size: 60),
+            SizedBox(height: 12),
+            Text('No se pudo cargar la imagen',
+                style: TextStyle(color: AppColors.dorado)),
+          ],
+        ),
+      ),
+    );
+
+    final tag = widget.heroTag;
+    if (tag == null || tag.isEmpty) return imagen;
+    return Hero(tag: tag, child: imagen);
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Foto
           Positioned.fill(
             child: GestureDetector(
               onDoubleTapDown: _toggleZoom,
@@ -141,33 +171,11 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
                 transformationController: _transformController,
                 minScale: 1.0,
                 maxScale: 4.0,
-                child: Center(
-                  child: CachedNetworkImage(
-                    imageUrl: widget.url,
-                    fit: BoxFit.contain,
-                    placeholder: (_, __) => const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.dorado),
-                    ),
-                    errorWidget: (_, __, ___) => const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.broken_image,
-                              color: AppColors.dorado, size: 60),
-                          SizedBox(height: 12),
-                          Text('No se pudo cargar la imagen',
-                              style: TextStyle(color: AppColors.dorado)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                child: Center(child: _imagenConHero()),
               ),
             ),
           ),
 
-          // Barra superior
           Positioned(
             top: 0,
             left: 0,
@@ -232,7 +240,6 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
             ),
           ),
 
-          // Hint
           if (!_zoomActivo)
             Positioned(
               bottom: 24,
