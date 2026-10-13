@@ -54,6 +54,23 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
     _searchCtrl.dispose();
     super.dispose();
   }
+
+  /// Alterna reproducción y suma 1 al contador SOLO cuando empieza
+  /// a sonar (no cuando pausa ni cuando se detiene).
+  Future<void> _togglePlayReproduccion(Cancion c) async {
+    final estabaPausado = PlayerService().sonando(c.id) == false;
+    final eraLaActual =
+        PlayerService().cancionActualId == c.id && estabaPausado;
+
+    await PlayerService().toggle(c);
+
+    // Si acaba de empezar a sonar (no estaba pausada la misma canción),
+    // contamos como reproducción nueva.
+    final sonandoAhora = PlayerService().sonando(c.id);
+    if (sonandoAhora && !eraLaActual) {
+      await CancionService().incrementarReproduccion(c.id);
+    }
+  }
 void _eliminar(Cancion c) async {
   final ok = await showDialog<bool>(
     context: context,
@@ -565,230 +582,230 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
     ),
   );
 }
-Widget _tarjetaCancion(
-  BuildContext context,
-  Cancion c,
-  int index,
-  List<String> favs,
-  EstadoPlayer estado,
-  Color onSurface,
-) {
-  final esFav = favs.contains(c.id);
-  final sonando = estado.cancionId == c.id;
-  final reproduciendo = sonando && estado.playing;
-  final cargando = sonando && estado.cargando;
+  Widget _tarjetaCancion(
+    BuildContext context,
+    Cancion c,
+    int index,
+    List<String> favs,
+    EstadoPlayer estado,
+    Color onSurface,
+  ) {
+    final esFav = favs.contains(c.id);
+    final sonando = estado.cancionId == c.id;
+    final reproduciendo = sonando && estado.playing;
+    final cargando = sonando && estado.cargando;
 
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => CancionDetalleScreen(cancion: c)),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.cardColor(context),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: sonando
-                  ? AppColors.dorado.withOpacity(0.6)
-                  : AppColors.dorado.withOpacity(0.2),
-              width: sonando ? 1.5 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => CancionDetalleScreen(cancion: c)),
           ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => PlayerService().toggle(c),
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: reproduciendo
-                        ? AppColors.gradienteDorado
-                        : AppColors.gradienteGranate,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (reproduciendo
-                                ? AppColors.dorado
-                                : AppColors.granate)
-                            .withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.cardColor(context),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: sonando
+                    ? AppColors.dorado.withOpacity(0.6)
+                    : AppColors.dorado.withOpacity(0.2),
+                width: sonando ? 1.5 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // ⬇️ PLAY con contador de reproducciones
+                GestureDetector(
+                  onTap: () => _togglePlayReproduccion(c),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: reproduciendo
+                          ? AppColors.gradienteDorado
+                          : AppColors.gradienteGranate,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (reproduciendo
+                                  ? AppColors.dorado
+                                  : AppColors.granate)
+                              .withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: cargando
+                        ? const Padding(
+                            padding: EdgeInsets.all(14),
+                            child: CircularProgressIndicator(
+                                color: AppColors.dorado,
+                                strokeWidth: 2.5),
+                          )
+                        : Icon(
+                            reproduciendo
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            color: reproduciendo
+                                ? AppColors.granate
+                                : AppColors.dorado,
+                            size: 30,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        c.titulo,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: onSurface,
+                          fontSize: 15,
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${c.ritmo}${c.autor.isNotEmpty ? ' · ${c.autor}' : ''}',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: onSurface.withOpacity(0.55)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.granate.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.play_arrow,
+                                    size: 10,
+                                    color: AppColors.granate),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${c.reproducciones}',
+                                  style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.granate,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (c.tieneCategoria)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Icon(Icons.folder_outlined,
+                                  size: 12,
+                                  color: onSurface.withOpacity(0.35)),
+                            ),
+                          if (c.tieneNumerofonia)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Icon(Icons.grid_on,
+                                  size: 12,
+                                  color: onSurface.withOpacity(0.35)),
+                            ),
+                          if (c.audioUrl.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Icon(Icons.audiotrack,
+                                  size: 12,
+                                  color: onSurface.withOpacity(0.35)),
+                            ),
+                        ],
                       ),
                     ],
                   ),
-                  child: cargando
-                      ? const Padding(
-                          padding: EdgeInsets.all(14),
-                          child: CircularProgressIndicator(
-                              color: AppColors.dorado,
-                              strokeWidth: 2.5),
-                        )
-                      : Icon(
-                          reproduciendo
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                          color: reproduciendo
-                              ? AppColors.granate
-                              : AppColors.dorado,
-                          size: 30,
+                ),
+                IconButton(
+                  icon: Icon(
+                    esFav ? Icons.favorite : Icons.favorite_border,
+                    color: esFav
+                        ? AppColors.granate
+                        : onSurface.withOpacity(0.3),
+                    size: 22,
+                  ),
+                  onPressed: () =>
+                      UsuarioService().toggleFavorito(c.id),
+                ),
+                if (_esAdmin)
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert,
+                        color: onSurface.withOpacity(0.5), size: 22),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    onSelected: (v) {
+                      if (v == 'editar') {
+                        _editar(c);
+                      } else if (v == 'eliminar') {
+                        _eliminar(c);
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'editar',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit,
+                                size: 20, color: AppColors.granate),
+                            SizedBox(width: 10),
+                            Text('Editar'),
+                          ],
                         ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      c.titulo,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: onSurface,
-                        fontSize: 15,
-                        letterSpacing: 0.2,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${c.ritmo}${c.autor.isNotEmpty ? ' · ${c.autor}' : ''}',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: onSurface.withOpacity(0.55)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color:
-                                AppColors.granate.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.play_arrow,
-                                  size: 10,
-                                  color: AppColors.granate),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${c.reproducciones}',
-                                style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.granate,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
+                      const PopupMenuItem(
+                        value: 'eliminar',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline,
+                                size: 20, color: Colors.red),
+                            SizedBox(width: 10),
+                            Text('Eliminar',
+                                style: TextStyle(color: Colors.red)),
+                          ],
                         ),
-                        if (c.tieneCategoria)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 6),
-                            child: Icon(Icons.folder_outlined,
-                                size: 12,
-                                color: onSurface.withOpacity(0.35)),
-                          ),
-                        if (c.tieneNumerofonia)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 6),
-                            child: Icon(Icons.grid_on,
-                                size: 12,
-                                color: onSurface.withOpacity(0.35)),
-                          ),
-                        if (c.audioUrl.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 6),
-                            child: Icon(Icons.audiotrack,
-                                size: 12,
-                                color: onSurface.withOpacity(0.35)),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: Icon(
-                  esFav ? Icons.favorite : Icons.favorite_border,
-                  color: esFav
-                      ? AppColors.granate
-                      : onSurface.withOpacity(0.3),
-                  size: 22,
-                ),
-                onPressed: () =>
-                    UsuarioService().toggleFavorito(c.id),
-              ),
-              if (_esAdmin)
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert,
-                      color: onSurface.withOpacity(0.5), size: 22),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  onSelected: (v) {
-                    if (v == 'editar') {
-                      _editar(c);
-                    } else if (v == 'eliminar') {
-                      _eliminar(c);
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'editar',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit,
-                              size: 20, color: AppColors.granate),
-                          SizedBox(width: 10),
-                          Text('Editar'),
-                        ],
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'eliminar',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_outline,
-                              size: 20, color: Colors.red),
-                          SizedBox(width: 10),
-                          Text('Eliminar',
-                              style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-                )
-              else
-                const SizedBox(width: 8),
-            ],
+                    ],
+                  )
+                else
+                  const SizedBox(width: 8),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
-}
-
 class _LoadingSkeleton extends StatelessWidget {
   const _LoadingSkeleton();
 
