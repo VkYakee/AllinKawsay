@@ -7,11 +7,13 @@ import 'package:permission_handler/permission_handler.dart';
 import 'models/usuario.dart';
 import 'services/auth_service.dart';
 import 'services/screen_security_service.dart';
+import 'services/update_service.dart';
 import 'services/usuario_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/colors.dart';
 import 'theme/theme_provider.dart';
+import 'widgets/dialogo_actualizacion.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +43,6 @@ void main() async {
 
   runApp(const SikurisApp());
 }
-
 class SikurisApp extends StatelessWidget {
   const SikurisApp({super.key});
 
@@ -78,7 +79,6 @@ class SikurisApp extends StatelessWidget {
         onSurfaceVariant: AppColors.negro,
         outline: AppColors.dorado,
       ),
-      // === TIPOGRAFÍA ===
       textTheme: const TextTheme(
         displayLarge: TextStyle(
           fontWeight: FontWeight.bold,
@@ -108,7 +108,6 @@ class SikurisApp extends StatelessWidget {
           color: AppColors.negro,
         ),
       ),
-      // === APP BAR ===
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.dorado,
@@ -123,7 +122,6 @@ class SikurisApp extends StatelessWidget {
         ),
         iconTheme: IconThemeData(color: AppColors.dorado),
       ),
-      // === CARDS ===
       cardTheme: CardTheme(
         color: AppColors.blanco,
         elevation: 0,
@@ -134,7 +132,6 @@ class SikurisApp extends StatelessWidget {
               color: AppColors.dorado.withOpacity(0.25), width: 1),
         ),
       ),
-      // === BOTONES ===
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.granate,
@@ -172,7 +169,6 @@ class SikurisApp extends StatelessWidget {
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-      // === NAV BAR ===
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.negro,
         elevation: 8,
@@ -195,7 +191,6 @@ class SikurisApp extends StatelessWidget {
           );
         }),
       ),
-      // === LIST TILES ===
       listTileTheme: ListTileThemeData(
         iconColor: AppColors.granate,
         textColor: AppColors.negro,
@@ -205,26 +200,25 @@ class SikurisApp extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
         ),
       ),
-      // === OTROS ===
       dividerColor: AppColors.dorado.withOpacity(0.25),
       dividerTheme: DividerThemeData(
         color: AppColors.dorado.withOpacity(0.25),
         thickness: 1,
         space: 24,
       ),
-      // === INPUTS ===
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.blanco,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         labelStyle: const TextStyle(color: AppColors.granate),
-        floatingLabelStyle:
-            const TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold),
+        floatingLabelStyle: const TextStyle(
+            color: AppColors.granate, fontWeight: FontWeight.bold),
         hintStyle: TextStyle(color: AppColors.negro.withOpacity(0.4)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.dorado, width: 2),
+          borderSide:
+              const BorderSide(color: AppColors.dorado, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -240,7 +234,6 @@ class SikurisApp extends StatelessWidget {
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
       ),
-      // === FAB ===
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.granate,
         foregroundColor: AppColors.dorado,
@@ -249,7 +242,6 @@ class SikurisApp extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
-      // === SNACKBAR ===
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.negro,
         contentTextStyle: const TextStyle(
@@ -261,7 +253,6 @@ class SikurisApp extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
         ),
       ),
-      // === CHIPS ===
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.granate.withOpacity(0.08),
         selectedColor: AppColors.granate,
@@ -275,7 +266,6 @@ class SikurisApp extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
-      // === DIALOG ===
       dialogTheme: DialogTheme(
         backgroundColor: AppColors.blanco,
         shape: RoundedRectangleBorder(
@@ -292,7 +282,6 @@ class SikurisApp extends StatelessWidget {
           height: 1.5,
         ),
       ),
-      // === BOTTOM SHEET ===
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.blanco,
         shape: RoundedRectangleBorder(
@@ -300,7 +289,6 @@ class SikurisApp extends StatelessWidget {
         ),
         showDragHandle: false,
       ),
-      // === TABBAR ===
       tabBarTheme: const TabBarTheme(
         labelColor: AppColors.dorado,
         unselectedLabelColor: Colors.white70,
@@ -314,7 +302,6 @@ class SikurisApp extends StatelessWidget {
       ),
     );
   }
-
   ThemeData _temaOscuro() {
     return ThemeData(
       useMaterial3: true,
@@ -469,12 +456,14 @@ class SikurisApp extends StatelessWidget {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         labelStyle: const TextStyle(color: AppColors.dorado),
-        floatingLabelStyle:
-            const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.bold),
-        hintStyle: TextStyle(color: AppColors.textoOscuroMedio.withOpacity(0.6)),
+        floatingLabelStyle: const TextStyle(
+            color: AppColors.dorado, fontWeight: FontWeight.bold),
+        hintStyle: TextStyle(
+            color: AppColors.textoOscuroMedio.withOpacity(0.6)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.dorado, width: 2),
+          borderSide:
+              const BorderSide(color: AppColors.dorado, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -559,7 +548,6 @@ class SikurisApp extends StatelessWidget {
     );
   }
 }
-
 class _AuthGate extends StatefulWidget {
   const _AuthGate();
 
@@ -570,6 +558,7 @@ class _AuthGate extends StatefulWidget {
 class _AuthGateState extends State<_AuthGate> {
   StreamSubscription? _userSub;
   String? _ultimoRol;
+  bool _chequeoUpdateYaHecho = false;
 
   @override
   void initState() {
@@ -591,6 +580,24 @@ class _AuthGateState extends State<_AuthGate> {
   void dispose() {
     _userSub?.cancel();
     super.dispose();
+  }
+
+  /// Chequea si hay actualización aprobada. Si la hay, muestra el
+  /// diálogo. Se llama una sola vez por sesión, tras el primer frame
+  /// con el usuario logueado.
+  Future<void> _chequearActualizacion() async {
+    if (_chequeoUpdateYaHecho) return;
+    _chequeoUpdateYaHecho = true;
+
+    try {
+      final info = await UpdateService.hayActualizacion();
+      if (info == null) return;
+      if (!mounted) return;
+
+      await DialogoActualizacion.mostrar(context, info);
+    } catch (_) {
+      // Silencioso: si falla el chequeo, no rompemos la app
+    }
   }
 
   @override
@@ -625,6 +632,13 @@ class _AuthGateState extends State<_AuthGate> {
               if (u != null && u.baneado) {
                 return const CuentaSuspendidaScreen();
               }
+
+              // Programar chequeo de actualización para después del
+              // primer render (evita mostrar diálogo antes de que
+              // el Navigator esté montado).
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _chequearActualizacion();
+              });
 
               final authUser = authSnap.data!;
               return HomeScreen(
