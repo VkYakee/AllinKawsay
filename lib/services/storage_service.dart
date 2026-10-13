@@ -45,6 +45,33 @@ class StorageService {
       'https://api.cloudinary.com/v1_1/$cloudName/auto/upload',
     );
 
+Future<String> subirFotoPerfil(File archivo, String uid) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final url = Uri.parse(
+      'https://api.cloudinary.com/v1_1/$cloudName/auto/upload',
+    );
+    final request = http.MultipartRequest('POST', url)
+      ..fields['upload_preset'] = uploadPreset
+      ..fields['folder'] = 'sikuris/perfiles'
+      ..fields['public_id'] = 'perfil_${uid}_$timestamp'
+      ..files.add(await http.MultipartFile.fromPath('file', archivo.path));
+
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+
+    if (response.statusCode != 200) {
+      throw Exception('Error subiendo foto: $body');
+    }
+
+    final json = jsonDecode(body);
+    return json['secure_url'] as String;
+  }
+
+  /// Sube un video a Cloudinary en la carpeta especificada.
+  Future<String> subirVideo(File archivo, String carpeta) =>
+      _subirConAuto(archivo, 'sikuris/$carpeta');
+}
+
     final request = http.MultipartRequest('POST', url)
       ..fields['upload_preset'] = uploadPreset
       ..fields['folder'] = 'sikuris/perfiles'
