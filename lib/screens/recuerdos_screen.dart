@@ -42,7 +42,8 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Eliminar recuerdo',
             style: TextStyle(
                 color: AppColors.granate, fontWeight: FontWeight.bold)),
@@ -286,7 +287,7 @@ class _TarjetaRecuerdo extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text('VER RECUERDO',
+                        const Text('VER RECUERDO',
                             style: TextStyle(
                                 color: AppColors.granate,
                                 fontSize: 11,
@@ -315,7 +316,8 @@ class _TarjetaRecuerdo extends StatelessWidget {
           topRight: Radius.circular(20),
         ),
         child: Hero(
-          tag: 'recuerdo_${r.id}_foto',
+          // ⬇️ TAG NUEVO para emparejar con la primera foto del detalle
+          tag: 'recuerdo_portada_${r.id}',
           child: CachedNetworkImage(
             imageUrl: r.fotos.first,
             width: double.infinity,
