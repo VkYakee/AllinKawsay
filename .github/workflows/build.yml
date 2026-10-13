@@ -106,14 +106,26 @@ jobs:
           echo "✅ version_build.dart generado:"
           cat lib/version_build.dart
 
+      - name: Leer versión de version.dart
+        id: version
+        run: |
+          MAJOR=$(grep "static const String major" lib/version.dart | grep -oP "'\K[^']+")
+          MINOR=$(grep "static const String minor" lib/version.dart | grep -oP "'\K[^']+")
+          PATCH=$(grep "static const String patch" lib/version.dart | grep -oP "'\K[^']+")
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Versión base detectada: $VERSION"
+
       - name: Get dependencies
         run: flutter pub get
 
       - name: Build APK
         run: |
           RUN=${{ github.run_number }}
+          VERSION=${{ steps.version.outputs.version }}
+          echo "🔨 Compilando ${VERSION}.${RUN}"
           flutter build apk --release \
-            --build-name=1.0.0.$RUN \
+            --build-name=${VERSION}.${RUN} \
             --build-number=$RUN
 
       - name: Verificar APK
@@ -129,5 +141,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: sikuris-apk-v1.0.0.${{ github.run_number }}
+          name: sikuris-apk-v${{ steps.version.outputs.version }}.${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
