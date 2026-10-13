@@ -434,3 +434,134 @@ Widget _tarjetaEvento(BuildContext context, Evento e, bool pasado, String nota, 
     final m = d.minute.toString().padLeft(2, '0');
     return '$h:$m';
   }
+Widget _emptyState(Color onSurface) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.granate.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.event_busy, size: 64, color: AppColors.granate.withOpacity(0.4)),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Sin eventos',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.granate, letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _esAdmin ? 'Toca el botón NUEVO para agregar el primero' : 'El admin aún no ha publicado eventos',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: onSurface.withOpacity(0.55), fontSize: 14, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingSkeleton extends StatelessWidget {
+  const _LoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            height: 140,
+            decoration: BoxDecoration(
+              color: AppColors.cardColor(context),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: 160, height: 18, color: Colors.grey.withOpacity(0.1)),
+                        const SizedBox(height: 8),
+                        Container(width: 120, height: 14, color: Colors.grey.withOpacity(0.1)),
+                        const SizedBox(height: 8),
+                        Container(width: double.infinity, height: 14, color: Colors.grey.withOpacity(0.1)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ErrorWidget extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+
+  const _ErrorWidget({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Error al cargar eventos',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('REINTENTAR'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
