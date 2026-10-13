@@ -119,12 +119,18 @@ class Cancion {
     );
   }
 
-  Map<String, dynamic> toMap() {
-    // Red de seguridad: si alguien guarda sin pasar `letras`,
-    // la letra legacy se conserva como una Letra automática.
-    final letrasFinal = letras.isNotEmpty
-        ? letras
-        : (letra.trim().isEmpty ? <Letra>[] : [Letra(texto: letra)]);
+  /// Normaliza las letras: si no hay `letras` pero sí `letra` legacy,
+  /// la convierte. Si no hay ninguna, devuelve lista vacía.
+  List<Letra> _letrasFinal() {
+    if (letras.isNotEmpty) return letras;
+    if (letra.trim().isEmpty) return const [];
+    return [Letra(texto: letra)];
+  }
+
+  /// SOLO usar al CREAR una canción nueva.
+  /// Incluye `fechaCreacion` (server timestamp) y `creadoPor`/`creadorNombre`.
+  Map<String, dynamic> toMapCrear() {
+    final finales = _letrasFinal();
     return {
       'titulo': titulo,
       'autor': autor,
@@ -133,8 +139,8 @@ class Cancion {
       'region': region,
       'numerofonia': numerofonia,
       'estrofas': estrofas.map((e) => e.toMap()).toList(),
-      'letra': letrasFinal.map((l) => l.texto).join('\n\n'),
-      'letras': letrasFinal.map((l) => l.toMap()).toList(),
+      'letra': finales.map((l) => l.texto).join('\n\n'),
+      'letras': finales.map((l) => l.toMap()).toList(),
       'imagenUrl': imagenUrl,
       'audioUrl': audioUrl,
       'videoUrl': videoUrl,
@@ -145,6 +151,30 @@ class Cancion {
       'creadoPor': creadoPor,
       'creadorNombre': creadorNombre,
       'fechaCreacion': FieldValue.serverTimestamp(),
+    };
+  }
+
+  /// SOLO usar al EDITAR una canción existente.
+  /// NUNCA pisa `fechaCreacion`, `creadoPor` ni `creadorNombre`.
+  Map<String, dynamic> toMapEditar() {
+    final finales = _letrasFinal();
+    return {
+      'titulo': titulo,
+      'autor': autor,
+      'tipo': tipo,
+      'ritmo': ritmo,
+      'region': region,
+      'numerofonia': numerofonia,
+      'estrofas': estrofas.map((e) => e.toMap()).toList(),
+      'letra': finales.map((l) => l.texto).join('\n\n'),
+      'letras': finales.map((l) => l.toMap()).toList(),
+      'imagenUrl': imagenUrl,
+      'audioUrl': audioUrl,
+      'videoUrl': videoUrl,
+      'descripcion': descripcion,
+      'tags': tags,
+      'categoriaId': categoriaId,
+      'reproducciones': reproducciones,
     };
   }
 }
