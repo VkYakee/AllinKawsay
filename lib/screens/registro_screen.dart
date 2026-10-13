@@ -15,6 +15,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _pass = TextEditingController();
   final _pass2 = TextEditingController();
   bool _loading = false;
+  bool _loadingGoogle = false;
   bool _verPass = false;
 
   Future<void> _registrar() async {
@@ -64,7 +65,37 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
   }
 
+  Future<void> _registrarConGoogle() async {
+    setState(() => _loadingGoogle = true);
+    try {
+      final user = await AuthService().loginConGoogle();
+      if (user != null && mounted) {
+        Navigator.pop(context);
+      }
+    } on FirebaseAuthException catch (e) {
+      String msg = 'No se pudo registrar con Google';
+      if (e.code == 'account-exists-with-different-credential') {
+        msg = 'Ese email ya está registrado con contraseña.';
+      }
+      _snack(msg);
+    } catch (e) {
+      final s = e.toString();
+      if (s.contains('ApiException: 10')) {
+        _snack('Configuración incompleta: falta registrar el SHA-1 en '
+            'Firebase Console.');
+      } else if (s.contains('sign_in_canceled') ||
+          s.contains('canceled')) {
+        // Silencioso
+      } else {
+        _snack('Error: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _loadingGoogle = false);
+    }
+  }
+
   void _snack(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(msg)));
   }
@@ -77,7 +108,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _pass2.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,7 +131,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Ícono
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
@@ -135,7 +164,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Card
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -146,12 +174,105 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     child: Column(
                       children: [
+                        // ══════ Botón Google (rápido) ══════
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: (_loading || _loadingGoogle)
+                                ? null
+                                : _registrarConGoogle,
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                  color: AppColors.dorado
+                                      .withOpacity(0.5),
+                                  width: 1.5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              backgroundColor: Colors.white,
+                            ),
+                            child: _loadingGoogle
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.granate,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        width: 22,
+                                        height: 22,
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.white,
+                                        ),
+                                        child: const Center(
+                                          child: Text(
+                                            'G',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF4285F4),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'Registrarme con Google',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.negro,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Divider(
+                                  color: AppColors.dorado
+                                      .withOpacity(0.2)),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12),
+                              child: Text(
+                                'o con email',
+                                style: TextStyle(
+                                  color: AppColors.dorado
+                                      .withOpacity(0.6),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Divider(
+                                  color: AppColors.dorado
+                                      .withOpacity(0.2)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
                         TextField(
                           controller: _nombre,
                           textCapitalization:
                               TextCapitalization.words,
                           style: const TextStyle(color: Colors.white),
-                          decoration: _deco('Nombre completo', Icons.person),
+                          decoration:
+                              _deco('Nombre completo', Icons.person),
                         ),
                         const SizedBox(height: 14),
                         TextField(
@@ -218,7 +339,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                   const SizedBox(height: 20),
                   TextButton.icon(
-                    onPressed: _loading
+                    onPressed: (_loading || _loadingGoogle)
                         ? null
                         : () => Navigator.pop(context),
                     icon: Icon(Icons.arrow_back,
