@@ -76,4 +76,13 @@ class AppColors {
         ? fondoOscuro
         : const Color(0xFFFAFAFA);
   }
+
+  /// Color para títulos de sección ("INFO BÁSICA", "NUMEROFONÍA", etc.).
+  /// En claro: granate (contrasta bien con fondo blanco).
+  /// En oscuro: dorado (contrasta bien con fondo #0F0F0F).
+  static Color seccionTitulo(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? dorado
+        : granate;
+  }
 }
