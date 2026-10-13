@@ -84,24 +84,29 @@ class UsuarioService {
     );
   }
 
+  /// Alterna favorito de manera ATÓMICA con `arrayUnion` / `arrayRemove`.
+  /// Así evitamos race conditions si el usuario toca varias veces rápido.
   Future<void> toggleFavorito(String cancionId) async {
     final uid = miUid();
     if (uid == null) return;
 
-    final doc = await _db.collection('usuarios').doc(uid).get();
+    final ref = _db.collection('usuarios').doc(uid);
+    final doc = await ref.get();
     final data = doc.data();
     if (data == null) return;
 
     final List<String> favs = List<String>.from(data['favoritos'] ?? []);
-    if (favs.contains(cancionId)) {
-      favs.remove(cancionId);
+    final yaEsta = favs.contains(cancionId);
+
+    if (yaEsta) {
+      await ref.update({
+        'favoritos': FieldValue.arrayRemove([cancionId]),
+      });
     } else {
-      favs.add(cancionId);
+      await ref.update({
+        'favoritos': FieldValue.arrayUnion([cancionId]),
+      });
     }
-    await _db
-        .collection('usuarios')
-        .doc(uid)
-        .update({'favoritos': favs});
   }
 
   Future<void> banear(String uid) async {
