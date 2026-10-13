@@ -137,6 +137,8 @@ Widget build(BuildContext context) {
                 fotos: r.fotos,
                 tituloRecuerdo: r.titulo,
                 puedeDescargar: puedeDescargar,
+                // ⬇️ NUEVO: prefijo para los Hero tags
+                heroPrefix: r.id,
               ),
             ),
             const SizedBox(height: 16),
