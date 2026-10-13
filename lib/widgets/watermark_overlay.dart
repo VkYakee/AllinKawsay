@@ -5,107 +5,67 @@ class WatermarkOverlay extends StatelessWidget {
   final Widget child;
   final double opacity;
   final double logoSize;
-  final double spacing;
+  final double rotation;
 
   const WatermarkOverlay({
     super.key,
     required this.child,
-    this.opacity = 0.06,
-    this.logoSize = 120,
-    this.spacing = 80,
+    this.opacity = 0.08,
+    this.logoSize = 100,
+    this.rotation = -30,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final adjustedOpacity = isDark ? opacity * 1.5 : opacity;
+    final adjustedOpacity = isDark ? opacity * 1.8 : opacity;
+    final screenSize = MediaQuery.of(context).size;
+    
+    // Calcular cuántos logos necesitamos para cubrir la pantalla
+    final diagonal = math.sqrt(
+      screenSize.width * screenSize.width + screenSize.height * screenSize.height,
+    );
+    final logosPerRow = (diagonal / logoSize).ceil() + 2;
+    final logosPerColumn = (diagonal / logoSize).ceil() + 2;
 
     return Stack(
       fit: StackFit.expand,
       children: [
         child,
         IgnorePointer(
-          child: CustomPaint(
-            painter: _WatermarkPainter(
-              opacity: adjustedOpacity,
-              logoSize: logoSize,
-              spacing: spacing,
+          child: ClipRect(
+            child: Center(
+              child: Transform.rotate(
+                angle: rotation * math.pi / 180,
+                child: SizedBox(
+                  width: diagonal * 1.5,
+                  height: diagonal * 1.5,
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: logosPerRow,
+                      childAspectRatio: 1.0,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: logosPerRow * logosPerColumn,
+                    itemBuilder: (context, index) {
+                      return Opacity(
+                        opacity: adjustedOpacity,
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
-            child: const SizedBox.expand(),
           ),
         ),
       ],
     );
   }
-}
-class _WatermarkPainter extends CustomPainter {
-  final double opacity;
-  final double logoSize;
-  final double spacing;
-
-  _WatermarkPainter({
-    required this.opacity,
-    required this.logoSize,
-    required this.spacing,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(opacity)
-      ..filterQuality = FilterQuality.medium;
-
-    final rotationAngle = -30 * math.pi / 180; // -30 grados
-
-    // Calcular cuántos logos caben en la pantalla
-    final diagonal = math.sqrt(size.width * size.width + size.height * size.height);
-    final stepX = logoSize + spacing;
-    final stepY = logoSize + spacing;
-
-    // Extender el área de dibujo para cubrir toda la pantalla después de rotar
-    final extendedWidth = diagonal + logoSize * 2;
-    final extendedHeight = diagonal + logoSize * 2;
-
-    canvas.save();
-    
-    // Mover al centro y rotar
-    canvas.translate(size.width / 2, size.height / 2);
-    canvas.rotate(rotationAngle);
-    canvas.translate(-extendedWidth / 2, -extendedHeight / 2);
-
-    // Dibujar patrón de logos
-    for (double y = -logoSize; y < extendedHeight; y += stepY) {
-      for (double x = -logoSize; x < extendedWidth; x += stepX) {
-        _drawLogo(canvas, x, y, paint);
-      }
-    }
-
-    canvas.restore();
-  }
-
-  void _drawLogo(Canvas canvas, double x, double y, Paint paint) {
-    final rect = Rect.fromLTWH(x, y, logoSize, logoSize);
-    
-    // Dibujar círculo de fondo sutil
-    canvas.drawCircle(
-      Offset(x + logoSize / 2, y + logoSize / 2),
-      logoSize / 2,
-      paint,
-    );
-
-    // Dibujar borde del círculo
-    final borderPaint = Paint()
-      ..color = Colors.white.withOpacity(opacity * 2)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    
-    canvas.drawCircle(
-      Offset(x + logoSize / 2, y + logoSize / 2),
-      logoSize / 2,
-      borderPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
