@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/info_version.dart';
 import '../version_build.dart';
+import 'onesignal_service.dart';
 
 class UpdateService {
   static final _db = FirebaseFirestore.instance;
   static const _docId = 'ultimaAprobada';
 
-  /// Lee el doc crudo `config/ultimaAprobada` (sin filtros).
   static Future<InfoVersion?> actual() async {
     try {
       final doc =
@@ -18,8 +18,6 @@ class UpdateService {
     }
   }
 
-  /// Devuelve info SOLO si hay una versión más nueva que la instalada
-  /// y tiene URL de APK. Caso contrario null.
   static Future<InfoVersion?> hayActualizacion() async {
     final info = await actual();
     if (info == null) return null;
@@ -32,17 +30,28 @@ class UpdateService {
       VersionBuild.build < otroBuild;
 
   static int get buildInstalado => VersionBuild.build;
-  /// Escribe `config/ultimaAprobada` con los datos de [info].
-  /// Solo funciona si el usuario autenticado es admin (regla Firestore).
+
   static Future<void> aprobar(InfoVersion info) async {
     await _db
         .collection('config')
         .doc(_docId)
         .set(info.toMap(), SetOptions(merge: false));
+
+    // Enviar notificación push a todos
+    final mensaje = info.critica
+        ? '⚠️ Actualización obligatoria. Actualizá para seguir usando la app.'
+        : '📲 Hay una nueva versión disponible. Tocá para actualizar.';
+    OneSignalService.enviarATodos(
+      titulo: '🚀 Nueva versión v${info.version}.${info.build}',
+      mensaje: mensaje,
+      datos: {
+        'tipo': 'actualizacion',
+        'build': info.build,
+        'version': info.version,
+      },
+    );
   }
 
-  /// Borra el doc `config/ultimaAprobada`.
-  /// Después de esto, nadie verá aviso de actualización.
   static Future<void> desactivar() async {
     await _db.collection('config').doc(_docId).delete();
   }
