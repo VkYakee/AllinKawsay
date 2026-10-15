@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import '../../services/descarga_service.dart';
 import '../../theme/colors.dart';
 import '../../screens/foto_fullscreen_screen.dart';
+import '../dialogo_descarga.dart';
 
 class GaleriaFotos extends StatelessWidget {
   final List<String> fotos;
   final String tituloRecuerdo;
   final bool puedeDescargar;
-
-  /// Identificador único del recuerdo (usualmente `recuerdo.id`).
-  /// Se usa para construir los Hero tags.
   final String heroPrefix;
 
   const GaleriaFotos({
@@ -49,7 +47,7 @@ class GaleriaFotos extends StatelessWidget {
                   top: 12,
                   right: 12,
                   child: GestureDetector(
-                    onTap: () => _descargarFoto(context, fotos[i]),
+                    onTap: () => _descargarFoto(context, fotos[i], i),
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -96,6 +94,7 @@ class GaleriaFotos extends StatelessWidget {
     if (heroPrefix.isEmpty) return imagen;
     return Hero(tag: _tagDe(index), child: imagen);
   }
+
   void _verFoto(BuildContext context, String url, int index) {
     Navigator.push(
       context,
@@ -110,36 +109,21 @@ class GaleriaFotos extends StatelessWidget {
     );
   }
 
-  Future<void> _descargarFoto(BuildContext context, String url) async {
-    if (context.mounted == false) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                  color: AppColors.dorado, strokeWidth: 2.5),
-            ),
-            SizedBox(width: 12),
-            Text('Descargando...'),
-          ],
-        ),
-        duration: Duration(seconds: 30),
-      ),
+  Future<void> _descargarFoto(
+      BuildContext context, String url, int index) async {
+    final nombre = DescargaService.nombreConTimestamp(
+      '${tituloRecuerdo}_${index + 1}',
+      'jpg',
+    );
+    final resultado = await DialogoDescarga.mostrar(
+      context,
+      url: url,
+      nombre: nombre,
+      mime: 'image/jpeg',
+      titulo: 'Descargando foto',
     );
 
-    final nombre =
-        DescargaService.nombreConTimestamp(tituloRecuerdo, 'jpg');
-    final resultado =
-        await DescargaService.descargar(url, nombre, 'image/jpeg');
-
-    if (context.mounted == false) return;
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
+    if (!context.mounted) return;
     if (resultado != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -148,17 +132,11 @@ class GaleriaFotos extends StatelessWidget {
               const Icon(Icons.check_circle, color: AppColors.dorado),
               const SizedBox(width: 12),
               Expanded(
-                  child: Text('Guardado en Descargas: $resultado')),
+                child: Text('Guardado en Descargas: $resultado'),
+              ),
             ],
           ),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo descargar'),
-          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
         ),
       );
     }
