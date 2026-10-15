@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/evento.dart';
 import 'actividad_service.dart';
+import 'onesignal_service.dart';
 
 class EventoService {
   final _db = FirebaseFirestore.instance;
@@ -19,11 +20,12 @@ class EventoService {
       'crear_evento',
       'Creó el evento "${e.titulo}"',
     );
+    // Enviar notificación push a todos (fire-and-forget)
+    _notificarEvento(e);
     return ref.id;
   }
 
   Future<void> actualizar(String id, Map<String, dynamic> cambios) async {
-    // Cada edición actualiza `fechaEdicion` automáticamente
     await _db.collection('eventos').doc(id).update({
       ...cambios,
       'fechaEdicion': FieldValue.serverTimestamp(),
@@ -48,6 +50,25 @@ class EventoService {
     ActividadService.registrar(
       'eliminar_evento',
       'Eliminó el evento "$titulo"',
+    );
+  }
+
+  /// Envía la notificación push silenciosamente.
+  void _notificarEvento(Evento e) {
+    final fecha = '${e.fecha.day}/${e.fecha.month}/${e.fecha.year}';
+    final hora = '${e.fecha.hour.toString().padLeft(2, '0')}:'
+        '${e.fecha.minute.toString().padLeft(2, '0')}';
+    final mensaje = e.lugar.isEmpty
+        ? '📅 $fecha · $hora'
+        : '📅 $fecha · $hora · ${e.lugar}';
+
+    OneSignalService.enviarATodos(
+      titulo: '🎉 Nuevo evento: ${e.titulo}',
+      mensaje: mensaje,
+      datos: {
+        'tipo': 'evento',
+        'eventoId': e.id,
+      },
     );
   }
 }
