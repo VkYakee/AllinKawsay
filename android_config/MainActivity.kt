@@ -1,4 +1,4 @@
-package com.sikuris.sikuris_app
+package com.allinkawsay.app
 
 import android.content.ContentValues
 import android.content.Intent
