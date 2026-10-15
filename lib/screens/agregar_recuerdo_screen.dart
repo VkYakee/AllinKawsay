@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/recuerdo.dart';
+import '../services/permisos_service.dart';
 import '../services/recuerdo_service.dart';
 import '../services/storage_service.dart';
 import '../theme/colors.dart';
@@ -22,7 +23,7 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
   final _descripcionCtrl = TextEditingController();
   final _service = RecuerdoService();
   final _storage = StorageService();
-  
+
   List<String> _fotosUrls = [];
   List<String> _videosUrls = [];
   List<File> _fotosNuevas = [];
@@ -50,6 +51,10 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
   }
 
   Future<void> _agregarFoto() async {
+    // Pedir permiso de galería primero
+    final ok = await PermisosService.pedirGaleria(context);
+    if (!ok || !mounted) return;
+
     final picker = ImagePicker();
     final imagen = await picker.pickImage(
       source: ImageSource.gallery,
@@ -65,6 +70,10 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
   }
 
   Future<void> _agregarVideo() async {
+    // Pedir permiso de videos primero
+    final ok = await PermisosService.pedirVideos(context);
+    if (!ok || !mounted) return;
+
     final resultado = await FilePicker.platform.pickFiles(
       type: FileType.video,
       allowMultiple: false,
@@ -95,7 +104,8 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
       }
     });
   }
-Future<void> _guardar() async {
+
+  Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -109,15 +119,19 @@ Future<void> _guardar() async {
 
       final fotosSubidas = <String>[];
       for (int i = 0; i < _fotosNuevas.length; i++) {
-        setState(() => _progreso = 'Subiendo foto ${i + 1}/${_fotosNuevas.length}...');
-        final url = await _storage.subirFoto(_fotosNuevas[i], 'recuerdos');
+        setState(() =>
+            _progreso = 'Subiendo foto ${i + 1}/${_fotosNuevas.length}...');
+        final url =
+            await _storage.subirFoto(_fotosNuevas[i], 'recuerdos');
         fotosSubidas.add(url);
       }
 
       final videosSubidos = <String>[];
       for (int i = 0; i < _videosNuevos.length; i++) {
-        setState(() => _progreso = 'Subiendo video ${i + 1}/${_videosNuevos.length}...');
-        final url = await _storage.subirVideo(_videosNuevos[i], 'recuerdos');
+        setState(() =>
+            _progreso = 'Subiendo video ${i + 1}/${_videosNuevos.length}...');
+        final url =
+            await _storage.subirVideo(_videosNuevos[i], 'recuerdos');
         videosSubidos.add(url);
       }
 
@@ -180,202 +194,214 @@ Future<void> _guardar() async {
     }
   }
 @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_esEdicion ? 'EDITAR RECUERDO' : 'NUEVO RECUERDO'),
-      ),
-      body: _guardando
-          ? _pantallaProgreso()
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(_esEdicion ? 'EDITAR RECUERDO' : 'NUEVO RECUERDO'),
+    ),
+    body: _guardando
+        ? _pantallaProgreso()
+        : Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                TextFormField(
+                  controller: _tituloCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Título *',
+                    hintText: 'Ej: Fiesta patronal 2024',
+                    prefixIcon: Icon(Icons.title),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? 'El título es obligatorio'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _descripcionCtrl,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Descripción',
+                    hintText:
+                        'Cuenta la historia detrás de este recuerdo...',
+                    prefixIcon: Icon(Icons.description),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _seccionMultimedia(
+                  titulo: 'FOTOS',
+                  icono: Icons.photo_library,
+                  urlsExistentes: _fotosUrls,
+                  archivosNuevos: _fotosNuevas,
+                  onAgregar: _agregarFoto,
+                  onEliminar: _eliminarFoto,
+                  esImagen: true,
+                ),
+                const SizedBox(height: 24),
+                _seccionMultimedia(
+                  titulo: 'VIDEOS',
+                  icono: Icons.video_library,
+                  urlsExistentes: _videosUrls,
+                  archivosNuevos: _videosNuevos,
+                  onAgregar: _agregarVideo,
+                  onEliminar: _eliminarVideo,
+                  esImagen: false,
+                ),
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: _guardando ? null : _guardar,
+                  icon: _guardando
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(
+                    _guardando
+                        ? 'GUARDANDO...'
+                        : (_esEdicion ? 'ACTUALIZAR' : 'GUARDAR'),
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppColors.granate,
+                  ),
+                ),
+              ],
+            ),
+          ),
+  );
+}
+
+Widget _pantallaProgreso() {
+  return Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const CircularProgressIndicator(color: AppColors.dorado),
+        const SizedBox(height: 24),
+        Text(
+          _progreso,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.granate,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Por favor espera...',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _seccionMultimedia({
+  required String titulo,
+  required IconData icono,
+  required List<String> urlsExistentes,
+  required List<File> archivosNuevos,
+  required VoidCallback onAgregar,
+  required Function(int, bool) onEliminar,
+  required bool esImagen,
+}) {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.cardColor(context),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.granate.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icono, color: AppColors.granate, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '$titulo (${urlsExistentes.length + archivosNuevos.length})',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.granate,
+                letterSpacing: 1,
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              onPressed: onAgregar,
+              icon: const Icon(Icons.add_circle,
+                  color: AppColors.dorado),
+              tooltip: 'Agregar ${esImagen ? "foto" : "video"}',
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (urlsExistentes.isEmpty && archivosNuevos.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              border:
+                  Border.all(color: Colors.grey.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Column(
                 children: [
-                  TextFormField(
-                    controller: _tituloCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Título *',
-                      hintText: 'Ej: Fiesta patronal 2024',
-                      prefixIcon: Icon(Icons.title),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'El título es obligatorio' : null,
+                  Icon(
+                    esImagen
+                        ? Icons.photo_camera_outlined
+                        : Icons.videocam_outlined,
+                    size: 40,
+                    color: Colors.grey,
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _descripcionCtrl,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Descripción',
-                      hintText: 'Cuenta la historia detrás de este recuerdo...',
-                      prefixIcon: Icon(Icons.description),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _seccionMultimedia(
-                    titulo: 'FOTOS',
-                    icono: Icons.photo_library,
-                    urlsExistentes: _fotosUrls,
-                    archivosNuevos: _fotosNuevas,
-                    onAgregar: _agregarFoto,
-                    onEliminar: _eliminarFoto,
-                    esImagen: true,
-                  ),
-                  const SizedBox(height: 24),
-                  _seccionMultimedia(
-                    titulo: 'VIDEOS',
-                    icono: Icons.video_library,
-                    urlsExistentes: _videosUrls,
-                    archivosNuevos: _videosNuevos,
-                    onAgregar: _agregarVideo,
-                    onEliminar: _eliminarVideo,
-                    esImagen: false,
-                  ),
-                  const SizedBox(height: 32),
-                  FilledButton.icon(
-                    onPressed: _guardando ? null : _guardar,
-                    icon: _guardando
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.save),
-                    label: Text(_guardando ? 'GUARDANDO...' : (_esEdicion ? 'ACTUALIZAR' : 'GUARDAR')),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppColors.granate,
-                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sin ${esImagen ? "fotos" : "videos"} aún',
+                    style: TextStyle(color: Colors.grey[600]),
                   ),
                 ],
               ),
             ),
-    );
-  }
-Widget _pantallaProgreso() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(color: AppColors.dorado),
-          const SizedBox(height: 24),
-          Text(
-            _progreso,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.granate,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Por favor espera...',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _seccionMultimedia({
-    required String titulo,
-    required IconData icono,
-    required List<String> urlsExistentes,
-    required List<File> archivosNuevos,
-    required VoidCallback onAgregar,
-    required Function(int, bool) onEliminar,
-    required bool esImagen,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.granate.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+              for (int i = 0; i < archivosNuevos.length; i++)
+                _previewItem(
+                  esNuevo: true,
+                  esImagen: esImagen,
+                  file: archivosNuevos[i],
+                  onEliminar: () => onEliminar(i, true),
                 ),
-                child: Icon(icono, color: AppColors.granate, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '$titulo (${urlsExistentes.length + archivosNuevos.length})',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.granate,
-                  letterSpacing: 1,
+              for (int i = 0; i < urlsExistentes.length; i++)
+                _previewItem(
+                  esNuevo: false,
+                  esImagen: esImagen,
+                  url: urlsExistentes[i],
+                  onEliminar: () => onEliminar(i, false),
                 ),
-              ),
-              const Spacer(),
-              IconButton(
-                onPressed: onAgregar,
-                icon: const Icon(Icons.add_circle, color: AppColors.dorado),
-                tooltip: 'Agregar ${esImagen ? "foto" : "video"}',
-              ),
             ],
           ),
-          const SizedBox(height: 12),
-          if (urlsExistentes.isEmpty && archivosNuevos.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      esImagen ? Icons.photo_camera_outlined : Icons.videocam_outlined,
-                      size: 40,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sin ${esImagen ? "fotos" : "videos"} aún',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (int i = 0; i < archivosNuevos.length; i++)
-                  _previewItem(
-                    esNuevo: true,
-                    esImagen: esImagen,
-                    file: archivosNuevos[i],
-                    onEliminar: () => onEliminar(i, true),
-                  ),
-                for (int i = 0; i < urlsExistentes.length; i++)
-                  _previewItem(
-                    esNuevo: false,
-                    esImagen: esImagen,
-                    url: urlsExistentes[i],
-                    onEliminar: () => onEliminar(i, false),
-                  ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
+      ],
+    ),
+  );
+}
   Widget _previewItem({
     required bool esNuevo,
     required bool esImagen,
@@ -392,7 +418,9 @@ Widget _pantallaProgreso() {
             borderRadius: BorderRadius.circular(12),
             color: Colors.grey.withOpacity(0.2),
             border: Border.all(
-              color: esNuevo ? AppColors.dorado : AppColors.dorado.withOpacity(0.3),
+              color: esNuevo
+                  ? AppColors.dorado
+                  : AppColors.dorado.withOpacity(0.3),
               width: esNuevo ? 2 : 1,
             ),
           ),
@@ -402,7 +430,7 @@ Widget _pantallaProgreso() {
                 ? (file != null
                     ? Image.file(file, fit: BoxFit.cover)
                     : Image.network(url!, fit: BoxFit.cover))
-                : Center(
+                : const Center(
                     child: Icon(
                       Icons.videocam,
                       color: AppColors.dorado,
@@ -421,7 +449,8 @@ Widget _pantallaProgreso() {
                 color: AppColors.dorado,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.cloud_upload, color: Colors.white, size: 14),
+              child: const Icon(Icons.cloud_upload,
+                  color: Colors.white, size: 14),
             ),
           ),
         Positioned(
@@ -435,7 +464,8 @@ Widget _pantallaProgreso() {
                 color: Colors.red,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.close, color: Colors.white, size: 14),
+              child: const Icon(Icons.close,
+                  color: Colors.white, size: 14),
             ),
           ),
         ),
