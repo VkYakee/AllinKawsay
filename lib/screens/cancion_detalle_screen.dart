@@ -14,12 +14,14 @@ import '../widgets/cancion/header_numerofonia.dart';
 import '../widgets/cancion/informacion_expandible.dart';
 import '../widgets/cancion/nota_personal_card.dart';
 import '../widgets/comunes/seccion_card.dart';
+import '../widgets/dialogo_descarga.dart';
 import '../widgets/tarjeta_video.dart';
 import '../widgets/visor_letras.dart';
 import '../widgets/visor_numerofonia.dart';
 import '../widgets/watermark_overlay.dart';
 import 'compartir_imagen_screen.dart';
 import 'presentacion_screen.dart';
+import 'reproductor_ensayo_screen.dart';
 
 class CancionDetalleScreen extends StatefulWidget {
   final Cancion cancion;
@@ -53,60 +55,59 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
     }
   }
 
+  Future<void> _abrirModoEnsayo() async {
+    if (widget.cancion.audioUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Esta canción no tiene audio cargado')),
+      );
+      return;
+    }
+    // Si no es esta la canción sonando, la empezamos a reproducir
+    if (_player.cancionActualId != widget.cancion.id) {
+      await _player.toggle(widget.cancion);
+    }
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ReproductorEnsayoScreen(cancion: widget.cancion),
+      ),
+    );
+  }
+
   Future<void> _descargar(String url,
       {String? nombre, String mime = 'application/octet-stream'}) async {
     if (url.isEmpty) return;
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    color: AppColors.dorado, strokeWidth: 2.5),
-              ),
-              SizedBox(width: 12),
-              Text('Descargando...'),
-            ],
-          ),
-          duration: Duration(seconds: 30),
-        ),
-      );
-    }
-
     final nombreFinal = nombre ??
         DescargaService.nombreConTimestamp(widget.cancion.titulo, 'mp3');
-    final resultado =
-        await DescargaService.descargar(url, nombreFinal, mime);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    final resultado = await DialogoDescarga.mostrar(
+      context,
+      url: url,
+      nombre: nombreFinal,
+      mime: mime,
+      titulo: 'Descargando audio',
+    );
 
-      if (resultado != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppColors.dorado),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: Text('Guardado en Descargas: $resultado')),
-              ],
-            ),
-            duration: const Duration(seconds: 4),
+    if (!mounted) return;
+    if (resultado != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.dorado),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('Guardado en Descargas: $resultado'),
+              ),
+            ],
           ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo descargar'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -259,6 +260,7 @@ Widget build(BuildContext context) {
               player: _player,
               onTogglePlay: _togglePlay,
               onDescargar: _descargar,
+              onModoEnsayo: _abrirModoEnsayo,
             ),
           ),
           const SizedBox(height: 16),
