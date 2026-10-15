@@ -7,6 +7,43 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:603260146479:android:214965db84299d8eacc7da",
+        "android_client_info": {
+          "package_name": "com.allinkawsay.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "603260146479-09b6q9qi0dnocdk1ccsg2asg5di2aaqv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.allinkawsay.app",
+            "certificate_hash": "45dd130575dd2c05b576cd969fbd85f8409f2e92"
+          }
+        },
+        {
+          "client_id": "603260146479-l9q7qm3vq9ueluggdijr5i8bm8hm6p82.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZpSNJUwgWW4zsqXwpzn2QSDOAthn5Jac"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "603260146479-l9q7qm3vq9ueluggdijr5i8bm8hm6p82.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:603260146479:android:2c872d7cf4ec2c6dacc7da",
         "android_client_info": {
           "package_name": "com.sikuris.sikuris_app"
