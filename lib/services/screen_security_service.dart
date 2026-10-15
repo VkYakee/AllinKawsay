@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 class ScreenSecurityService {
   static const _channel =
-      MethodChannel('com.sikuris/screen_security');
+      MethodChannel('com.allinkawsay/native');
 
   /// Bloquea capturas de pantalla y grabación (solo Android).
   static Future<void> enable() async {
