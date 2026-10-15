@@ -35,7 +35,6 @@ class OneSignalService {
   }
 
   /// Asocia el dispositivo del usuario logueado con su UID de Firebase.
-  /// Llamar cuando el usuario entra a la app.
   static Future<void> login(String uid) async {
     if (!estaConfigurado) return;
     try {
@@ -73,9 +72,6 @@ class OneSignalService {
   }
 
   /// Envía una notificación push a TODOS los usuarios registrados.
-  /// Solo funciona si el usuario logueado es admin (reglas Firestore).
-  ///
-  /// Devuelve true si se envió, false si falló.
   static Future<bool> enviarATodos({
     required String titulo,
     required String mensaje,
@@ -98,7 +94,7 @@ class OneSignalService {
         'priority': 10,
         'android_sound': 'default',
         'small_icon': 'ic_stat_notify',
-        'large_icon': 'ic_launcher',
+        'large_icon': 'ic_notify_large',
         if (datos != null) 'data': datos,
       };
 
