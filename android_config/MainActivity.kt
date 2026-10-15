@@ -14,7 +14,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity : AudioServiceActivity() {
-    private val CHANNEL = "com.sikuris/screen_security"
+    private val CHANNEL = "com.allinkawsay/native"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
