@@ -53,6 +53,18 @@ jobs:
           mkdir -p android/app/src/main/res/xml
           cp android_config/file_paths.xml android/app/src/main/res/xml/file_paths.xml
 
+          # Copiar íconos de notificación (silueta) al proyecto Android
+          mkdir -p android/app/src/main/res/drawable-mdpi
+          mkdir -p android/app/src/main/res/drawable-hdpi
+          mkdir -p android/app/src/main/res/drawable-xhdpi
+          mkdir -p android/app/src/main/res/drawable-xxhdpi
+          mkdir -p android/app/src/main/res/drawable-xxxhdpi
+          cp android_config/res/drawable-mdpi/ic_stat_notify.png android/app/src/main/res/drawable-mdpi/
+          cp android_config/res/drawable-hdpi/ic_stat_notify.png android/app/src/main/res/drawable-hdpi/
+          cp android_config/res/drawable-xhdpi/ic_stat_notify.png android/app/src/main/res/drawable-xhdpi/
+          cp android_config/res/drawable-xxhdpi/ic_stat_notify.png android/app/src/main/res/drawable-xxhdpi/
+          cp android_config/res/drawable-xxxhdpi/ic_stat_notify.png android/app/src/main/res/drawable-xxxhdpi/
+
       - name: Aplicar MainActivity custom
         run: |
           if [ -f "android_config/MainActivity.kt" ]; then
