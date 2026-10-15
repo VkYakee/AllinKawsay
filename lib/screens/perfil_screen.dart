@@ -6,6 +6,7 @@ import '../models/recuerdo.dart';
 import '../models/usuario.dart';
 import '../services/auth_service.dart';
 import '../services/cancion_service.dart';
+import '../services/permisos_service.dart';
 import '../services/recuerdo_service.dart';
 import '../services/storage_service.dart';
 import '../services/usuario_service.dart';
@@ -38,6 +39,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
   }
 
   Future<void> _cambiarFoto(Usuario u) async {
+    // Pedir permiso de galería primero
+    final ok = await PermisosService.pedirGaleria(context);
+    if (!ok || !mounted) return;
+
     final picker = ImagePicker();
     final x = await picker.pickImage(
       source: ImageSource.gallery,
