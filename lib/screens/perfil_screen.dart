@@ -22,6 +22,7 @@ import 'exportar_respaldo_screen.dart';
 import 'gestion_actualizaciones_screen.dart';
 import 'gestion_categorias_screen.dart';
 import 'gestion_usuarios_screen.dart';
+import 'notificaciones_admin_screen.dart';
 
 class PerfilScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -415,8 +416,8 @@ void _abrirAjustes() {
                             color: AppColors.granate,
                             letterSpacing: 2)),
                     SizedBox(height: 10),
-                    Text('• Notificaciones push'),
                     Text('• Modo offline'),
+                    Text('• Ajuste de tamaño de letra'),
                   ],
                 ),
               ),
@@ -797,6 +798,17 @@ Widget _seccionAdmin(Color onSurface) {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ActividadScreen()),
+        ),
+      ),
+      _itemMenu(
+        Icons.campaign,
+        'Notificaciones',
+        'Canciones nuevas y mensajes al grupo',
+        onSurface,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const NotificacionesAdminScreen()),
         ),
       ),
       _itemMenu(
