@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 class DescargaService {
-  static const _channel = MethodChannel('com.sikuris/screen_security');
+  static const _channel = MethodChannel('com.allinkawsay/native');
 
   /// Descarga un archivo desde una URL y lo guarda en la carpeta
   /// Descargas del dispositivo.
@@ -41,7 +41,8 @@ class DescargaService {
         '${ahora.hour.toString().padLeft(2, '0')}'
         '${ahora.minute.toString().padLeft(2, '0')}'
         '${ahora.second.toString().padLeft(2, '0')}';
-    final limpio = base.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
+    final limpio =
+        base.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
     return '${limpio}_$ts.$extension';
   }
 }
