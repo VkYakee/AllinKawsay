@@ -97,6 +97,8 @@ class OneSignalService {
         'contents': {'en': mensaje, 'es': mensaje},
         'priority': 10,
         'android_sound': 'default',
+        'small_icon': 'ic_stat_notify',
+        'large_icon': 'ic_launcher',
         if (datos != null) 'data': datos,
       };
 
