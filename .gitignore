@@ -1,9 +1,25 @@
+# Dart/Flutter
 .dart_tool/
 .packages
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# IDE
 *.iml
 .idea/
 .vscode/
+
+# Logs
 *.log
+
+# Archivos sensibles — NUNCA subir al repo
+*.keystore
+*.jks
+keystore.properties
+firebase/google-services.json
+.env
+.env.*
+key.properties
+*.p12
+*.pem
