@@ -99,5 +99,15 @@
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>
+
+        <!-- OneSignal: ícono chico (silueta) para notificaciones -->
+        <meta-data
+            android:name="com.onesignal.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_notify" />
+
+        <!-- Color de acento blanco para la silueta -->
+        <meta-data
+            android:name="com.onesignal.NotificationAccentColor.DEFAULT"
+            android:value="FFFFFFFF" />
     </application>
 </manifest>
