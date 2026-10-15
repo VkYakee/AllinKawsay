@@ -5,8 +5,10 @@ import '../models/evento.dart';
 import '../models/recuerdo.dart';
 import '../services/cancion_service.dart';
 import '../services/evento_service.dart';
+import '../services/novedades_service.dart';
 import '../services/recuerdo_service.dart';
 import '../theme/colors.dart';
+import '../widgets/banner_novedades.dart';
 import '../widgets/social_buttons.dart';
 import '../widgets/watermark_overlay.dart';
 import 'busqueda_global_screen.dart';
@@ -23,8 +25,24 @@ class InicioScreen extends StatefulWidget {
 }
 
 class _InicioScreenState extends State<InicioScreen> {
+  Evento? _eventoNuevo;
+  bool _bannerCerrado = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarNovedades();
+  }
+
+  Future<void> _cargarNovedades() async {
+    final evento = await NovedadesService.eventoNuevoNoVisto();
+    if (!mounted) return;
+    setState(() => _eventoNuevo = evento);
+  }
+
   Future<void> _onRefresh() async {
-    await Future.delayed(const Duration(milliseconds: 800));
+    await _cargarNovedades();
+    await Future.delayed(const Duration(milliseconds: 500));
   }
 
   @override
@@ -45,6 +63,22 @@ class _InicioScreenState extends State<InicioScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 _header(context),
+
+                // Banner de evento nuevo
+                if (_eventoNuevo != null && !_bannerCerrado)
+                  BannerNovedades(
+                    icono: Icons.celebration,
+                    titulo: '🎉 Nuevo evento: ${_eventoNuevo!.titulo}',
+                    subtitulo:
+                        '${_eventoNuevo!.fecha.day}/${_eventoNuevo!.fecha.month}'
+                        ' · ${_eventoNuevo!.lugar}',
+                    onTap: () {
+                      setState(() => _bannerCerrado = true);
+                    },
+                    onCerrar: () =>
+                        setState(() => _bannerCerrado = true),
+                  ),
+
                 const SizedBox(height: 24),
                 _seccionTitulo(context, 'Próximo evento',
                     Icons.event_available),
@@ -448,187 +482,188 @@ Widget _ultimasCanciones(BuildContext context) {
     },
   );
 }
-Widget _ultimoRecuerdo(BuildContext context) {
-  final onSurface = Theme.of(context).colorScheme.onSurface;
-  return StreamBuilder<List<Recuerdo>>(
-    stream: RecuerdoService().listar(),
-    builder: (context, snap) {
-      if (snap.connectionState == ConnectionState.waiting) {
-        return const _SkeletonRecuerdo();
-      }
-      if (snap.hasError) return const _ErrorMini();
+  Widget _ultimoRecuerdo(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return StreamBuilder<List<Recuerdo>>(
+      stream: RecuerdoService().listar(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const _SkeletonRecuerdo();
+        }
+        if (snap.hasError) return const _ErrorMini();
 
-      final lista = snap.data ?? [];
-      if (lista.isEmpty) {
-        return _emptyCard(context, Icons.photo_library,
-            'Sin recuerdos aún', onSurface);
-      }
+        final lista = snap.data ?? [];
+        if (lista.isEmpty) {
+          return _emptyCard(context, Icons.photo_library,
+              'Sin recuerdos aún', onSurface);
+        }
 
-      final r = lista.first;
-      return TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOut,
-        builder: (context, value, child) {
-          return Opacity(
-            opacity: value,
-            child: Transform.translate(
-                offset: Offset(0, 10 * (1 - value)), child: child),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => RecuerdoDetalleScreen(recuerdo: r)),
-              ),
-              child: Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: AppColors.dorado.withOpacity(0.25)),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4)),
-                  ],
+        final r = lista.first;
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                  offset: Offset(0, 10 * (1 - value)), child: child),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => RecuerdoDetalleScreen(recuerdo: r)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (r.fotos.isNotEmpty)
-                      CachedNetworkImage(
-                        imageUrl: r.fotos.first,
-                        memCacheWidth: 800,
-                        width: double.infinity,
-                        height: 180,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(
+                child: Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: AppColors.dorado.withOpacity(0.25)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (r.fotos.isNotEmpty)
+                        CachedNetworkImage(
+                          imageUrl: r.fotos.first,
+                          memCacheWidth: 800,
+                          width: double.infinity,
                           height: 180,
-                          color: Colors.grey.withOpacity(0.1),
-                          child: const Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.granate)),
-                        ),
-                        errorWidget: (_, __, ___) => Container(
-                          height: 180,
-                          color: Colors.grey.withOpacity(0.1),
-                          child: const Icon(Icons.broken_image,
-                              color: AppColors.granate, size: 40),
-                        ),
-                      ),
-                    Container(
-                      color: AppColors.cardColor(context),
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Expanded(
-                              child: Text(r.titulo,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: onSurface))),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.granate.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text('${r.fotos.length} 📸',
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            height: 180,
+                            color: Colors.grey.withOpacity(0.1),
+                            child: const Center(
+                                child: CircularProgressIndicator(
                                     color: AppColors.granate)),
                           ),
-                        ],
+                          errorWidget: (_, __, ___) => Container(
+                            height: 180,
+                            color: Colors.grey.withOpacity(0.1),
+                            child: const Icon(Icons.broken_image,
+                                color: AppColors.granate, size: 40),
+                          ),
+                        ),
+                      Container(
+                        color: AppColors.cardColor(context),
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Expanded(
+                                child: Text(r.titulo,
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: onSurface))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.granate.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text('${r.fotos.length} 📸',
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.granate)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
-Widget _tarjetaHistoria(BuildContext context, Color onSurface) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => const HistoriaScreen())),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [
-              AppColors.dorado.withOpacity(0.15),
-              AppColors.granate.withOpacity(0.1),
-            ]),
-            borderRadius: BorderRadius.circular(20),
-            border:
-                Border.all(color: AppColors.dorado.withOpacity(0.4)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: AppColors.gradienteDorado,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppColors.dorado.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3)),
-                  ],
+  Widget _tarjetaHistoria(BuildContext context, Color onSurface) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const HistoriaScreen())),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                AppColors.dorado.withOpacity(0.15),
+                AppColors.granate.withOpacity(0.1),
+              ]),
+              borderRadius: BorderRadius.circular(20),
+              border:
+                  Border.all(color: AppColors.dorado.withOpacity(0.4)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.gradienteDorado,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                          color: AppColors.dorado.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3)),
+                    ],
+                  ),
+                  child: const Icon(Icons.auto_stories,
+                      color: AppColors.granate, size: 24),
                 ),
-                child: const Icon(Icons.auto_stories,
-                    color: AppColors.granate, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Conoce nuestra historia',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: onSurface,
-                            fontSize: 15)),
-                    const SizedBox(height: 2),
-                    Text('Cómo empezó el grupo y sus logros',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: onSurface.withOpacity(0.55))),
-                  ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Conoce nuestra historia',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: onSurface,
+                              fontSize: 15)),
+                      const SizedBox(height: 2),
+                      Text('Cómo empezó el grupo y sus logros',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: onSurface.withOpacity(0.55))),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.arrow_forward_ios,
-                  color: AppColors.seccionTitulo(context), size: 16),
-            ],
+                Icon(Icons.arrow_forward_ios,
+                    color: AppColors.seccionTitulo(context), size: 16),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _emptyCard(BuildContext context, IconData icono, String texto,
       Color onSurface) {
     return Padding(
@@ -676,7 +711,6 @@ Widget _tarjetaHistoria(BuildContext context, Color onSurface) {
     return '$h:$m';
   }
 }
-
 class _SkeletonEvento extends StatelessWidget {
   const _SkeletonEvento();
   @override
@@ -795,6 +829,7 @@ class _SkeletonRecuerdo extends StatelessWidget {
     );
   }
 }
+
 class _ErrorMini extends StatelessWidget {
   const _ErrorMini();
   @override
