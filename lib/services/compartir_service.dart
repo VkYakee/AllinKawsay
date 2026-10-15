@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 class CompartirService {
-  static const _channel = MethodChannel('com.sikuris/screen_security');
+  static const _channel = MethodChannel('com.allinkawsay/native');
 
   /// Guarda bytes de una imagen en el cache y abre el diálogo de
   /// compartir del sistema Android.
