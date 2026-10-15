@@ -1,5 +1,5 @@
-name: sikuris_app
-description: App para grupo de sikuris
+name: allinkawsay_app
+description: App para grupo de sikuris Allin Kawsay
 publish_to: 'none'
 version: 1.1.2+0
 
@@ -26,6 +26,7 @@ dependencies:
   path_provider: ^2.1.4
   google_sign_in: ^6.2.1
   qr_flutter: ^4.1.0
+  onesignal_flutter: ^5.2.6
 
 dev_dependencies:
   flutter_lints: ^4.0.0
