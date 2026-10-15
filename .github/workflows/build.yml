@@ -198,7 +198,7 @@ jobs:
       - name: Upload APK (artifact de Actions)
         uses: actions/upload-artifact@v4
         with:
-          name: sikuris-apk-v${{ steps.version.outputs.version }}.${{ github.run_number }}
+          name: allinkawsay-apk-v${{ steps.version.outputs.version }}.${{ github.run_number }}
           path: build/app/outputs/flutter-apk/AllinKawsay.apk
 
       - name: Crear release en GitHub
