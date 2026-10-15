@@ -10,6 +10,7 @@ import '../models/categoria.dart';
 import '../models/numerofonia.dart';
 import '../services/cancion_service.dart';
 import '../services/categoria_service.dart';
+import '../services/permisos_service.dart';
 import '../services/storage_service.dart';
 import '../theme/colors.dart';
 import '../widgets/editor_letras.dart';
@@ -103,6 +104,10 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   }
 
   Future<void> _seleccionarImagen() async {
+    // Pedir permiso de galería primero
+    final ok = await PermisosService.pedirGaleria(context);
+    if (!ok || !mounted) return;
+
     final picker = ImagePicker();
     final file = await picker.pickImage(
         source: ImageSource.gallery, imageQuality: 85);
@@ -121,6 +126,10 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   }
 
   Future<void> _seleccionarAudio() async {
+    // Pedir permiso de audio primero
+    final ok = await PermisosService.pedirAudio(context);
+    if (!ok || !mounted) return;
+
     final res = await FilePicker.platform
         .pickFiles(type: FileType.audio, allowMultiple: false);
     if (res == null || res.files.isEmpty || res.files.single.path == null) {
@@ -171,7 +180,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
           .toList();
       final letraPlana = _letras.map((l) => l.texto).join('\n\n');
 
-      // En edición conservamos el creador original. En creación, el actual.
       final esEdicion = widget.cancion != null;
       final creadoPor =
           esEdicion ? widget.cancion!.creadoPor : user.uid;
@@ -215,313 +223,313 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
       if (mounted) setState(() => _guardando = false);
     }
   }
-  @override
-  Widget build(BuildContext context) {
-    final esEdicion = widget.cancion != null;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+@override
+Widget build(BuildContext context) {
+  final esEdicion = widget.cancion != null;
+  final onSurface = Theme.of(context).colorScheme.onSurface;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(esEdicion ? 'Editar canción' : 'Nueva canción'),
-        actions: [
-          if (_guardando)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                    color: AppColors.dorado, strokeWidth: 2),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.check, color: AppColors.dorado),
-              tooltip: 'Guardar',
-              onPressed: _guardar,
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(esEdicion ? 'Editar canción' : 'Nueva canción'),
+      actions: [
+        if (_guardando)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                  color: AppColors.dorado, strokeWidth: 2),
             ),
+          )
+        else
+          IconButton(
+            icon: const Icon(Icons.check, color: AppColors.dorado),
+            tooltip: 'Guardar',
+            onPressed: _guardar,
+          ),
+      ],
+    ),
+    body: Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _seccion('INFO BÁSICA', Icons.info_outline, [
+            _campo(_tituloCtrl, 'Título *', obligatorio: true),
+            const SizedBox(height: 12),
+            _campo(_autorCtrl, 'Autor'),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _campo(_ritmoCtrl, 'Ritmo')),
+                const SizedBox(width: 12),
+                Expanded(child: _campo(_regionCtrl, 'Región')),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _selectorTipo(),
+            const SizedBox(height: 12),
+            _cargandoCategorias
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(
+                          color: AppColors.granate, strokeWidth: 2),
+                    ),
+                  )
+                : _selectorCategoria(),
+            const SizedBox(height: 12),
+            _campo(_tagsCtrl, 'Tags',
+                hint: 'ej: huayño, festivo, tradicional'),
+          ]),
+          const SizedBox(height: 20),
+
+          _seccion('NUMEROFONÍA', Icons.grid_on, [
+            EditorNumerofonia(
+              estrofas: _numerofoniaEstrofas,
+              onChanged: (v) =>
+                  setState(() => _numerofoniaEstrofas = v),
+            ),
+          ]),
+          const SizedBox(height: 20),
+
+          _seccion('LETRAS', Icons.lyrics_outlined, [
+            EditorLetras(letras: _letras),
+          ]),
+          const SizedBox(height: 20),
+
+          _seccion('DESCRIPCIÓN', Icons.notes, [
+            TextFormField(
+              controller: _descripcionCtrl,
+              maxLines: 4,
+              style: TextStyle(color: onSurface, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Descripción breve de la canción...',
+                hintStyle:
+                    TextStyle(color: onSurface.withOpacity(0.4)),
+                filled: true,
+                fillColor: AppColors.granate.withOpacity(0.04),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.all(14),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 20),
+
+          _seccion('AUDIO', Icons.music_note, [_bloqueAudio(onSurface)]),
+          const SizedBox(height: 20),
+
+          _seccion('IMAGEN (opcional)', Icons.image,
+              [_bloqueImagen(onSurface)]),
+          const SizedBox(height: 20),
+
+          _seccion('VIDEO YOUTUBE (opcional)',
+              Icons.play_circle_outline, [
+            _campo(_videoCtrl, 'Link de YouTube',
+                hint: 'https://youtube.com/watch?v=...'),
+          ]),
+          const SizedBox(height: 32),
+
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: FilledButton.icon(
+              onPressed: _guardando ? null : _guardar,
+              icon: _guardando
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          color: AppColors.dorado, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save, color: AppColors.dorado),
+              label: Text(
+                esEdicion ? 'GUARDAR CAMBIOS' : 'CREAR CANCIÓN',
+                style: const TextStyle(
+                    color: AppColors.dorado,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                    fontSize: 14),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.granate,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+    ),
+  );
+}
+
+Widget _seccion(String titulo, IconData icono, List<Widget> children) {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.cardColor(context),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            _seccion('INFO BÁSICA', Icons.info_outline, [
-              _campo(_tituloCtrl, 'Título *', obligatorio: true),
-              const SizedBox(height: 12),
-              _campo(_autorCtrl, 'Autor'),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _campo(_ritmoCtrl, 'Ritmo')),
-                  const SizedBox(width: 12),
-                  Expanded(child: _campo(_regionCtrl, 'Región')),
-                ],
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.granate.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(height: 16),
-              _selectorTipo(),
-              const SizedBox(height: 12),
-              _cargandoCategorias
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(12),
-                        child: CircularProgressIndicator(
-                            color: AppColors.granate, strokeWidth: 2),
-                      ),
-                    )
-                  : _selectorCategoria(),
-              const SizedBox(height: 12),
-              _campo(_tagsCtrl, 'Tags',
-                  hint: 'ej: huayño, festivo, tradicional'),
-            ]),
-            const SizedBox(height: 20),
-
-            _seccion('NUMEROFONÍA', Icons.grid_on, [
-              EditorNumerofonia(
-                estrofas: _numerofoniaEstrofas,
-                onChanged: (v) =>
-                    setState(() => _numerofoniaEstrofas = v),
-              ),
-            ]),
-            const SizedBox(height: 20),
-
-            _seccion('LETRAS', Icons.lyrics_outlined, [
-              EditorLetras(letras: _letras),
-            ]),
-            const SizedBox(height: 20),
-
-            _seccion('DESCRIPCIÓN', Icons.notes, [
-              TextFormField(
-                controller: _descripcionCtrl,
-                maxLines: 4,
-                style: TextStyle(color: onSurface, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Descripción breve de la canción...',
-                  hintStyle:
-                      TextStyle(color: onSurface.withOpacity(0.4)),
-                  filled: true,
-                  fillColor: AppColors.granate.withOpacity(0.04),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.all(14),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 20),
-
-            _seccion('AUDIO', Icons.music_note, [_bloqueAudio(onSurface)]),
-            const SizedBox(height: 20),
-
-            _seccion('IMAGEN (opcional)', Icons.image,
-                [_bloqueImagen(onSurface)]),
-            const SizedBox(height: 20),
-
-            _seccion('VIDEO YOUTUBE (opcional)',
-                Icons.play_circle_outline, [
-              _campo(_videoCtrl, 'Link de YouTube',
-                  hint: 'https://youtube.com/watch?v=...'),
-            ]),
-            const SizedBox(height: 32),
-
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: FilledButton.icon(
-                onPressed: _guardando ? null : _guardar,
-                icon: _guardando
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            color: AppColors.dorado, strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save, color: AppColors.dorado),
-                label: Text(
-                  esEdicion ? 'GUARDAR CAMBIOS' : 'CREAR CANCIÓN',
-                  style: const TextStyle(
-                      color: AppColors.dorado,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      fontSize: 14),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.granate,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
+              child: Icon(icono, color: AppColors.granate, size: 14),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(width: 10),
+            Text(titulo,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.granate,
+                    fontSize: 12,
+                    letterSpacing: 2)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _seccion(String titulo, IconData icono, List<Widget> children) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.granate.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icono, color: AppColors.granate, size: 14),
-              ),
-              const SizedBox(width: 10),
-              Text(titulo,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.granate,
-                      fontSize: 12,
-                      letterSpacing: 2)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _campo(TextEditingController ctrl, String label,
-      {String? hint, bool obligatorio = false}) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    return TextFormField(
-      controller: ctrl,
-      style: TextStyle(color: onSurface, fontSize: 14),
-      validator: obligatorio
-          ? (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null
-          : null,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        labelStyle: const TextStyle(color: AppColors.granate, fontSize: 13),
-        hintStyle:
-            TextStyle(color: onSurface.withOpacity(0.4), fontSize: 13),
-        filled: true,
-        fillColor: AppColors.granate.withOpacity(0.04),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      ),
-    );
-  }
-
-  Widget _selectorTipo() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.granate.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _tipo = 'original'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: _tipo == 'original'
-                      ? AppColors.granate
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'ORIGINAL',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: _tipo == 'original'
-                          ? AppColors.dorado
-                          : AppColors.granate,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                      letterSpacing: 1),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _tipo = 'adaptacion'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: _tipo == 'adaptacion'
-                      ? AppColors.granate
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'ADAPTACIÓN',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: _tipo == 'adaptacion'
-                          ? AppColors.dorado
-                          : AppColors.granate,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                      letterSpacing: 1),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _selectorCategoria() {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    return DropdownButtonFormField<String>(
-      value: _categorias.any((c) => c.id == _categoriaId)
-          ? _categoriaId
-          : null,
-      isExpanded: true,
-      dropdownColor: AppColors.cardColor(context),
-      style: TextStyle(color: onSurface, fontSize: 14),
-      decoration: InputDecoration(
-        labelText: 'Categoría',
-        labelStyle: const TextStyle(color: AppColors.granate, fontSize: 13),
-        filled: true,
-        fillColor: AppColors.granate.withOpacity(0.04),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      ),
-      items: [
-        const DropdownMenuItem<String>(
-          value: '',
-          child: Text('Sin categoría', style: TextStyle(fontStyle: FontStyle.italic)),
-        ),
-        ..._categorias.map((c) => DropdownMenuItem<String>(
-              value: c.id,
-              child: Text('${c.emoji} ${c.nombre}'),
-            )),
+        const SizedBox(height: 14),
+        ...children,
       ],
-      onChanged: (v) => setState(() => _categoriaId = v ?? ''),
-    );
-  }
+    ),
+  );
+}
 
+Widget _campo(TextEditingController ctrl, String label,
+    {String? hint, bool obligatorio = false}) {
+  final onSurface = Theme.of(context).colorScheme.onSurface;
+  return TextFormField(
+    controller: ctrl,
+    style: TextStyle(color: onSurface, fontSize: 14),
+    validator: obligatorio
+        ? (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null
+        : null,
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(color: AppColors.granate, fontSize: 13),
+      hintStyle:
+          TextStyle(color: onSurface.withOpacity(0.4), fontSize: 13),
+      filled: true,
+      fillColor: AppColors.granate.withOpacity(0.04),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    ),
+  );
+}
+
+Widget _selectorTipo() {
+  return Container(
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: AppColors.granate.withOpacity(0.04),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _tipo = 'original'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: _tipo == 'original'
+                    ? AppColors.granate
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'ORIGINAL',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: _tipo == 'original'
+                        ? AppColors.dorado
+                        : AppColors.granate,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    letterSpacing: 1),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _tipo = 'adaptacion'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: _tipo == 'adaptacion'
+                    ? AppColors.granate
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'ADAPTACIÓN',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: _tipo == 'adaptacion'
+                        ? AppColors.dorado
+                        : AppColors.granate,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    letterSpacing: 1),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _selectorCategoria() {
+  final onSurface = Theme.of(context).colorScheme.onSurface;
+  return DropdownButtonFormField<String>(
+    value: _categorias.any((c) => c.id == _categoriaId)
+        ? _categoriaId
+        : null,
+    isExpanded: true,
+    dropdownColor: AppColors.cardColor(context),
+    style: TextStyle(color: onSurface, fontSize: 14),
+    decoration: InputDecoration(
+      labelText: 'Categoría',
+      labelStyle: const TextStyle(color: AppColors.granate, fontSize: 13),
+      filled: true,
+      fillColor: AppColors.granate.withOpacity(0.04),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    ),
+    items: [
+      const DropdownMenuItem<String>(
+        value: '',
+        child: Text('Sin categoría',
+            style: TextStyle(fontStyle: FontStyle.italic)),
+      ),
+      ..._categorias.map((c) => DropdownMenuItem<String>(
+            value: c.id,
+            child: Text('${c.emoji} ${c.nombre}'),
+          )),
+    ],
+    onChanged: (v) => setState(() => _categoriaId = v ?? ''),
+  );
+}
   Widget _bloqueAudio(Color onSurface) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
