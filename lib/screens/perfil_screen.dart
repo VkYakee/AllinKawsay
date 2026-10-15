@@ -15,6 +15,7 @@ import '../version.dart';
 import '../widgets/social_buttons.dart';
 import 'actividad_screen.dart';
 import 'cancion_detalle_screen.dart';
+import 'compartir_app_screen.dart';
 import 'estadisticas_admin_screen.dart';
 import 'exportar_respaldo_screen.dart';
 import 'gestion_actualizaciones_screen.dart';
@@ -309,6 +310,7 @@ Widget _subtitulo(String t) {
     ),
   );
 }
+
 void _abrirAjustes() {
   showModalBottomSheet(
     context: context,
@@ -421,7 +423,6 @@ void _abrirAjustes() {
     ),
   );
 }
-
 void _abrirAcercaDe() {
   final onSurface = Theme.of(context).colorScheme.onSurface;
   showModalBottomSheet(
@@ -555,6 +556,17 @@ Widget build(BuildContext context) {
                   onSurface,
                   onTap: () => _abrirMisSubidas(u.uid),
                 ),
+              _itemMenu(
+                Icons.qr_code_2,
+                'Compartir app',
+                'Mostrar QR o enviar el enlace de descarga',
+                onSurface,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CompartirAppScreen()),
+                ),
+              ),
               _itemMenu(
                 Icons.settings,
                 'Ajustes',
