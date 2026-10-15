@@ -5,9 +5,6 @@ import 'actividad_service.dart';
 class CancionService {
   final _db = FirebaseFirestore.instance;
 
-  /// Lista todas las canciones ordenadas por fecha de creación DESC
-  /// (las más nuevas primero). Ordenamos en Dart para no perder
-  /// documentos viejos que no tengan el campo `fechaCreacion`.
   Stream<List<Cancion>> listar() {
     return _db.collection('canciones').snapshots().map((snap) {
       final lista = snap.docs.map(Cancion.fromDoc).toList();
@@ -26,6 +23,8 @@ class CancionService {
       'crear_cancion',
       'Subió la canción "${c.titulo}"',
     );
+    // Incrementar contador de canciones sin notificar
+    await _incrementarContadorCanciones();
     return ref.id;
   }
 
@@ -54,7 +53,6 @@ class CancionService {
     );
   }
 
-  /// Incrementa reproducciones de forma ATÓMICA (evita race conditions).
   Future<void> incrementarReproduccion(String id) async {
     try {
       await _db.collection('canciones').doc(id).update({
@@ -63,9 +61,6 @@ class CancionService {
     } catch (_) {}
   }
 
-  /// Cuenta cuántas canciones subió el usuario.
-  /// Traemos TODAS y filtramos en Dart, porque muchas canciones viejas
-  /// tienen `creadoPor` guardado con distintos formatos o vacío.
   Future<int> contarPorUsuario(String uid) async {
     if (uid.isEmpty) return 0;
     try {
@@ -82,8 +77,6 @@ class CancionService {
     }
   }
 
-  /// Suma todas las reproducciones de las canciones subidas por el usuario.
-  /// Mismo criterio que `contarPorUsuario` (filtramos en Dart).
   Future<int> totalReproduccionesDeUsuario(String uid) async {
     if (uid.isEmpty) return 0;
     try {
@@ -101,5 +94,45 @@ class CancionService {
     } catch (_) {
       return 0;
     }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // CONTADOR DE CANCIONES PENDIENTES DE NOTIFICAR
+  // ══════════════════════════════════════════════════════════════════
+
+  /// Incrementa el contador de canciones nuevas sin notificar.
+  /// El admin decide cuándo enviar el resumen con un botón.
+  Future<void> _incrementarContadorCanciones() async {
+    try {
+      final ref = _db.collection('config').doc('notificaciones');
+      await ref.set({
+        'cancionesPendientes': FieldValue.increment(1),
+      }, SetOptions(merge: true));
+    } catch (_) {
+      // Silencioso
+    }
+  }
+
+  /// Devuelve cuántas canciones hay pendientes de notificar.
+  Future<int> contarCancionesPendientes() async {
+    try {
+      final doc =
+          await _db.collection('config').doc('notificaciones').get();
+      if (!doc.exists) return 0;
+      final n = doc.data()?['cancionesPendientes'];
+      return (n is int) ? n : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Resetea el contador a 0 (llamar después de notificar).
+  Future<void> resetearContadorCanciones() async {
+    try {
+      await _db
+          .collection('config')
+          .doc('notificaciones')
+          .set({'cancionesPendientes': 0}, SetOptions(merge: true));
+    } catch (_) {}
   }
 }
