@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 ///   - `bytesRecibidos`: bytes descargados hasta ahora
 ///   - `bytesTotales`: bytes totales (0 si el servidor no lo informa)
 class DescargaProgresoService {
-  static const _channel = MethodChannel('com.sikuris/screen_security');
+  static const _channel = MethodChannel('com.allinkawsay/native');
 
   /// Descarga [url] con progreso, la guarda en la carpeta Descargas con
   /// el nombre [nombre] y mime [mime]. Devuelve el nombre guardado o
