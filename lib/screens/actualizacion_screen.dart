@@ -17,8 +17,7 @@ class ActualizacionScreen extends StatefulWidget {
 enum _EstadoDescarga { iniciando, descargando, listo, error }
 
 class _ActualizacionScreenState extends State<ActualizacionScreen> {
-  static const _channel =
-      MethodChannel('com.sikuris/screen_security');
+  static const _channel = MethodChannel('com.allinkawsay/native');
 
   _EstadoDescarga _estado = _EstadoDescarga.iniciando;
   double _progreso = 0;
@@ -130,7 +129,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Ícono de estado
               Center(
                 child: Container(
                   padding: const EdgeInsets.all(24),
@@ -144,11 +142,10 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color:
-                            (_estado == _EstadoDescarga.error
-                                    ? Colors.red
-                                    : AppColors.granate)
-                                .withOpacity(0.3),
+                        color: (_estado == _EstadoDescarga.error
+                                ? Colors.red
+                                : AppColors.granate)
+                            .withOpacity(0.3),
                         blurRadius: 16,
                         spreadRadius: 2,
                       ),
@@ -167,7 +164,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Título
               Text(
                 _estado == _EstadoDescarga.error
                     ? 'Error'
@@ -184,7 +180,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Mensaje
               Text(
                 _estado == _EstadoDescarga.error
                     ? _error ?? 'Error desconocido'
@@ -199,7 +194,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
 
               const SizedBox(height: 32),
 
-              // Progreso
               if (_estado == _EstadoDescarga.descargando) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
@@ -225,7 +219,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
                 ),
               ],
 
-              // Aviso
               if (_estado == _EstadoDescarga.listo) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -260,7 +253,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
 
               const SizedBox(height: 32),
 
-              // Botón reintentar (si error)
               if (_estado == _EstadoDescarga.error)
                 SizedBox(
                   height: 50,
@@ -283,7 +275,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
                   ),
                 ),
 
-              // Botón cerrar (si listo)
               if (_estado == _EstadoDescarga.listo)
                 SizedBox(
                   height: 50,
