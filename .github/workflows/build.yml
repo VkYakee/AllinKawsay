@@ -181,11 +181,18 @@ jobs:
             exit 1
           fi
 
+      - name: Renombrar APK
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             build/app/outputs/flutter-apk/AllinKawsay.apk
+          ls -la build/app/outputs/flutter-apk/
+          echo "✅ APK renombrado a AllinKawsay.apk"
+
       - name: Upload APK (artifact de Actions)
         uses: actions/upload-artifact@v4
         with:
           name: sikuris-apk-v${{ steps.version.outputs.version }}.${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/AllinKawsay.apk
 
       - name: Crear release en GitHub
         env:
@@ -194,7 +201,7 @@ jobs:
           RUN=${{ github.run_number }}
           VERSION=${{ steps.version.outputs.version }}
           TAG="v${VERSION}.${RUN}"
-          APK="build/app/outputs/flutter-apk/app-release.apk"
+          APK="build/app/outputs/flutter-apk/AllinKawsay.apk"
           SIZE=$(stat -c%s $APK)
           SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $SIZE/1048576}")
           MOTIVO="${{ github.event.inputs.motivo }}"
@@ -225,4 +232,6 @@ jobs:
               --notes-file /tmp/notas.md
             echo "✅ Release ESTABLE creado: $TAG"
             echo "🎯 Ahora aparecerá en el panel admin para aprobar"
+            echo "📥 Link de descarga directo:"
+            echo "https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk"
           fi
