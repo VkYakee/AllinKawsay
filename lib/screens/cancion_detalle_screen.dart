@@ -21,7 +21,6 @@ import '../widgets/visor_numerofonia.dart';
 import '../widgets/watermark_overlay.dart';
 import 'compartir_imagen_screen.dart';
 import 'presentacion_screen.dart';
-import 'reproductor_ensayo_screen.dart';
 
 class CancionDetalleScreen extends StatefulWidget {
   final Cancion cancion;
@@ -53,28 +52,6 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
       _reproduccionContada = true;
       await CancionService().incrementarReproduccion(widget.cancion.id);
     }
-  }
-
-  Future<void> _abrirModoEnsayo() async {
-    if (widget.cancion.audioUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Esta canción no tiene audio cargado')),
-      );
-      return;
-    }
-    // Si no es esta la canción sonando, la empezamos a reproducir
-    if (_player.cancionActualId != widget.cancion.id) {
-      await _player.toggle(widget.cancion);
-    }
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            ReproductorEnsayoScreen(cancion: widget.cancion),
-      ),
-    );
   }
 
   Future<void> _descargar(String url,
@@ -260,7 +237,6 @@ Widget build(BuildContext context) {
               player: _player,
               onTogglePlay: _togglePlay,
               onDescargar: _descargar,
-              onModoEnsayo: _abrirModoEnsayo,
             ),
           ),
           const SizedBox(height: 16),
