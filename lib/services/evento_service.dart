@@ -23,7 +23,11 @@ class EventoService {
   }
 
   Future<void> actualizar(String id, Map<String, dynamic> cambios) async {
-    await _db.collection('eventos').doc(id).update(cambios);
+    // Cada edición actualiza `fechaEdicion` automáticamente
+    await _db.collection('eventos').doc(id).update({
+      ...cambios,
+      'fechaEdicion': FieldValue.serverTimestamp(),
+    });
     final titulo = cambios['titulo'] ?? id;
     ActividadService.registrar(
       'editar_evento',
