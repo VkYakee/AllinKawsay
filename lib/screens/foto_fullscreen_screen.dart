@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/descarga_service.dart';
 import '../theme/colors.dart';
+import '../widgets/dialogo_descarga.dart';
 
 class FotoFullscreenScreen extends StatefulWidget {
   final String url;
   final String titulo;
   final bool puedeDescargar;
-
-  /// Tag del Hero compartido con la galería origen (opcional).
-  /// Si es null o vacío, no se envuelve en Hero.
   final String? heroTag;
 
   const FotoFullscreenScreen({
@@ -74,61 +72,34 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
   }
 
   Future<void> _descargar() async {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: AppColors.dorado,
-                  strokeWidth: 2.5,
-                ),
-              ),
-              SizedBox(width: 12),
-              Text('Descargando...'),
-            ],
-          ),
-          duration: Duration(seconds: 30),
-        ),
-      );
-    }
-
     final nombre = DescargaService.nombreConTimestamp(
         widget.titulo.isEmpty ? 'foto_allin_kawsay' : widget.titulo,
         'jpg');
 
-    final resultado =
-        await DescargaService.descargar(widget.url, nombre, 'image/jpeg');
+    final resultado = await DialogoDescarga.mostrar(
+      context,
+      url: widget.url,
+      nombre: nombre,
+      mime: 'image/jpeg',
+      titulo: 'Descargando foto',
+    );
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      if (resultado != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle,
-                    color: AppColors.dorado),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Guardado en Descargas: $resultado'),
-                ),
-              ],
-            ),
-            duration: const Duration(seconds: 4),
+    if (!mounted) return;
+    if (resultado != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.dorado),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('Guardado en Descargas: $resultado'),
+              ),
+            ],
           ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo descargar'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -157,6 +128,7 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
     if (tag == null || tag.isEmpty) return imagen;
     return Hero(tag: tag, child: imagen);
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
