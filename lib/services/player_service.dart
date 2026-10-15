@@ -8,12 +8,21 @@ class EstadoPlayer {
   final bool playing;
   final bool cargando;
   final bool modoBucle;
+  final double velocidad;
+  final Duration? puntoA;
+  final Duration? puntoB;
+
   const EstadoPlayer({
     this.cancionId,
     this.playing = false,
     this.cargando = false,
     this.modoBucle = false,
+    this.velocidad = 1.0,
+    this.puntoA,
+    this.puntoB,
   });
+
+  bool get abActivo => puntoA != null && puntoB != null;
 }
 
 class PlayerService {
@@ -28,6 +37,10 @@ class PlayerService {
   bool _playing = false;
   bool _cargando = false;
   bool _bucle = false;
+  double _velocidad = 1.0;
+  Duration? _puntoA;
+  Duration? _puntoB;
+  bool _seekingLoop = false;
 
   PlayerService._() {
     player.playerStateStream.listen((s) {
@@ -35,6 +48,19 @@ class PlayerService {
       _cargando = s.processingState == ProcessingState.loading ||
           s.processingState == ProcessingState.buffering;
       _notificar();
+    });
+
+    // Bucle A-B manual: si la posición supera el punto B, vuelve al A.
+    player.positionStream.listen((pos) {
+      if (_seekingLoop) return;
+      if (_puntoA == null || _puntoB == null) return;
+      if (pos < _puntoB!) return;
+      _seekingLoop = true;
+      player.seek(_puntoA!).then((_) {
+        _seekingLoop = false;
+      }).catchError((_) {
+        _seekingLoop = false;
+      });
     });
   }
 
@@ -44,11 +70,12 @@ class PlayerService {
       playing: _playing,
       cargando: _cargando,
       modoBucle: _bucle,
+      velocidad: _velocidad,
+      puntoA: _puntoA,
+      puntoB: _puntoB,
     );
   }
 
-  /// Si la canción ya está cargada → alterna play/pausa.
-  /// Si es otra → la carga y la reproduce.
   Future<void> toggle(Cancion c) async {
     if (c.audioUrl.isEmpty) return;
 
@@ -66,6 +93,12 @@ class PlayerService {
       _cargando = true;
       _notificar();
 
+      // Resetear ajustes al cambiar de canción
+      _velocidad = 1.0;
+      _puntoA = null;
+      _puntoB = null;
+      _bucle = false;
+
       await player.setAudioSource(AudioSource.uri(
         Uri.parse(c.audioUrl),
         tag: MediaItem(
@@ -76,6 +109,8 @@ class PlayerService {
           artUri: c.imagenUrl.isNotEmpty ? Uri.parse(c.imagenUrl) : null,
         ),
       ));
+      await player.setSpeed(1.0);
+      await player.setLoopMode(LoopMode.off);
       await player.play();
     } catch (e) {
       _cancionId = null;
@@ -90,12 +125,60 @@ class PlayerService {
     _notificar();
   }
 
+  /// Cambia la velocidad de reproducción (0.5x a 1.5x).
+  Future<void> cambiarVelocidad(double v) async {
+    _velocidad = v;
+    await player.setSpeed(v);
+    _notificar();
+  }
+
+  /// Salta hacia adelante o atrás [delta] desde la posición actual.
+  Future<void> saltar(Duration delta) async {
+    final pos = player.position;
+    final total = player.duration ?? Duration.zero;
+    var nueva = pos + delta;
+    if (nueva < Duration.zero) nueva = Duration.zero;
+    if (total > Duration.zero && nueva > total) nueva = total;
+    await player.seek(nueva);
+  }
+
+  /// Marca el punto A (inicio del bucle) en la posición actual.
+  void marcarA() {
+    final pos = player.position;
+    _puntoA = pos;
+    // Si B ya existía y quedaba antes de A, lo borramos.
+    if (_puntoB != null && _puntoB! <= pos) {
+      _puntoB = null;
+    }
+    _notificar();
+  }
+
+  /// Marca el punto B (fin del bucle) en la posición actual.
+  /// Solo si hay punto A y B > A.
+  void marcarB() {
+    final pos = player.position;
+    if (_puntoA == null) return;
+    if (pos <= _puntoA!) return;
+    _puntoB = pos;
+    _notificar();
+  }
+
+  /// Limpia los puntos A y B.
+  void limpiarAB() {
+    _puntoA = null;
+    _puntoB = null;
+    _notificar();
+  }
+
   Future<void> detener() async {
     await player.stop();
     _cancionId = null;
     _playing = false;
     _cargando = false;
     _bucle = false;
+    _velocidad = 1.0;
+    _puntoA = null;
+    _puntoB = null;
     _notificar();
   }
 
