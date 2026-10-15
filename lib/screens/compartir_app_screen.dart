@@ -18,7 +18,7 @@ class CompartirAppScreen extends StatefulWidget {
 
 class _CompartirAppScreenState extends State<CompartirAppScreen> {
   static const MethodChannel _channel =
-      MethodChannel('com.sikuris/screen_security');
+      MethodChannel('com.allinkawsay/native');
 
   static const String _enlaceDescarga =
       'https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk';
