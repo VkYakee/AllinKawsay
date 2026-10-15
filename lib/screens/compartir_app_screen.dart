@@ -17,7 +17,7 @@ class CompartirAppScreen extends StatefulWidget {
 }
 
 class _CompartirAppScreenState extends State<CompartirAppScreen> {
-  static const String _channel =
+  static const MethodChannel _channel =
       MethodChannel('com.sikuris/screen_security');
 
   static const String _enlaceDescarga =
@@ -81,13 +81,13 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
 
     // 1) Obtener la última release estable para tener la URL correcta
     String urlApk = _enlaceDescarga;
-    String versionLegible = 'última versión';
+    String versionLegible = 'ultima';
 
     try {
       final releases = await GithubService.listarEstables(limite: 1);
       if (releases.isNotEmpty && releases.first.tieneApk) {
         urlApk = releases.first.urlApk;
-        versionLegible = releases.first.tag;
+        versionLegible = releases.first.versionLegible;
       }
     } catch (_) {
       // Si falla la API, usamos el enlace genérico de todas formas
@@ -95,8 +95,8 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
 
     if (!mounted) return;
 
-    // 2) Mostrar diálogo de descarga
-    final nombre = 'AllinKawsay_$versionLegible.apk'.replaceAll(' ', '_');
+    // 2) Mostrar diálogo de descarga con progreso (guarda en Descargas)
+    final nombre = 'AllinKawsay_$versionLegible.apk';
     final resultado = await DialogoDescarga.mostrar(
       context,
       url: urlApk,
@@ -106,9 +106,9 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
     );
 
     if (!mounted) return;
-    setState(() => _descargandoApk = false);
 
     if (resultado == null) {
+      setState(() => _descargandoApk = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No se pudo descargar el APK'),
@@ -118,22 +118,15 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
       return;
     }
 
-    // 3) El archivo se guardó en Descargas. Ahora lo copiamos a temp
-    //    para poder abrirlo con el instalador vía FileProvider.
-    //    Como no tenemos el path exacto (el nativo lo maneja), vamos
-    //    a descargar directo a temp con un segundo paso.
+    // 3) Copiamos el APK a caché interna para abrirlo con el instalador
+    //    usando el FileProvider (que solo permite cache/ y files/).
     try {
       final tempDir = await getTemporaryDirectory();
       final archivoTemp = File('${tempDir.path}/$nombre');
 
-      // Si el archivo temp no existe, lo descargamos de nuevo a temp
-      // (no es lo ideal pero es lo más simple para abrir el instalador)
       if (!await archivoTemp.exists()) {
-        // Volvemos a descargar a temp con progreso
-        if (!mounted) return;
-        setState(() => _descargandoApk = true);
-
-        final bytes = await _descargarATempConProgreso(urlApk);
+        // Volvemos a descargar a temp para poder pasárselo al instalador
+        final bytes = await _descargarBytes(urlApk);
         if (bytes == null) {
           if (!mounted) return;
           setState(() => _descargandoApk = false);
@@ -146,9 +139,9 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
           return;
         }
         await archivoTemp.writeAsBytes(bytes);
-        if (!mounted) return;
-        setState(() => _descargandoApk = false);
       }
+
+      if (!mounted) return;
 
       // 4) Lanzar el instalador de Android
       await _channel.invokeMethod('instalarApk', {
@@ -156,7 +149,6 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _descargandoApk = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -164,33 +156,21 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
               'Es posible que necesites habilitar "Instalar apps '
               'desconocidas" para Allin Kawsay en los ajustes de Android.\n\n$e'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 8),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _descargandoApk = false);
     }
   }
 
-  Future<List<int>?> _descargarATempConProgreso(String url) async {
-    // Reusamos el servicio pero necesitamos los bytes, así que
-    // hacemos una descarga directa sin progreso por simplicidad.
-    // El progreso visible ya lo mostró el diálogo anterior.
-    try {
-      final releases = await GithubService.listarEstables(limite: 1);
-      if (releases.isEmpty) return null;
-
-      // Descargamos usando el servicio de descarga a temp
-      final bytes = await _descargarBytes(url);
-      return bytes;
-    } catch (_) {
-      return null;
-    }
-  }
-
+  /// Descarga bytes a memoria (sin progreso, para preparar el instalador).
   Future<List<int>?> _descargarBytes(String url) async {
     try {
       final uri = Uri.parse(url);
-      final response = await HttpClient()
-          .getUrl(uri)
-          .then((req) => req.close());
+      final client = HttpClient();
+      final request = await client.getUrl(uri);
+      final response = await request.close();
       if (response.statusCode != 200) return null;
       final builder = BytesBuilder(copy: false);
       await for (final chunk in response) {
