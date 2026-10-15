@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/recuerdo.dart';
 import 'actividad_service.dart';
+import 'onesignal_service.dart';
 
 class RecuerdoService {
   final _db = FirebaseFirestore.instance;
@@ -19,6 +20,8 @@ class RecuerdoService {
       'crear_recuerdo',
       'Subió el recuerdo "${r.titulo}" (${r.fotos.length} fotos, ${r.videos.length} videos)',
     );
+    // Notificación push a todos
+    _notificarRecuerdo(r);
     return ref.id;
   }
 
@@ -42,6 +45,31 @@ class RecuerdoService {
     ActividadService.registrar(
       'eliminar_recuerdo',
       'Eliminó el recuerdo "$titulo"',
+    );
+  }
+
+  /// Envía la notificación push silenciosamente (fire-and-forget).
+  void _notificarRecuerdo(Recuerdo r) {
+    final total = r.fotos.length + r.videos.length;
+    final detalle = <String>[];
+    if (r.fotos.isNotEmpty) {
+      detalle.add('${r.fotos.length} foto${r.fotos.length == 1 ? '' : 's'}');
+    }
+    if (r.videos.isNotEmpty) {
+      detalle.add('${r.videos.length} video${r.videos.length == 1 ? '' : 's'}');
+    }
+    final mensaje = detalle.isEmpty
+        ? 'Tocá para verlo'
+        : '${detalle.join(' · ')} · Tocá para ver';
+
+    OneSignalService.enviarATodos(
+      titulo: '📸 Nuevo recuerdo: ${r.titulo}',
+      mensaje: mensaje,
+      datos: {
+        'tipo': 'recuerdo',
+        'recuerdoId': r.id,
+        'totalMedia': total,
+      },
     );
   }
 }
