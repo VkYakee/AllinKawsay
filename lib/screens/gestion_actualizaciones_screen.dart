@@ -93,113 +93,107 @@ class _GestionActualizacionesScreenState
       );
     }
   }
-/// Descarga el APK de una release a la carpeta Descargas del celu.
-/// El admin después puede instalarlo manualmente tocándolo desde
-/// su gestor de archivos.
-Future<void> _descargarRelease(ReleaseInfo r) async {
-  final confirmar = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20)),
-      title: const Text('Descargar APK',
-          style: TextStyle(
-              color: AppColors.granate,
-              fontWeight: FontWeight.bold)),
-      content: Text(
-          'Se descargará el APK de ${r.tag} (${r.tamanoMb} MB) en la '
-          'carpeta Descargas. Después podrás instalarlo manualmente '
-          'para probarlo.\n\n'
-          '¿Continuar?'),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar')),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Descargar'),
-        ),
-      ],
-    ),
-  );
-  if (confirmar != true) return;
 
-  if (!mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-                color: AppColors.dorado, strokeWidth: 2.5),
+  Future<void> _descargarRelease(ReleaseInfo r) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text('Descargar APK',
+            style: TextStyle(
+                color: AppColors.granate,
+                fontWeight: FontWeight.bold)),
+        content: Text(
+            'Se descargará el APK de ${r.tag} (${r.tamanoMb} MB) en la '
+            'carpeta Descargas. Después podrás instalarlo manualmente '
+            'para probarlo.\n\n'
+            '¿Continuar?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Descargar'),
           ),
-          const SizedBox(width: 12),
-          Expanded(child: Text('Descargando ${r.tamanoMb} MB...')),
         ],
       ),
-      duration: const Duration(minutes: 5),
-    ),
-  );
-
-  try {
-    final nombre = 'allin_kawsay_${r.versionLegible}.apk';
-    final resultado = await DescargaService.descargar(
-      r.urlApk,
-      nombre,
-      'application/vnd.android.package-archive',
     );
+    if (confirmar != true) return;
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    if (resultado != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: AppColors.dorado),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'APK guardado en Descargas: $resultado\n\n'
-                  'Abrí tu gestor de archivos → Descargas → tocá el APK '
-                  'para instalarlo.',
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 8),
-        ),
-      );
-    } else {
-      // Fallback: abrir en el navegador si falla la descarga interna
-      final uri = Uri.parse(r.urlApk);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo descargar ni abrir el enlace'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Error al descargar: $e'),
-        backgroundColor: Colors.red,
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                  color: AppColors.dorado, strokeWidth: 2.5),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Descargando ${r.tamanoMb} MB...')),
+          ],
+        ),
+        duration: const Duration(minutes: 5),
       ),
     );
-  }
-}
 
+    try {
+      final nombre = 'AllinKawsay_${r.versionLegible}.apk';
+      final resultado = await DescargaService.descargar(
+        r.urlApk,
+        nombre,
+        'application/vnd.android.package-archive',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      if (resultado != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.dorado),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'APK guardado en Descargas: $resultado',
+                  ),
+                ),
+              ],
+            ),
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      } else {
+        final uri = Uri.parse(r.urlApk);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo descargar ni abrir el enlace'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al descargar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 Future<void> _aprobarRelease(ReleaseInfo r) async {
   final notasCtrl = TextEditingController(text: r.notas);
   bool critica = false;
@@ -265,7 +259,7 @@ Future<void> _aprobarRelease(ReleaseInfo r) async {
                   decoration: const InputDecoration(
                     labelText: 'Notas / novedades (opcional)',
                     hintText:
-                        'Ej: Correcciones en numerofonía, mejoras de rendimiento...',
+                        'Ej: Correcciones en numerofonía, mejoras...',
                     alignLabelWithHint: true,
                   ),
                 ),
@@ -325,6 +319,7 @@ Future<void> _aprobarRelease(ReleaseInfo r) async {
     );
   }
 }
+
 @override
 Widget build(BuildContext context) {
   final onSurface = Theme.of(context).colorScheme.onSurface;
