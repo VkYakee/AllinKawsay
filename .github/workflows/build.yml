@@ -40,7 +40,7 @@ jobs:
       - name: Bootstrap Android project
         run: |
           rm -rf android/
-          flutter create . --org com.sikuris --platforms android --project-name sikuris_app
+          flutter create . --org com.allinkawsay --platforms android --project-name allinkawsay_app
 
       - name: Aplicar config Android con Firebase
         run: |
@@ -58,32 +58,40 @@ jobs:
           if [ -f "android_config/MainActivity.kt" ]; then
             find android/app/src/main -name "MainActivity.java" -delete || true
             find android/app/src/main -name "MainActivity.kt" -delete || true
-            mkdir -p android/app/src/main/kotlin/com/sikuris/sikuris_app
+            mkdir -p android/app/src/main/kotlin/com/allinkawsay/app
             cp android_config/MainActivity.kt \
-              android/app/src/main/kotlin/com/sikuris/sikuris_app/MainActivity.kt
+              android/app/src/main/kotlin/com/allinkawsay/app/MainActivity.kt
             echo "✅ MainActivity custom copiado"
           fi
 
-      - name: Mostrar SHA-1 del keystore (para Firebase)
+      - name: Configurar keystore de release desde Secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          if [ -f "android_config/sikuris.keystore" ]; then
-            echo "═══════════════════════════════════════════════════════"
-            echo "  SHA-1 (pegar en Firebase Console → Project Settings)"
-            echo "═══════════════════════════════════════════════════════"
-            keytool -list -v \
-              -keystore android_config/sikuris.keystore \
-              -alias sikuris \
-              -storepass sikuris2026 2>/dev/null | grep -E "SHA1:|SHA-1:" || echo "⚠️ No se pudo leer SHA-1"
-            echo "═══════════════════════════════════════════════════════"
-          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/allinkawsay.keystore
 
-      - name: Configurar keystore de release
+          cat > android/keystore.properties << EOF
+          storeFile=allinkawsay.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+          echo "✅ Keystore de release configurado desde Secrets"
+
+      - name: Mostrar SHA-1 del keystore (para verificar)
         run: |
-          if [ -f "android_config/sikuris.keystore" ]; then
-            cp android_config/sikuris.keystore android/app/sikuris.keystore
-            cp android_config/keystore.properties android/keystore.properties
-            echo "✅ Keystore de release configurado"
-          fi
+          echo "═══════════════════════════════════════════════════════"
+          echo "  SHA-1 del keystore de release"
+          echo "═══════════════════════════════════════════════════════"
+          keytool -list -v \
+            -keystore android/app/allinkawsay.keystore \
+            -alias allinkawsay \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" 2>/dev/null | grep -E "SHA1:|SHA-256:" || echo "⚠️ No se pudo leer SHA-1"
+          echo "═══════════════════════════════════════════════════════"
 
       - name: Preparar assets
         run: |
@@ -136,7 +144,6 @@ jobs:
 
           if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ]; then
             echo "❌ No se pudieron leer las versiones. Revisá lib/version.dart"
-            echo "MAJOR='$MAJOR' MINOR='$MINOR' PATCH='$PATCH'"
             exit 1
           fi
 
@@ -153,7 +160,7 @@ jobs:
             echo "emoji=🚀" >> $GITHUB_OUTPUT
             echo "etiqueta=LANZAMIENTO OFICIAL" >> $GITHUB_OUTPUT
           else
-            echo "🔨 Push automático → prerelease (NO visible en el panel admin)"
+            echo "🔨 Push automático → prerelease"
             echo "es_prerelease=true" >> $GITHUB_OUTPUT
             echo "emoji=🔬" >> $GITHUB_OUTPUT
             echo "etiqueta=BUILD DE PRUEBA" >> $GITHUB_OUTPUT
@@ -169,7 +176,8 @@ jobs:
           echo "🔨 Compilando ${VERSION}.${RUN}"
           flutter build apk --release \
             --build-name=${VERSION}.${RUN} \
-            --build-number=$RUN
+            --build-number=$RUN \
+            --dart-define=ONESIGNAL_APP_ID=${{ secrets.ONESIGNAL_APP_ID }}
 
       - name: Verificar APK
         run: |
@@ -185,7 +193,6 @@ jobs:
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk \
              build/app/outputs/flutter-apk/AllinKawsay.apk
-          ls -la build/app/outputs/flutter-apk/
           echo "✅ APK renombrado a AllinKawsay.apk"
 
       - name: Upload APK (artifact de Actions)
@@ -225,13 +232,12 @@ jobs:
               --title "v${VERSION}.${RUN} (prueba)" \
               --notes-file /tmp/notas.md \
               --prerelease
-            echo "✅ Prerelease creada: $TAG (NO aparece en el panel admin)"
+            echo "✅ Prerelease creada: $TAG"
           else
             gh release create "$TAG" "$APK" \
               --title "v${VERSION}.${RUN}" \
               --notes-file /tmp/notas.md
             echo "✅ Release ESTABLE creado: $TAG"
-            echo "🎯 Ahora aparecerá en el panel admin para aprobar"
-            echo "📥 Link de descarga directo:"
+            echo "📥 Link de descarga directa:"
             echo "https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk"
           fi
