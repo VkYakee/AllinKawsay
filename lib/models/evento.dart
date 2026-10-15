@@ -8,6 +8,8 @@ class Evento {
   final DateTime fecha;
   final String creadoPor;
   final String creadorNombre;
+  final DateTime? fechaCreacion;
+  final DateTime? fechaEdicion;
 
   Evento({
     required this.id,
@@ -17,9 +19,16 @@ class Evento {
     required this.fecha,
     required this.creadoPor,
     required this.creadorNombre,
+    this.fechaCreacion,
+    this.fechaEdicion,
   });
 
   bool get esFuturo => fecha.isAfter(DateTime.now());
+
+  /// Última modificación conocida del evento. Se usa para saber si
+  /// es "nuevo" desde la última visita del usuario.
+  DateTime get ultimaModificacion =>
+      fechaEdicion ?? fechaCreacion ?? DateTime(2000);
 
   factory Evento.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -31,6 +40,8 @@ class Evento {
       fecha: (d['fecha'] as Timestamp?)?.toDate() ?? DateTime.now(),
       creadoPor: d['creadoPor'] ?? '',
       creadorNombre: d['creadorNombre'] ?? '',
+      fechaCreacion: (d['fechaCreacion'] as Timestamp?)?.toDate(),
+      fechaEdicion: (d['fechaEdicion'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -41,5 +52,6 @@ class Evento {
         'fecha': Timestamp.fromDate(fecha),
         'creadoPor': creadoPor,
         'creadorNombre': creadorNombre,
+        'fechaCreacion': FieldValue.serverTimestamp(),
       };
 }
