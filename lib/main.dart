@@ -32,17 +32,19 @@ void main() async {
 
   await ThemeProvider.cargar();
 
+  // Pedir permiso de notificaciones al primer arranque (opcional).
   try {
     final status = await Permission.notification.status;
     if (status.isDenied) {
       await Permission.notification.request();
     }
   } catch (e) {
-    debugPrint('⚠️ Error pidiendo permiso: $e');
+    debugPrint('⚠️ Error pidiendo permiso de notificaciones: $e');
   }
 
   runApp(const SikurisApp());
 }
+
 class SikurisApp extends StatelessWidget {
   const SikurisApp({super.key});
 
@@ -81,32 +83,23 @@ class SikurisApp extends StatelessWidget {
       ),
       textTheme: const TextTheme(
         displayLarge: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: -1,
-          color: AppColors.negro,
-        ),
+            fontWeight: FontWeight.bold,
+            letterSpacing: -1,
+            color: AppColors.negro),
         headlineMedium: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-          color: AppColors.negro,
-        ),
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+            color: AppColors.negro),
         titleLarge: TextStyle(
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-          color: AppColors.negro,
-        ),
-        titleMedium: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: AppColors.negro,
-        ),
-        bodyLarge: TextStyle(
-          letterSpacing: 0.2,
-          color: AppColors.negro,
-        ),
-        bodyMedium: TextStyle(
-          letterSpacing: 0.15,
-          color: AppColors.negro,
-        ),
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+            color: AppColors.negro),
+        titleMedium:
+            TextStyle(fontWeight: FontWeight.w600, color: AppColors.negro),
+        bodyLarge:
+            TextStyle(letterSpacing: 0.2, color: AppColors.negro),
+        bodyMedium:
+            TextStyle(letterSpacing: 0.15, color: AppColors.negro),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -115,11 +108,10 @@ class SikurisApp extends StatelessWidget {
         centerTitle: true,
         scrolledUnderElevation: 0,
         titleTextStyle: TextStyle(
-          color: AppColors.dorado,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 2.5,
-        ),
+            color: AppColors.dorado,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2.5),
         iconTheme: IconThemeData(color: AppColors.dorado),
       ),
       cardTheme: CardTheme(
@@ -139,13 +131,11 @@ class SikurisApp extends StatelessWidget {
           padding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+              borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-          ),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -154,13 +144,10 @@ class SikurisApp extends StatelessWidget {
           padding:
               const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+              borderRadius: BorderRadius.circular(16)),
           side: const BorderSide(color: AppColors.granate, width: 1.5),
           textStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
+              fontWeight: FontWeight.bold, letterSpacing: 1),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -174,14 +161,11 @@ class SikurisApp extends StatelessWidget {
         elevation: 8,
         height: 68,
         indicatorColor: AppColors.granate,
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(
+        labelTextStyle: WidgetStateProperty.all(const TextStyle(
             color: AppColors.dorado,
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
+            letterSpacing: 0.5)),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           return IconThemeData(
             size: 24,
@@ -197,15 +181,13 @@ class SikurisApp extends StatelessWidget {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+            borderRadius: BorderRadius.circular(14)),
       ),
       dividerColor: AppColors.dorado.withOpacity(0.25),
       dividerTheme: DividerThemeData(
-        color: AppColors.dorado.withOpacity(0.25),
-        thickness: 1,
-        space: 24,
-      ),
+          color: AppColors.dorado.withOpacity(0.25),
+          thickness: 1,
+          space: 24),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.blanco,
@@ -217,8 +199,7 @@ class SikurisApp extends StatelessWidget {
         hintStyle: TextStyle(color: AppColors.negro.withOpacity(0.4)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide:
-              const BorderSide(color: AppColors.dorado, width: 2),
+          borderSide: const BorderSide(color: AppColors.dorado, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -239,54 +220,43 @@ class SikurisApp extends StatelessWidget {
         foregroundColor: AppColors.dorado,
         elevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+            borderRadius: BorderRadius.circular(20)),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.negro,
         contentTextStyle: const TextStyle(
-          color: AppColors.dorado,
-          fontWeight: FontWeight.w500,
-        ),
+            color: AppColors.dorado, fontWeight: FontWeight.w500),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+            borderRadius: BorderRadius.circular(14)),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.granate.withOpacity(0.08),
         selectedColor: AppColors.granate,
         labelStyle: const TextStyle(
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-        ),
+            fontWeight: FontWeight.w600, letterSpacing: 0.3),
         side: BorderSide(color: AppColors.granate.withOpacity(0.3)),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+            borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
       dialogTheme: DialogTheme(
         backgroundColor: AppColors.blanco,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+            borderRadius: BorderRadius.circular(24)),
         titleTextStyle: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: AppColors.granate,
-        ),
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.granate),
         contentTextStyle: TextStyle(
-          fontSize: 15,
-          color: AppColors.negro.withOpacity(0.8),
-          height: 1.5,
-        ),
+            fontSize: 15,
+            color: AppColors.negro.withOpacity(0.8),
+            height: 1.5),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.blanco,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         showDragHandle: false,
       ),
       tabBarTheme: const TabBarTheme(
@@ -295,13 +265,13 @@ class SikurisApp extends StatelessWidget {
         indicatorColor: AppColors.dorado,
         indicatorSize: TabBarIndicatorSize.tab,
         labelStyle: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.5,
-          fontSize: 12,
-        ),
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+            fontSize: 12),
       ),
     );
   }
+
   ThemeData _temaOscuro() {
     return ThemeData(
       useMaterial3: true,
@@ -322,35 +292,25 @@ class SikurisApp extends StatelessWidget {
       ),
       textTheme: const TextTheme(
         displayLarge: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: -1,
-          color: AppColors.textoOscuroClaro,
-        ),
+            fontWeight: FontWeight.bold,
+            letterSpacing: -1,
+            color: AppColors.textoOscuroClaro),
         headlineMedium: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-          color: AppColors.textoOscuroClaro,
-        ),
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+            color: AppColors.textoOscuroClaro),
         titleLarge: TextStyle(
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-          color: AppColors.textoOscuroClaro,
-        ),
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+            color: AppColors.textoOscuroClaro),
         titleMedium: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: AppColors.textoOscuroClaro,
-        ),
+            fontWeight: FontWeight.w600,
+            color: AppColors.textoOscuroClaro),
         bodyLarge: TextStyle(
-          letterSpacing: 0.2,
-          color: AppColors.textoOscuroClaro,
-        ),
+            letterSpacing: 0.2, color: AppColors.textoOscuroClaro),
         bodyMedium: TextStyle(
-          letterSpacing: 0.15,
-          color: AppColors.textoOscuroClaro,
-        ),
-        bodySmall: TextStyle(
-          color: AppColors.textoOscuroMedio,
-        ),
+            letterSpacing: 0.15, color: AppColors.textoOscuroClaro),
+        bodySmall: TextStyle(color: AppColors.textoOscuroMedio),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -359,11 +319,10 @@ class SikurisApp extends StatelessWidget {
         centerTitle: true,
         scrolledUnderElevation: 0,
         titleTextStyle: TextStyle(
-          color: AppColors.dorado,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 2.5,
-        ),
+            color: AppColors.dorado,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2.5),
         iconTheme: IconThemeData(color: AppColors.dorado),
       ),
       cardTheme: CardTheme(
@@ -383,13 +342,11 @@ class SikurisApp extends StatelessWidget {
           padding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+              borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-          ),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -398,13 +355,10 @@ class SikurisApp extends StatelessWidget {
           padding:
               const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+              borderRadius: BorderRadius.circular(16)),
           side: const BorderSide(color: AppColors.dorado, width: 1.5),
           textStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
+              fontWeight: FontWeight.bold, letterSpacing: 1),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -418,14 +372,11 @@ class SikurisApp extends StatelessWidget {
         elevation: 8,
         height: 68,
         indicatorColor: AppColors.granate,
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(
+        labelTextStyle: WidgetStateProperty.all(const TextStyle(
             color: AppColors.dorado,
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
+            letterSpacing: 0.5)),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           return IconThemeData(
             size: 24,
@@ -441,15 +392,13 @@ class SikurisApp extends StatelessWidget {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+            borderRadius: BorderRadius.circular(14)),
       ),
       dividerColor: AppColors.dorado.withOpacity(0.3),
       dividerTheme: DividerThemeData(
-        color: AppColors.dorado.withOpacity(0.3),
-        thickness: 1,
-        space: 24,
-      ),
+          color: AppColors.dorado.withOpacity(0.3),
+          thickness: 1,
+          space: 24),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.fondoCardOscuro,
@@ -462,8 +411,7 @@ class SikurisApp extends StatelessWidget {
             color: AppColors.textoOscuroMedio.withOpacity(0.6)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide:
-              const BorderSide(color: AppColors.dorado, width: 2),
+          borderSide: const BorderSide(color: AppColors.dorado, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -484,54 +432,43 @@ class SikurisApp extends StatelessWidget {
         foregroundColor: AppColors.dorado,
         elevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+            borderRadius: BorderRadius.circular(20)),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.granateOscuro,
         contentTextStyle: const TextStyle(
-          color: AppColors.dorado,
-          fontWeight: FontWeight.w500,
-        ),
+            color: AppColors.dorado, fontWeight: FontWeight.w500),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+            borderRadius: BorderRadius.circular(14)),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.granate.withOpacity(0.3),
         selectedColor: AppColors.granate,
         labelStyle: const TextStyle(
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-        ),
+            fontWeight: FontWeight.w600, letterSpacing: 0.3),
         side: BorderSide(color: AppColors.dorado.withOpacity(0.3)),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+            borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
       dialogTheme: DialogTheme(
         backgroundColor: AppColors.fondoCardOscuro,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+            borderRadius: BorderRadius.circular(24)),
         titleTextStyle: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: AppColors.dorado,
-        ),
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.dorado),
         contentTextStyle: TextStyle(
-          fontSize: 15,
-          color: AppColors.textoOscuroClaro.withOpacity(0.85),
-          height: 1.5,
-        ),
+            fontSize: 15,
+            color: AppColors.textoOscuroClaro.withOpacity(0.85),
+            height: 1.5),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.fondoCardOscuro,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         showDragHandle: false,
       ),
       tabBarTheme: const TabBarTheme(
@@ -540,10 +477,9 @@ class SikurisApp extends StatelessWidget {
         indicatorColor: AppColors.dorado,
         indicatorSize: TabBarIndicatorSize.tab,
         labelStyle: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.5,
-          fontSize: 12,
-        ),
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+            fontSize: 12),
       ),
     );
   }
@@ -582,9 +518,6 @@ class _AuthGateState extends State<_AuthGate> {
     super.dispose();
   }
 
-  /// Chequea si hay actualización aprobada. Si la hay, muestra el
-  /// diálogo. Se llama una sola vez por sesión, tras el primer frame
-  /// con el usuario logueado.
   Future<void> _chequearActualizacion() async {
     if (_chequeoUpdateYaHecho) return;
     _chequeoUpdateYaHecho = true;
@@ -596,7 +529,7 @@ class _AuthGateState extends State<_AuthGate> {
 
       await DialogoActualizacion.mostrar(context, info);
     } catch (_) {
-      // Silencioso: si falla el chequeo, no rompemos la app
+      // Silencioso
     }
   }
 
@@ -633,9 +566,6 @@ class _AuthGateState extends State<_AuthGate> {
                 return const CuentaSuspendidaScreen();
               }
 
-              // Programar chequeo de actualización para después del
-              // primer render (evita mostrar diálogo antes de que
-              // el Navigator esté montado).
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _chequearActualizacion();
               });
@@ -656,7 +586,6 @@ class _AuthGateState extends State<_AuthGate> {
     );
   }
 }
-
 class CuentaSuspendidaScreen extends StatelessWidget {
   const CuentaSuspendidaScreen({super.key});
 
@@ -718,8 +647,7 @@ class CuentaSuspendidaScreen extends StatelessWidget {
                       side: const BorderSide(
                           color: AppColors.dorado, width: 1.5),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                          borderRadius: BorderRadius.circular(16)),
                     ),
                     onPressed: () async {
                       await AuthService().logout();
