@@ -33,7 +33,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace = "com.sikuris.sikuris_app"
+    namespace = "com.allinkawsay.app"
     compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
@@ -58,7 +58,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sikuris.sikuris_app"
+        applicationId = "com.allinkawsay.app"
         minSdk = 24
         targetSdk = 35
         versionCode = flutterVersionCode.toInteger()
