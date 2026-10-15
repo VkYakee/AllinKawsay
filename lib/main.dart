@@ -607,3 +607,79 @@ class _AuthGateState extends State<_AuthGate> {
     );
   }
 }
+class CuentaSuspendidaScreen extends StatelessWidget {
+  const CuentaSuspendidaScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.negro,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.red.withOpacity(0.15),
+                    border: Border.all(color: Colors.red, width: 3),
+                  ),
+                  child: const Icon(Icons.block,
+                      size: 60, color: Colors.red),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  'Cuenta suspendida',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.dorado,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Tu acceso a la app fue suspendido por un '
+                  'administrador del grupo.\n\n'
+                  'Si crees que es un error, contactate con '
+                  'la directiva.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.dorado.withOpacity(0.7),
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.logout),
+                    label: const Text('CERRAR SESIÓN',
+                        style: TextStyle(letterSpacing: 1.5)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.dorado,
+                      side: const BorderSide(
+                          color: AppColors.dorado, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () async {
+                      await AuthService().logout();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
