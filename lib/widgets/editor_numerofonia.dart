@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/numerofonia.dart';
+import '../screens/grabar_partitura_screen.dart';
 import '../theme/colors.dart';
 
 class EditorNumerofonia extends StatefulWidget {
@@ -37,6 +38,22 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
 
   void _notify() => widget.onChanged?.call(_estrofas);
 
+  Future<void> _abrirGrabador(int i) async {
+    final resultado = await Navigator.push<EstrofaNumerofonia>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GrabarPartituraScreen(
+          estrofaInicial: _estrofas[i].copy(),
+        ),
+      ),
+    );
+    if (resultado == null) return;
+    setState(() {
+      _estrofas[i] = resultado;
+      _notify();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -45,7 +62,6 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
             ? cons.maxWidth
             : MediaQuery.of(context).size.width - 64;
 
-        // ESCALA ÚNICA para todas las estrofas del editor
         double maxBase = 0;
         for (final e in _estrofas) {
           final b = _EditorEstrofa.baseDe(e);
@@ -78,6 +94,7 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
                   _estrofas.removeAt(i);
                   _notify();
                 }),
+                onGrabar: () => _abrirGrabador(i),
               ),
               const SizedBox(height: 16),
             ],
@@ -122,6 +139,7 @@ class _EditorEstrofa extends StatelessWidget {
   final VoidCallback onToggleBis;
   final VoidCallback onAgregarColumna;
   final VoidCallback onEliminar;
+  final VoidCallback onGrabar;
 
   const _EditorEstrofa({
     super.key,
@@ -132,6 +150,7 @@ class _EditorEstrofa extends StatelessWidget {
     required this.onToggleBis,
     required this.onAgregarColumna,
     required this.onEliminar,
+    required this.onGrabar,
   });
 
   static const double charW = 7.5;
@@ -191,6 +210,8 @@ class _EditorEstrofa extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            _botonGrabar(),
+            const SizedBox(width: 6),
             _chipBis(),
             const SizedBox(width: 6),
             InkWell(
@@ -236,6 +257,43 @@ class _EditorEstrofa extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _botonGrabar() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onGrabar,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          gradient: AppColors.gradienteDorado,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.dorado.withOpacity(0.4),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.piano, size: 11, color: AppColors.granate),
+            SizedBox(width: 4),
+            Text(
+              'GRABAR',
+              style: TextStyle(
+                color: AppColors.granate,
+                fontWeight: FontWeight.bold,
+                fontSize: 9,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
