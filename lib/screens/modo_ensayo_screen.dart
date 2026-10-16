@@ -13,10 +13,6 @@ import '../widgets/visor_numerofonia.dart';
 enum ModoAudio { silencio, ambas, solo7, solo6 }
 
 /// Pantalla de ensayo guiado.
-///
-/// Recorre la tabla de numerofonía celda por celda, iluminando
-/// la columna activa en la tabla y la caña correspondiente en
-/// la mini zampoña. Opcionalmente reproduce el OGG de la nota.
 class ModoEnsayoScreen extends StatefulWidget {
   final Cancion cancion;
   const ModoEnsayoScreen({super.key, required this.cancion});
@@ -54,9 +50,9 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
   int _estrofaActual = 0;
   _NotaEnsayable? _notaActiva;
-  String? _notaSonando; // id de la caña que debe brillar ahora
+  String? _notaSonando;
 
-  int _runId = 0; // para cancelar loops viejos
+  int _runId = 0;
 
   @override
   void initState() {
@@ -71,7 +67,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
   @override
   void dispose() {
-    _runId++; // cancela cualquier loop en curso
+    _runId++;
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -83,7 +79,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
   }
 
   /// Extrae todas las notas de la canción en orden de reproducción.
-  /// Fila 7 primero, después fila 6, columna por columna.
   List<_NotaEnsayable> _extraerNotas() {
     final estrofas =
         widget.cancion.estrofas.where((e) => !e.vacia).toList();
@@ -97,7 +92,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       for (int c = 0; c < cols.length; c++) {
         final col = cols[c];
 
-        // ─── Fila 7 ───
+        // Fila 7
         final n7 = col.nota7.trim();
         for (int i = 0; i < n7.length; i++) {
           final delay = i < col.timings7.length
@@ -112,12 +107,12 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
           ));
         }
 
-        // ─── Fila 6 ───
+        // Fila 6
         final n6 = col.nota6.trim();
         for (int i = 0; i < n6.length; i++) {
           final delay = i < col.timings6.length
               ? col.timings6[i]
-              : (i == 0 ? 400 : 400); // entre filas, 400ms base
+              : 400;
           lista.add(_NotaEnsayable(
             estrofa: e,
             columna: c,
@@ -132,7 +127,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     return lista;
   }
 
-  /// Devuelve la nota individual ('4', '5', '.', etc.) de la posición actual.
   String _caracterDe(_NotaEnsayable n) {
     final estrofas =
         widget.cancion.estrofas.where((e) => !e.vacia).toList();
@@ -146,8 +140,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     return limpio[n.notaIndex];
   }
 
-  /// Convierte un carácter ('1'-'7') a la nota de la zampoña correspondiente.
-  /// Devuelve null si es punto, fuera de rango o no existe.
   ZamponaNota? _zamponaDe(String caracter, bool esFila7) {
     if (caracter == '.' || caracter.isEmpty) return null;
     final pos = int.tryParse(caracter);
@@ -159,7 +151,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     return null;
   }
 
-  /// ¿Debe sonar la fila indicada, según el modo de audio actual?
   bool _debeSonar(bool esFila7) {
     switch (_modoAudio) {
       case ModoAudio.silencio:
@@ -194,13 +185,11 @@ Future<void> _reproducir() async {
     for (final n in notas) {
       if (id != _runId) return;
 
-      // Manejar pausa
       while (_pausa && id == _runId) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
       if (id != _runId) return;
 
-      // Actualizar estado visual
       if (mounted) {
         setState(() {
           _estrofaActual = n.estrofa;
@@ -208,7 +197,6 @@ Future<void> _reproducir() async {
         });
       }
 
-      // Sonar / iluminar la caña
       final caracter = _caracterDe(n);
       final nota = _zamponaDe(caracter, n.esFila7);
 
@@ -221,7 +209,6 @@ Future<void> _reproducir() async {
           } catch (_) {}
         }
 
-        // Apagar el brillo después de un rato (proporcional a la velocidad)
         final brilloMs = (260 / _velocidad).round().clamp(80, 800);
         Future.delayed(Duration(milliseconds: brilloMs), () {
           if (mounted && id == _runId) {
@@ -230,7 +217,6 @@ Future<void> _reproducir() async {
         });
       }
 
-      // Esperar el delay de la nota
       final delay = (n.delayMs / _velocidad).round();
       if (delay > 0) {
         await Future.delayed(Duration(milliseconds: delay));
@@ -239,7 +225,6 @@ Future<void> _reproducir() async {
 
     if (!_bucle) break;
 
-    // Pausa breve entre vueltas del bucle
     await Future.delayed(
         Duration(milliseconds: (700 / _velocidad).round()));
   }
@@ -253,13 +238,8 @@ Future<void> _reproducir() async {
   }
 }
 
-void _pausar() {
-  setState(() => _pausa = true);
-}
-
-void _reanudar() {
-  setState(() => _pausa = false);
-}
+void _pausar() => setState(() => _pausa = true);
+void _reanudar() => setState(() => _pausa = false);
 
 void _detener() {
   _runId++;
@@ -274,7 +254,6 @@ void _detener() {
 
 void _reiniciar() {
   _detener();
-  // Pequeño delay para que se asiente el estado
   Future.delayed(const Duration(milliseconds: 120), () {
     if (mounted) _reproducir();
   });
@@ -459,7 +438,7 @@ Widget _chip({
               child: Slider(
                 min: 0.25,
                 max: 2.0,
-                divisions: 35, // 0.05 por step
+                divisions: 35,
                 value: _velocidad,
                 onChanged: (v) => setState(() => _velocidad = v),
               ),
@@ -488,6 +467,19 @@ Widget _chip({
     final idx = _estrofaActual.clamp(0, estrofas.length - 1);
     final estrofa = estrofas[idx];
 
+    // ⚠️ FIX: construimos el CeldaActiva correctamente.
+    // - Si la nota activa es de ESTA estrofa → la mostramos.
+    // - El índice de estrofa siempre es 0 porque le pasamos SOLO 1 estrofa.
+    CeldaActiva? activa;
+    if (_notaActiva != null && _notaActiva!.estrofa == idx) {
+      activa = CeldaActiva(
+        estrofa: 0,
+        columna: _notaActiva!.columna,
+        esFila7: _notaActiva!.esFila7,
+        notaIndex: _notaActiva!.notaIndex,
+      );
+    }
+
     return Container(
       height: 70,
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -502,10 +494,7 @@ Widget _chip({
         child: VisorNumerofonia(
           estrofas: [estrofa],
           escala: 0.9,
-          celdaActiva: _notaActiva != null &&
-                  _notaActiva!.estrofa == idx
-              ? _notaActiva
-              : null,
+          celdaActiva: activa,
         ),
       ),
     );
@@ -517,7 +506,6 @@ Widget _chip({
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Play / Pausa / Reanudar
           if (!_reproduciendo)
             _botonControl(
               icono: Icons.play_arrow,
