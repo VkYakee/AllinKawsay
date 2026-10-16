@@ -18,10 +18,17 @@ class AuthService {
     await cred.user?.updateDisplayName(nombre);
     await cred.user?.reload();
 
+    // Creamos el doc con TODOS los campos que exige la regla.
     await _db.collection('usuarios').doc(cred.user!.uid).set({
       'nombre': nombre,
       'email': email,
       'rol': 'publico',
+      'fotoUrl': '',
+      'baneado': false,
+      'favoritos': <String>[],
+      'notasPorCancion': <String, String>{},
+      'notasPorEvento': <String, String>{},
+      'notasPorRecuerdo': <String, String>{},
       'fechaRegistro': FieldValue.serverTimestamp(),
     });
 
@@ -43,7 +50,7 @@ class AuthService {
   Future<User?> loginConGoogle() async {
     final googleSignIn = GoogleSignIn();
     final googleUser = await googleSignIn.signIn();
-    if (googleUser == null) return null; // canceló
+    if (googleUser == null) return null;
 
     final googleAuth = await googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
@@ -74,14 +81,13 @@ class AuthService {
         'rol': 'publico',
         'fotoUrl': user.photoURL ?? '',
         'baneado': false,
-        'favoritos': [],
-        'notasPorCancion': {},
-        'notasPorEvento': {},
-        'notasPorRecuerdo': {},
+        'favoritos': <String>[],
+        'notasPorCancion': <String, String>{},
+        'notasPorEvento': <String, String>{},
+        'notasPorRecuerdo': <String, String>{},
         'fechaRegistro': FieldValue.serverTimestamp(),
       });
     } else {
-      // Si el doc ya existe pero no tiene foto, la tomamos de Google
       final data = doc.data();
       if ((data?['fotoUrl'] ?? '').toString().isEmpty &&
           (user.photoURL ?? '').isNotEmpty) {
@@ -91,15 +97,12 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    // Cerrar sesión de Google también (si aplica)
     try {
       final googleSignIn = GoogleSignIn();
       if (await googleSignIn.isSignedIn()) {
         await googleSignIn.signOut();
       }
-    } catch (_) {
-      // Silencioso: si no había sesión Google, no pasa nada
-    }
+    } catch (_) {}
     await _auth.signOut();
   }
 }
