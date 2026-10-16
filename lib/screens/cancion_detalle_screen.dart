@@ -1,11 +1,16 @@
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/cancion.dart';
 import '../models/usuario.dart';
+import '../services/audio_cache_service.dart';
 import '../services/cancion_service.dart';
 import '../services/descarga_service.dart';
 import '../services/player_service.dart';
+import '../services/reproduccion_service.dart';
 import '../services/usuario_service.dart';
 import '../theme/colors.dart';
 import '../widgets/cancion/audio_player_compacto.dart';
@@ -33,7 +38,7 @@ class CancionDetalleScreen extends StatefulWidget {
 class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
   final _player = PlayerService();
   Usuario? _usuario;
-  bool _reproduccionContada = false;
+  bool _guardando = false;
 
   @override
   void initState() {
@@ -47,45 +52,177 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
   }
 
   Future<void> _togglePlay() async {
+    final estabaSonando = _player.sonando(widget.cancion.id);
     await _player.toggle(widget.cancion);
-    if (!_reproduccionContada && _player.sonando(widget.cancion.id)) {
-      _reproduccionContada = true;
-      await CancionService().incrementarReproduccion(widget.cancion.id);
+    final sonandoAhora = _player.sonando(widget.cancion.id);
+    if (sonandoAhora && !estabaSonando) {
+      await ReproduccionService.contarUnaVez(widget.cancion.id);
     }
   }
 
-  Future<void> _descargar(String url,
-      {String? nombre, String mime = 'application/octet-stream'}) async {
-    if (url.isEmpty) return;
+  /// Descarga manual con selector de carpeta (SAF).
+  /// Guarda el MP3 con el nombre "Título - Autor.mp3".
+  Future<void> _descargar() async {
+    final c = widget.cancion;
+    if (c.audioUrl.isEmpty) return;
 
-    final nombreFinal = nombre ??
-        DescargaService.nombreConTimestamp(widget.cancion.titulo, 'mp3');
+    // 1) Elegir carpeta destino
+    String? rutaCarpeta;
+    try {
+      rutaCarpeta = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: '¿Dónde guardar el archivo?',
+      );
+    } catch (e) {
+      rutaCarpeta = null;
+    }
 
+    if (rutaCarpeta == null) {
+      // El usuario canceló o falló el selector → fallback a Descargas
+      _descargarADescargas(c);
+      return;
+    }
+
+    // 2) Descargar con progreso
+    if (!mounted) return;
+    setState(() => _guardando = true);
+
+    final nombre = _nombreArchivo(c);
     final resultado = await DialogoDescarga.mostrar(
       context,
-      url: url,
-      nombre: nombreFinal,
-      mime: mime,
+      url: c.audioUrl,
+      nombre: nombre,
+      mime: 'audio/mpeg',
       titulo: 'Descargando audio',
     );
 
     if (!mounted) return;
-    if (resultado != null) {
+    setState(() => _guardando = false);
+
+    if (resultado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo descargar el audio'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // El diálogo guarda en Descargas. Ahora movemos/copiamos a la
+    // carpeta elegida por el usuario.
+    try {
+      final dirDescargas = await _obtenerDirDescargas();
+      final origen = File('${dirDescargas.path}/$nombre');
+      if (await origen.exists()) {
+        final destino = File('$rutaCarpeta/$nombre');
+        await origen.copy(destino.path);
+        try {
+          await origen.delete();
+        } catch (_) {}
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Guardado en: $rutaCarpeta'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Guardado en Descargas: $nombre'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: AppColors.dorado),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('Guardado en Descargas: $resultado'),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 3),
+          content: Text(
+              'Se guardó en Descargas (no se pudo mover a la carpeta elegida)'),
+          duration: const Duration(seconds: 5),
         ),
       );
     }
+  }
+
+  /// Fallback: descarga directo a Descargas.
+  Future<void> _descargarADescargas(Cancion c) async {
+    final nombre = _nombreArchivo(c);
+    final resultado = await DialogoDescarga.mostrar(
+      context,
+      url: c.audioUrl,
+      nombre: nombre,
+      mime: 'audio/mpeg',
+      titulo: 'Descargando audio',
+    );
+    if (!mounted) return;
+    if (resultado != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Guardado en Descargas: $nombre'),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  Future<Directory> _obtenerDirDescargas() async {
+    // getExternalStorageDirectory() da un dir escribible sin permisos
+    final dir = await getExternalStorageDirectory();
+    if (dir != null) {
+      // Android: subir hasta /storage/emulated/0/Download
+      final base = dir.path
+          .replaceAll(RegExp(r'/Android/.*'), '');
+      final download = Directory('$base/Download');
+      if (await download.exists()) return download;
+      return dir;
+    }
+    return await getApplicationDocumentsDirectory();
+  }
+
+  String _nombreArchivo(Cancion c) {
+    // "Título - Autor.mp3" (limpio de caracteres raros)
+    final partes = <String>[c.titulo];
+    if (c.autor.isNotEmpty) partes.add(c.autor);
+    final base = partes.join(' - ');
+    final limpio = base
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '')
+        .trim();
+    return '$limpio.mp3';
+  }
+
+  Future<void> _borrarCacheDeEsta() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Borrar caché de esta canción',
+            style: TextStyle(
+                color: AppColors.granate,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
+        content: const Text(
+            'Se borrará el audio cacheado. Se descargará de nuevo la próxima vez que la reproduzcas.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Borrar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await AudioCacheService().borrar(widget.cancion.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Caché de la canción borrado')),
+    );
   }
 
   Future<void> _compartir() async {
@@ -141,181 +278,199 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
       }
     }
   }
-@override
-Widget build(BuildContext context) {
-  final c = widget.cancion;
-  final puedeDescargar = _usuario?.puedeDescargar ?? false;
-  final puedeComentar = _usuario?.puedeComentar ?? false;
-  final esFavorito = _usuario?.esFavorito(c.id) ?? false;
-  final onSurface = Theme.of(context).colorScheme.onSurface;
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.cancion;
+    final puedeDescargar = _usuario?.puedeDescargar ?? false;
+    final puedeComentar = _usuario?.puedeComentar ?? false;
+    final esFavorito = _usuario?.esFavorito(c.id) ?? false;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(c.titulo),
-      actions: [
-        IconButton(
-          icon: Icon(esFavorito ? Icons.favorite : Icons.favorite_border),
-          tooltip: 'Favorito',
-          onPressed: () async {
-            await UsuarioService().toggleFavorito(c.id);
-            await _cargarUsuario();
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.slideshow),
-          tooltip: 'Modo presentación',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PresentacionScreen(cancion: widget.cancion),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(c.titulo),
+        actions: [
+          IconButton(
+            icon: Icon(
+                esFavorito ? Icons.favorite : Icons.favorite_border),
+            tooltip: 'Favorito',
+            onPressed: () async {
+              await UsuarioService().toggleFavorito(c.id);
+              await _cargarUsuario();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.slideshow),
+            tooltip: 'Modo presentación',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    PresentacionScreen(cancion: widget.cancion),
+              ),
             ),
           ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.image),
-          tooltip: 'Compartir como imagen',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  CompartirImagenScreen(cancion: widget.cancion),
+          IconButton(
+            icon: const Icon(Icons.image),
+            tooltip: 'Compartir como imagen',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    CompartirImagenScreen(cancion: widget.cancion),
+              ),
             ),
           ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.share),
-          tooltip: 'Compartir texto',
-          onPressed: _compartir,
-        ),
-      ],
-    ),
-    body: WatermarkOverlay(
-      opacity: 0.04,
-      child: ListView(
-        children: [
-          _heroTitulo(c, onSurface),
-          const SizedBox(height: 20),
-
-          // === NUMEROFONÍA ===
-          if (c.tieneNumerofonia) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: HeaderNumerofonia(cancion: c),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: VisorNumerofonia(estrofas: c.estrofas),
-            ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Compartir texto',
+            onPressed: _compartir,
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
+            onSelected: (v) {
+              if (v == 'borrar_cache') {
+                _borrarCacheDeEsta();
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'borrar_cache',
+                child: Row(
+                  children: [
+                    Icon(Icons.cleaning_services_outlined,
+                        size: 20, color: Colors.orange),
+                    SizedBox(width: 10),
+                    Text('Borrar caché de esta canción'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: WatermarkOverlay(
+        opacity: 0.04,
+        child: ListView(
+          children: [
+            _heroTitulo(c, onSurface),
             const SizedBox(height: 20),
-          ] else if (c.tieneNumerofoniaString) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SeccionCard(
-                icono: Icons.grid_on,
-                titulo: 'Numerofonía',
-                child: Text(
-                  c.numerofonia,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 14,
-                    color: onSurface,
-                    letterSpacing: 1.5,
+
+            if (c.tieneNumerofonia) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: HeaderNumerofonia(cancion: c),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: VisorNumerofonia(estrofas: c.estrofas),
+              ),
+              const SizedBox(height: 20),
+            ] else if (c.tieneNumerofoniaString) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SeccionCard(
+                  icono: Icons.grid_on,
+                  titulo: 'Numerofonía',
+                  child: Text(
+                    c.numerofonia,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      color: onSurface,
+                      letterSpacing: 1.5,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
 
-          // === AUDIO ===
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: AudioPlayerCompacto(
-              cancion: c,
-              puedeDescargar: puedeDescargar,
-              player: _player,
-              onTogglePlay: _togglePlay,
-              onDescargar: _descargar,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // === LETRAS ===
-          if (c.tieneLetra) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: VisorLetras(letras: c.letras),
+              child: AudioPlayerCompacto(
+                cancion: c,
+                puedeDescargar: puedeDescargar,
+                player: _player,
+                onTogglePlay: _togglePlay,
+                onDescargar: (url, {nombre, mime}) => _descargar(),
+              ),
             ),
             const SizedBox(height: 16),
-          ],
 
-          // === DESCRIPCIÓN ===
-          if (c.descripcion.isNotEmpty) ...[
+            if (c.tieneLetra) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: VisorLetras(letras: c.letras),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            if (c.descripcion.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SeccionCard(
+                  icono: Icons.notes,
+                  titulo: 'Descripción',
+                  child: Text(
+                    c.descripcion,
+                    style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: onSurface.withOpacity(0.85)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SeccionCard(
-                icono: Icons.notes,
-                titulo: 'Descripción',
-                child: Text(
-                  c.descripcion,
-                  style: TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: onSurface.withOpacity(0.85)),
+              child: InformacionExpandible(cancion: c),
+            ),
+            const SizedBox(height: 16),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _expansionCard(
+                context,
+                icono: Icons.comment,
+                titulo: 'Comentarios',
+                child: ComentariosSection(
+                  cancionId: c.id,
+                  puedeComentar: puedeComentar,
                 ),
               ),
             ),
             const SizedBox(height: 16),
-          ],
 
-          // === INFORMACIÓN ===
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: InformacionExpandible(cancion: c),
-          ),
-          const SizedBox(height: 16),
-
-          // === COMENTARIOS ===
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _expansionCard(
-              context,
-              icono: Icons.comment,
-              titulo: 'Comentarios',
-              child: ComentariosSection(
-                cancionId: c.id,
-                puedeComentar: puedeComentar,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // === NOTA PERSONAL ===
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: NotaPersonalCard(
-              cancionId: c.id,
-              usuario: _usuario,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // === VIDEO YOUTUBE ===
-          if (c.tieneVideo) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TarjetaVideo(url: c.videoUrl, titulo: c.titulo),
+              child: NotaPersonalCard(
+                cancionId: c.id,
+                usuario: _usuario,
+              ),
             ),
-            const SizedBox(height: 32),
-          ] else ...[
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+
+            if (c.tieneVideo) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TarjetaVideo(url: c.videoUrl, titulo: c.titulo),
+              ),
+              const SizedBox(height: 32),
+            ] else ...[
+              const SizedBox(height: 32),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _heroTitulo(Cancion c, Color onSurface) {
     return Container(
       width: double.infinity,
