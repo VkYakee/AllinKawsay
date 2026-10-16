@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../services/novedades_service.dart';
 import '../theme/colors.dart';
-import 'inicio_screen.dart';
+import 'busqueda_global_screen.dart';
 import 'cancionero_screen.dart';
 import 'eventos_screen.dart';
-import 'recuerdos_screen.dart';
+import 'inicio_screen.dart';
 import 'perfil_screen.dart';
+import 'recuerdos_screen.dart';
+import 'zampona_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -25,6 +27,20 @@ class _HomeScreenState extends State<HomeScreen> {
     NovedadesService.refrescar();
   }
 
+  void _abrirZampona() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ZamponaScreen()),
+    );
+  }
+
+  void _abrirBusqueda() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BusquedaGlobalScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
@@ -36,7 +52,41 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      body: IndexedStack(index: _index, children: pages),
+      body: Stack(
+        children: [
+          IndexedStack(index: _index, children: pages),
+
+          // ═══ FABs FLOTANTES (arriba del NavigationBar) ═══
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'fab_zampona',
+                  onPressed: _abrirZampona,
+                  backgroundColor: AppColors.granate,
+                  foregroundColor: AppColors.dorado,
+                  elevation: 4,
+                  tooltip: 'Zampoña',
+                  child: const Icon(Icons.music_note, size: 20),
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton.small(
+                  heroTag: 'fab_busqueda',
+                  onPressed: _abrirBusqueda,
+                  backgroundColor: AppColors.granate,
+                  foregroundColor: AppColors.dorado,
+                  elevation: 4,
+                  tooltip: 'Buscar',
+                  child: const Icon(Icons.search, size: 20),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
