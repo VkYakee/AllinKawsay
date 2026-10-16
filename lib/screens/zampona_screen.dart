@@ -5,9 +5,6 @@ import '../models/zampona_nota.dart';
 import '../services/zampona_service.dart';
 import '../theme/colors.dart';
 
-/// Pantalla de la mini zampoña en modo horizontal (landscape),
-/// pantalla completa (immersive), con las 2 filas pegadas.
-/// Incluye toggle SOSTENIDO / PULSADO.
 class ZamponaScreen extends StatefulWidget {
   const ZamponaScreen({super.key});
 
@@ -23,13 +20,11 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
   @override
   void initState() {
     super.initState();
-
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
     _inicializar();
   }
 
@@ -47,24 +42,22 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
     if (mounted) setState(() => _cargando = false);
   }
 
-  // ─── MODO SOSTENIDO ───
   Future<void> _tocarDown(ZamponaNota nota) async {
     setState(() => _sonando.add(nota.id));
     await _service.tocar(nota.id);
   }
 
-  // ─── MODO PULSADO ───
   Future<void> _soltar(ZamponaNota nota) async {
     await _service.soltar(nota.id);
     if (mounted) {
-      Future.delayed(const Duration(milliseconds: 60), () {
+      Future.delayed(const Duration(milliseconds: 80), () {
         if (mounted) setState(() => _sonando.remove(nota.id));
       });
     }
   }
 
   void _apagarBrillo(ZamponaNota nota) {
-    Future.delayed(const Duration(milliseconds: 280), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _sonando.remove(nota.id));
     });
   }
@@ -81,18 +74,11 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
                 children: [
                   Positioned.fill(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 54, 12, 12),
+                      padding: const EdgeInsets.fromLTRB(8, 52, 8, 8),
                       child: _zampona(),
                     ),
                   ),
-
-                  // Barra superior flotante
-                  Positioned(
-                    top: 4,
-                    left: 8,
-                    right: 8,
-                    child: _barraSuperior(),
-                  ),
+                  Positioned(top: 4, left: 8, right: 8, child: _barraSuperior()),
                 ],
               ),
       ),
@@ -104,7 +90,6 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
       children: [
         IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.dorado),
-          tooltip: 'Volver',
           onPressed: () => Navigator.pop(context),
         ),
         const Text(
@@ -116,15 +101,11 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
             fontSize: 15,
           ),
         ),
-        const SizedBox(width: 16),
-
-        // Toggle SOSTENIDO / PULSADO
+        const SizedBox(width: 14),
         _toggleModo(),
-
         const Spacer(),
         IconButton(
           icon: const Icon(Icons.volume_off, color: AppColors.dorado),
-          tooltip: 'Detener sonidos',
           onPressed: () async {
             await _service.detener();
             if (mounted) setState(() => _sonando.clear());
@@ -156,9 +137,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
   Widget _chipModo(String texto, IconData icono, ZamponaModo modo) {
     final activo = _service.modo == modo;
     return GestureDetector(
-      onTap: () {
-        setState(() => _service.setModo(modo));
-      },
+      onTap: () => setState(() => _service.setModo(modo)),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -195,75 +174,84 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // ZAMPOÑA — vista "de frente a los tubos"
+  // ═══════════════════════════════════════════════════════════
   Widget _zampona() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 14, 12, 18),
       decoration: BoxDecoration(
         gradient: const RadialGradient(
-          center: Alignment(0, -0.6),
+          center: Alignment(0, -0.4),
           radius: 1.6,
-          colors: [
-            Color(0xFF1A0A0D),
-            Colors.black,
-          ],
+          colors: [Color(0xFF1A0509), Colors.black],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.dorado.withOpacity(0.35),
+          color: AppColors.dorado.withOpacity(0.3),
           width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.granate.withOpacity(0.25),
-            blurRadius: 30,
-            spreadRadius: 2,
-          ),
-        ],
       ),
       child: LayoutBuilder(
         builder: (context, cons) {
-          const separacion = 4.0;
-          final disponible = cons.maxWidth - (separacion * 6);
+          // Calculamos el tamaño del hueco (círculo) según el ancho
+          // disponible. Fila 7 tiene 7 cañas, fila 6 tiene 6 → siempre
+          // mando por el ancho de 7 columnas para alinear.
+          const separacion = 3.0;
+          final disponible = cons.maxWidth - (separacion * 6) - 16;
           final anchoCania = disponible / 7;
+
+          // Hueco: 90% del ancho de la columna (redondo)
+          final diametro = anchoCania * 0.92;
 
           return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // FILA 7
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final nota in notasFila7)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: separacion / 2),
-                      child: SizedBox(
-                        width: anchoCania,
-                        child: _cania(nota, esArriba: true),
-                      ),
-                    ),
-                ],
+              // ─── FILA 7 (arriba, al frente) ───
+              _filaTubos(
+                notas: notasFila7,
+                diametro: diametro,
+                separacion: separacion,
+                colorMaderaClaro: AppColors.granateClaro,
+                colorMaderaOscuro: const Color(0xFF3A0810),
               ),
 
-              const SizedBox(height: 2),
-
-              // FILA 6 pegada
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final nota in notasFila6)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: separacion / 2),
-                      child: SizedBox(
-                        width: anchoCania,
-                        child: _cania(nota, esArriba: false),
-                      ),
+              // ─── LISTÓN (madera oscura con línea dorada) ───
+              Container(
+                height: 14,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF2A0308),
+                      AppColors.granateOscuro,
+                      Color(0xFF2A0308),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color: AppColors.dorado.withOpacity(0.4),
+                    width: 0.8,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.7),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
                     ),
-                ],
+                  ],
+                ),
+              ),
+
+              // ─── FILA 6 (abajo, detrás) ───
+              _filaTubos(
+                notas: notasFila6,
+                diametro: diametro,
+                separacion: separacion,
+                colorMaderaClaro: AppColors.granate,
+                colorMaderaOscuro: const Color(0xFF2A0308),
               ),
             ],
           );
@@ -272,25 +260,119 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
     );
   }
 
-  Widget _cania(ZamponaNota nota, {required bool esArriba}) {
+  Widget _filaTubos({
+    required List<ZamponaNota> notas,
+    required double diametro,
+    required double separacion,
+    required Color colorMaderaClaro,
+    required Color colorMaderaOscuro,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final nota in notas)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: separacion / 2),
+            child: _tubo(
+              nota: nota,
+              diametro: diametro,
+              colorClaro: colorMaderaClaro,
+              colorOscuro: colorMaderaOscuro,
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // TUBO INDIVIDUAL (círculo con hueco visible)
+  // ═══════════════════════════════════════════════════════════
+  Widget _tubo({
+    required ZamponaNota nota,
+    required double diametro,
+    required Color colorClaro,
+    required Color colorOscuro,
+  }) {
     final sonando = _sonando.contains(nota.id);
     final modoPulsado = _service.modo == ZamponaModo.pulsado;
 
-    final total = esArriba ? 7.0 : 6.0;
-    final alturaMin = esArriba ? 48.0 : 42.0;
-    final alturaMax = esArriba ? 92.0 : 80.0;
-    final factor = nota.posicion / total;
-    final altura = alturaMin + (alturaMax - alturaMin) * factor;
+    Widget contenido = AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      width: diametro,
+      height: diametro,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        // Gradiente radial que simula:
+        //   centro = hueco oscuro (interior del tubo)
+        //   medio = sombra interna
+        //   borde = madera (color del tubo)
+        gradient: RadialGradient(
+          colors: sonando
+              ? [
+                  const Color(0xFF0A0103), // hueco centro
+                  const Color(0xFF1A0205),
+                  AppColors.granate,
+                  AppColors.dorado, // aro dorado exterior (brillo)
+                ]
+              : [
+                  const Color(0xFF0A0103),
+                  const Color(0xFF1A0205),
+                  colorOscuro,
+                  colorClaro,
+                ],
+          stops: const [0.0, 0.35, 0.78, 1.0],
+        ),
+        border: Border.all(
+          color: sonando
+              ? AppColors.dorado
+              : AppColors.dorado.withOpacity(0.35),
+          width: sonando ? 2 : 1.2,
+        ),
+        boxShadow: [
+          // Sombra externa (profundidad)
+          BoxShadow(
+            color: Colors.black.withOpacity(0.85),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+          // Brillo cuando suena
+          if (sonando)
+            BoxShadow(
+              color: AppColors.dorado.withOpacity(0.7),
+              blurRadius: 18,
+              spreadRadius: 1,
+            ),
+        ],
+      ),
+      // Número en el centro del hueco
+      child: Center(
+        child: Text(
+          '${nota.posicion}',
+          style: TextStyle(
+            color: sonando
+                ? AppColors.dorado
+                : AppColors.dorado.withOpacity(0.55),
+            fontWeight: FontWeight.bold,
+            fontSize: diametro * 0.32,
+            height: 1.0,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.9),
+                blurRadius: 3,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
 
-    // En modo sostenido: onTapDown solo
-    // En modo pulsado: onTapDown + onTapUp + onTapCancel
     final gesture = modoPulsado
         ? GestureDetector(
             onTapDown: (_) => _tocarDown(nota),
             onTapUp: (_) => _soltar(nota),
             onTapCancel: () => _soltar(nota),
             behavior: HitTestBehavior.opaque,
-            child: _contenidoCania(nota, sonando, altura),
+            child: contenido,
           )
         : GestureDetector(
             onTapDown: (_) {
@@ -298,144 +380,14 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
               _apagarBrillo(nota);
             },
             behavior: HitTestBehavior.opaque,
-            child: _contenidoCania(nota, sonando, altura),
+            child: contenido,
           );
 
     return AnimatedScale(
-      scale: sonando ? 1.06 : 1.0,
+      scale: sonando ? 1.08 : 1.0,
       duration: const Duration(milliseconds: 120),
       curve: Curves.easeOut,
       child: gesture,
-    );
-  }
-
-  Widget _contenidoCania(ZamponaNota nota, bool sonando, double altura) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // HUECO con NÚMERO adentro
-        AspectRatio(
-          aspectRatio: 1,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 130),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: sonando
-                    ? [
-                        const Color(0xFF3A0810),
-                        AppColors.granate,
-                        AppColors.dorado.withOpacity(0.95),
-                      ]
-                    : [
-                        Colors.black,
-                        const Color(0xFF0A0305),
-                        AppColors.granateOscuro,
-                      ],
-                stops: const [0.0, 0.55, 1.0],
-              ),
-              border: Border.all(
-                color: sonando
-                    ? AppColors.dorado
-                    : AppColors.dorado.withOpacity(0.45),
-                width: sonando ? 2.5 : 1.3,
-              ),
-              boxShadow: sonando
-                  ? [
-                      BoxShadow(
-                        color: AppColors.dorado.withOpacity(0.8),
-                        blurRadius: 16,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.7),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-            ),
-            child: Center(
-              child: LayoutBuilder(
-                builder: (context, c) {
-                  final lado = c.maxWidth;
-                  return Text(
-                    '${nota.posicion}',
-                    style: TextStyle(
-                      color: sonando
-                          ? AppColors.dorado
-                          : AppColors.dorado.withOpacity(0.9),
-                      fontWeight: FontWeight.bold,
-                      fontSize: (lado * 0.5).clamp(11.0, 26.0),
-                      height: 1.0,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withOpacity(0.7),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 2),
-
-        // CUERPO cilíndrico
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 130),
-          width: double.infinity,
-          height: altura,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: sonando
-                  ? [
-                      AppColors.doradoOscuro,
-                      AppColors.dorado,
-                      AppColors.doradoClaro,
-                      AppColors.dorado,
-                      AppColors.doradoOscuro,
-                    ]
-                  : [
-                      const Color(0xFF3A0810),
-                      AppColors.granate,
-                      AppColors.granateClaro,
-                      AppColors.granate,
-                      AppColors.granateOscuro,
-                    ],
-              stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
-            ),
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(8),
-            ),
-            border: Border.all(
-              color: sonando
-                  ? AppColors.dorado
-                  : AppColors.dorado.withOpacity(0.15),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 5,
-                offset: const Offset(3, 3),
-              ),
-              if (sonando)
-                BoxShadow(
-                  color: AppColors.dorado.withOpacity(0.55),
-                  blurRadius: 18,
-                  spreadRadius: 1,
-                ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
