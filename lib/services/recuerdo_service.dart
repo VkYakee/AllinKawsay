@@ -47,20 +47,18 @@ class RecuerdoService {
     );
   }
 
-  /// Reasigna el `creadoPor` de los recuerdos que coincidan con
-  /// [nombre] pero tengan `creadoPor` vacío.
+  /// 🔧 REASIGNACIÓN AGRESIVA:
+  /// Asigna al usuario actual TODOS los recuerdos cuyo `creadoPor`
+  /// esté vacío (ignora el nombre).
   Future<int> reasignarMisRecuerdos(String uid, String nombre) async {
-    if (uid.isEmpty || nombre.isEmpty) return 0;
-    final nombreLower = nombre.trim().toLowerCase();
+    if (uid.isEmpty) return 0;
     try {
       final snap = await _db.collection('recuerdos').get();
       int actualizadas = 0;
       for (final doc in snap.docs) {
         final d = doc.data();
         final creadoPor = (d['creadoPor'] ?? '').toString().trim();
-        final creadorNombre =
-            (d['creadorNombre'] ?? '').toString().trim().toLowerCase();
-        if (creadoPor.isEmpty && creadorNombre == nombreLower) {
+        if (creadoPor.isEmpty) {
           await doc.reference.update({
             'creadoPor': uid,
             'creadorNombre': nombre,
@@ -69,6 +67,21 @@ class RecuerdoService {
         }
       }
       return actualizadas;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<int> contarSinDueno() async {
+    try {
+      final snap = await _db.collection('recuerdos').get();
+      int total = 0;
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        final creadoPor = (d['creadoPor'] ?? '').toString().trim();
+        if (creadoPor.isEmpty) total++;
+      }
+      return total;
     } catch (_) {
       return 0;
     }
