@@ -3,17 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 /// Servicio de descarga con progreso en tiempo real.
-///
-/// Emite el progreso a través del callback [onProgreso] con:
-///   - `progreso`: 0.0 a 1.0
-///   - `bytesRecibidos`: bytes descargados hasta ahora
-///   - `bytesTotales`: bytes totales (0 si el servidor no lo informa)
 class DescargaProgresoService {
   static const _channel = MethodChannel('com.allinkawsay/native');
 
-  /// Descarga [url] con progreso, la guarda en la carpeta Descargas con
-  /// el nombre [nombre] y mime [mime]. Devuelve el nombre guardado o
-  /// null si falló.
+  /// User-Agent obligatorio para algunas CDNs (Cloudinary incluido).
+  static const _userAgent =
+      'Mozilla/5.0 (Linux; Android 10) AllinKawsay/1.0';
+
   static Future<String?> descargar(
     String url,
     String nombre,
@@ -22,17 +18,19 @@ class DescargaProgresoService {
   }) async {
     try {
       final request = http.Request('GET', Uri.parse(url));
-      final response = await request.send();
+      request.headers['User-Agent'] = _userAgent;
+      request.headers['Accept'] = '*/*';
 
-      if (response.statusCode != 200) {
-        throw Exception('Error HTTP: ${response.statusCode}');
+      final streamedResponse = await request.send();
+      if (streamedResponse.statusCode != 200) {
+        return null;
       }
 
-      final total = response.contentLength ?? 0;
+      final total = streamedResponse.contentLength ?? 0;
       int recibido = 0;
 
       final chunks = <List<int>>[];
-      await for (final chunk in response.stream) {
+      await for (final chunk in streamedResponse.stream) {
         chunks.add(chunk);
         recibido += chunk.length;
         if (onProgreso != null) {
@@ -41,48 +39,42 @@ class DescargaProgresoService {
         }
       }
 
-      // Armar el buffer final
       final builder = BytesBuilder(copy: false);
       for (final c in chunks) {
         builder.add(c);
       }
       final Uint8List bytes = builder.takeBytes();
+      if (bytes.isEmpty) return null;
 
-      // Guardar vía método nativo (va a Descargas)
       final resultado = await _channel.invokeMethod('guardarEnDescargas', {
         'bytes': bytes,
         'nombre': nombre,
         'mime': mime,
       });
 
-      if (resultado != null) {
-        return nombre;
-      }
+      if (resultado != null) return nombre;
       return null;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
-  /// Descarga un archivo a un path temporal SIN guardarlo en Descargas.
-  /// Útil para el APK antes de instalarlo.
   static Future<Uint8List?> descargarATemp(
     String url, {
     void Function(double progreso, int recibidos, int totales)? onProgreso,
   }) async {
     try {
       final request = http.Request('GET', Uri.parse(url));
-      final response = await request.send();
+      request.headers['User-Agent'] = _userAgent;
+      request.headers['Accept'] = '*/*';
+      final streamedResponse = await request.send();
+      if (streamedResponse.statusCode != 200) return null;
 
-      if (response.statusCode != 200) {
-        throw Exception('Error HTTP: ${response.statusCode}');
-      }
-
-      final total = response.contentLength ?? 0;
+      final total = streamedResponse.contentLength ?? 0;
       int recibido = 0;
 
       final builder = BytesBuilder(copy: false);
-      await for (final chunk in response.stream) {
+      await for (final chunk in streamedResponse.stream) {
         builder.add(chunk);
         recibido += chunk.length;
         if (onProgreso != null) {
@@ -90,14 +82,12 @@ class DescargaProgresoService {
           onProgreso(progreso, recibido, total);
         }
       }
-
       return builder.takeBytes();
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
-  /// Formatea un tamaño en bytes a algo legible: "1.4 MB", "320 KB", etc.
   static String formatearTamano(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1048576) {
