@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/info_version.dart';
-import '../services/descarga_service.dart';
 import '../services/github_service.dart';
 import '../services/update_service.dart';
 import '../services/usuario_service.dart';
 import '../theme/colors.dart';
 import '../widgets/comunes/seccion_card.dart';
+import 'actualizacion_screen.dart';
 
 class GestionActualizacionesScreen extends StatefulWidget {
   const GestionActualizacionesScreen({super.key});
@@ -99,108 +98,26 @@ class _GestionActualizacionesScreenState
         SnackBar(content: Text('Error: $e')),
       );
     }
-  } 
-Future<void> _descargarRelease(ReleaseInfo r) async {
-  final confirmar = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20)),
-      title: const Text('Descargar APK',
-          style: TextStyle(
-              color: AppColors.granate,
-              fontWeight: FontWeight.bold)),
-      content: Text(
-          'Se descargará el APK de ${r.tag} (${r.tamanoMb} MB) en la '
-          'carpeta Descargas. Después podrás instalarlo manualmente '
-          'para probarlo.\n\n'
-          '¿Continuar?'),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar')),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Descargar'),
-        ),
-      ],
-    ),
-  );
-  if (confirmar != true) return;
+  }
 
-  if (!mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-                color: AppColors.dorado, strokeWidth: 2.5),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text('Descargando ${r.tamanoMb} MB...')),
-        ],
-      ),
-      duration: const Duration(minutes: 5),
-    ),
-  );
-
-  try {
-    final nombre = 'AllinKawsay_${r.versionLegible}.apk';
-    final resultado = await DescargaService.descargar(
-      r.urlApk,
-      nombre,
-      'application/vnd.android.package-archive',
+  /// Descarga + instala directamente usando el flujo completo.
+  /// Simplemente navega a ActualizacionScreen con los datos de la release.
+  void _descargarRelease(ReleaseInfo r) {
+    final infoTemp = InfoVersion(
+      build: r.build,
+      version: r.versionLegible,
+      url: r.urlApk,
+      critica: false,
+      notas: r.notas,
+      aprobadaPor: '',
     );
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    if (resultado != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: AppColors.dorado),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'APK guardado en Descargas: $resultado',
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 6),
-        ),
-      );
-    } else {
-      final uri = Uri.parse(r.urlApk);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo descargar ni abrir el enlace'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error al descargar: $e'),
-        backgroundColor: Colors.red,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ActualizacionScreen(info: infoTemp),
       ),
     );
   }
-}
-
 Future<void> _aprobarRelease(ReleaseInfo r) async {
   final notasCtrl = TextEditingController(text: r.notas);
   bool critica = false;
@@ -327,127 +244,127 @@ Future<void> _aprobarRelease(ReleaseInfo r) async {
     );
   }
 }
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ACTUALIZACIONES'),
-        actions: [
-          if (_esDev)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0A2540),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'DEV MODE',
-                  style: TextStyle(
-                    color: Colors.cyanAccent,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 9,
-                    letterSpacing: 1.5,
-                  ),
+@override
+Widget build(BuildContext context) {
+  final onSurface = Theme.of(context).colorScheme.onSurface;
+
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('ACTUALIZACIONES'),
+      actions: [
+        if (_esDev)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A2540),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'DEV MODE',
+                style: TextStyle(
+                  color: Colors.cyanAccent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 9,
+                  letterSpacing: 1.5,
                 ),
               ),
             ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Recargar',
-            onPressed: _cargando ? null : _cargar,
           ),
-        ],
-      ),
-      body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.granate))
-          : _error != null
-              ? _buildError(onSurface)
-              : RefreshIndicator(
-                  onRefresh: _cargar,
-                  color: AppColors.dorado,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _buildInfoFlujo(onSurface),
-                      const SizedBox(height: 16),
-                      _buildSeccionActual(onSurface),
-                      const SizedBox(height: 20),
-                      _buildSeccionReleases(onSurface),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
-    );
-  }
-
-  Widget _buildInfoFlujo(Color onSurface) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.dorado.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline,
-              size: 16, color: AppColors.seccionTitulo(context)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _esDev
-                  ? 'Modo DEV: ves TODOS los lanzamientos (incluidos los '
-                      'prereleases de prueba). Los admins normales solo '
-                      'ven los estables.'
-                  : 'Acá aparecen solo los LANZAMIENTOS OFICIALES. Los '
-                      'cambios internos de desarrollo no se muestran para '
-                      'evitar instalar versiones a medio terminar.',
-              style: TextStyle(
-                fontSize: 12,
-                color: onSurface.withOpacity(0.75),
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildError(Color onSurface) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline,
-                size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              _error ?? 'Error',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: onSurface.withOpacity(0.7)),
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: _cargar,
-              icon: const Icon(Icons.refresh),
-              label: const Text('REINTENTAR'),
-            ),
-          ],
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Recargar',
+          onPressed: _cargando ? null : _cargar,
         ),
-      ),
-    );
-  }
+      ],
+    ),
+    body: _cargando
+        ? const Center(
+            child: CircularProgressIndicator(color: AppColors.granate))
+        : _error != null
+            ? _buildError(onSurface)
+            : RefreshIndicator(
+                onRefresh: _cargar,
+                color: AppColors.dorado,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _buildInfoFlujo(onSurface),
+                    const SizedBox(height: 16),
+                    _buildSeccionActual(onSurface),
+                    const SizedBox(height: 20),
+                    _buildSeccionReleases(onSurface),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+  );
+}
 
+Widget _buildInfoFlujo(Color onSurface) {
+  return Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: AppColors.dorado.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.info_outline,
+            size: 16, color: AppColors.seccionTitulo(context)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            _esDev
+                ? 'Modo DEV: ves TODOS los lanzamientos (incluidos los '
+                    'prereleases de prueba). Los admins normales solo '
+                    'ven los estables.'
+                : 'Acá aparecen solo los LANZAMIENTOS OFICIALES. Los '
+                    'cambios internos de desarrollo no se muestran para '
+                    'evitar instalar versiones a medio terminar.',
+            style: TextStyle(
+              fontSize: 12,
+              color: onSurface.withOpacity(0.75),
+              height: 1.5,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildError(Color onSurface) {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline,
+              size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(
+            _error ?? 'Error',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: onSurface.withOpacity(0.7)),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: _cargar,
+            icon: const Icon(Icons.refresh),
+            label: const Text('REINTENTAR'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   Widget _buildSeccionActual(Color onSurface) {
     return SeccionCard(
       icono: Icons.verified,
