@@ -56,28 +56,25 @@ class ZamponaService {
     debugPrint('✅ ZamponaService inicializado: ${_players.length} notas');
   }
 
-  /// Reproduce una nota. SIN stop() previo (ese era el bug).
+  /// Reproduce una nota. Patrón que SÍ funciona: stop + resume.
+  /// En modo lowLatency, stop NO libera el source — solo reinicia
+  /// la posición al inicio. resume() la vuelve a reproducir.
   Future<void> tocar(String notaId) async {
     final player = _players[notaId];
     if (player == null) return;
 
     try {
-      // Cancelar fade pendiente
       _fadeTimers[notaId]?.cancel();
       _fadeTimers[notaId] = null;
 
-      // Restaurar volumen
       await player.setVolume(1.0);
-
-      // Reiniciar desde el principio sin soltar el buffer
-      await player.seek(Duration.zero);
+      await player.stop();
       await player.resume();
     } catch (e) {
       debugPrint('⚠️ Error al tocar $notaId: $e');
     }
   }
 
-  /// Suelta una nota (solo modo PULSADO). Fade-out suave.
   Future<void> soltar(String notaId) async {
     if (_modo != ZamponaModo.pulsado) return;
     final player = _players[notaId];
