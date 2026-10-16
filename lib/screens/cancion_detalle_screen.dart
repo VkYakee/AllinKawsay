@@ -138,10 +138,10 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(
               'Se guardó en Descargas (no se pudo mover a la carpeta elegida)'),
-          duration: const Duration(seconds: 5),
+          duration: Duration(seconds: 5),
         ),
       );
     }
@@ -169,12 +169,9 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
   }
 
   Future<Directory> _obtenerDirDescargas() async {
-    // getExternalStorageDirectory() da un dir escribible sin permisos
     final dir = await getExternalStorageDirectory();
     if (dir != null) {
-      // Android: subir hasta /storage/emulated/0/Download
-      final base = dir.path
-          .replaceAll(RegExp(r'/Android/.*'), '');
+      final base = dir.path.replaceAll(RegExp(r'/Android/.*'), '');
       final download = Directory('$base/Download');
       if (await download.exists()) return download;
       return dir;
@@ -183,7 +180,6 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
   }
 
   String _nombreArchivo(Cancion c) {
-    // "Título - Autor.mp3" (limpio de caracteres raros)
     final partes = <String>[c.titulo];
     if (c.autor.isNotEmpty) partes.add(c.autor);
     final base = partes.join(' - ');
@@ -396,7 +392,9 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                 puedeDescargar: puedeDescargar,
                 player: _player,
                 onTogglePlay: _togglePlay,
-                onDescargar: (url, {nombre, mime}) => _descargar(),
+                onDescargar: (String url,
+                        {String? nombre, String mime = 'audio/mpeg'}) =>
+                    _descargar(),
               ),
             ),
             const SizedBox(height: 16),
