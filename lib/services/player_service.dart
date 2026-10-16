@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import '../models/cancion.dart';
+import 'audio_cache_service.dart';
 
 class EstadoPlayer {
   final String? cancionId;
@@ -50,7 +51,6 @@ class PlayerService {
       _notificar();
     });
 
-    // Bucle A-B manual: si la posición supera el punto B, vuelve al A.
     player.positionStream.listen((pos) {
       if (_seekingLoop) return;
       if (_puntoA == null || _puntoB == null) return;
@@ -76,9 +76,12 @@ class PlayerService {
     );
   }
 
+  /// Reproduce o pausa. Usa el cache local si está disponible,
+  /// si no, hace streaming y descarga en paralelo.
   Future<void> toggle(Cancion c) async {
     if (c.audioUrl.isEmpty) return;
 
+    // Misma canción → solo play/pausa
     if (_cancionId == c.id) {
       if (_playing) {
         await player.pause();
@@ -99,20 +102,43 @@ class PlayerService {
       _puntoB = null;
       _bucle = false;
 
-      await player.setAudioSource(AudioSource.uri(
-        Uri.parse(c.audioUrl),
-        tag: MediaItem(
-          id: c.id,
-          album: 'Allin Kawsay',
-          title: c.titulo,
-          artist: c.autor.isNotEmpty ? c.autor : 'Anónimo',
-          artUri: c.imagenUrl.isNotEmpty ? Uri.parse(c.imagenUrl) : null,
-        ),
-      ));
-      await player.setSpeed(1.0);
-      await player.setLoopMode(LoopMode.off);
-      await player.play();
+      // Preparar tag de la notificación
+      final tag = MediaItem(
+        id: c.id,
+        album: 'Allin Kawsay',
+        title: c.titulo,
+        artist: c.autor.isNotEmpty ? c.autor : 'Anónimo',
+        artUri: c.imagenUrl.isNotEmpty ? Uri.parse(c.imagenUrl) : null,
+      );
+
+      // 1) Ver si está en cache
+      final rutaCache = await AudioCacheService().rutaDe(c.id);
+
+      if (rutaCache != null) {
+        // ✅ Reproducir del archivo local (instantáneo)
+        debugPrint('▶️ Reproduciendo del cache: ${c.id}');
+        await player.setAudioSource(
+          AudioSource.file(rutaCache, tag: tag),
+        );
+        await player.setSpeed(1.0);
+        await player.setLoopMode(LoopMode.off);
+        await player.play();
+        // Marcar como accedido (LRU)
+        AudioCacheService().marcarAcceso(c.id);
+      } else {
+        // 🔄 Streaming + descarga en paralelo
+        debugPrint('🌐 Streaming: ${c.id}');
+        await player.setAudioSource(
+          AudioSource.uri(Uri.parse(c.audioUrl), tag: tag),
+        );
+        await player.setSpeed(1.0);
+        await player.setLoopMode(LoopMode.off);
+        await player.play();
+        // Descargar al cache en background (no bloquea)
+        AudioCacheService().descargarEnBackground(c.id, c.audioUrl);
+      }
     } catch (e) {
+      debugPrint('⚠️ Error al reproducir: $e');
       _cancionId = null;
       _cargando = false;
       _notificar();
@@ -125,14 +151,12 @@ class PlayerService {
     _notificar();
   }
 
-  /// Cambia la velocidad de reproducción (0.5x a 1.5x).
   Future<void> cambiarVelocidad(double v) async {
     _velocidad = v;
     await player.setSpeed(v);
     _notificar();
   }
 
-  /// Salta hacia adelante o atrás [delta] desde la posición actual.
   Future<void> saltar(Duration delta) async {
     final pos = player.position;
     final total = player.duration ?? Duration.zero;
@@ -142,19 +166,15 @@ class PlayerService {
     await player.seek(nueva);
   }
 
-  /// Marca el punto A (inicio del bucle) en la posición actual.
   void marcarA() {
     final pos = player.position;
     _puntoA = pos;
-    // Si B ya existía y quedaba antes de A, lo borramos.
     if (_puntoB != null && _puntoB! <= pos) {
       _puntoB = null;
     }
     _notificar();
   }
 
-  /// Marca el punto B (fin del bucle) en la posición actual.
-  /// Solo si hay punto A y B > A.
   void marcarB() {
     final pos = player.position;
     if (_puntoA == null) return;
@@ -163,7 +183,6 @@ class PlayerService {
     _notificar();
   }
 
-  /// Limpia los puntos A y B.
   void limpiarAB() {
     _puntoA = null;
     _puntoB = null;
