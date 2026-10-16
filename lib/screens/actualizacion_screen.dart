@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/info_version.dart';
 import '../theme/colors.dart';
 
@@ -31,6 +32,21 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
     _iniciarDescarga();
   }
 
+  @override
+  void dispose() {
+    // Intentar borrar el APK temporal al salir de la pantalla
+    _borrarApkTemporal();
+    super.dispose();
+  }
+
+  Future<void> _borrarApkTemporal() async {
+    try {
+      if (_apkFile != null && await _apkFile!.exists()) {
+        await _apkFile!.delete();
+      }
+    } catch (_) {}
+  }
+
   Future<void> _iniciarDescarga() async {
     setState(() {
       _estado = _EstadoDescarga.descargando;
@@ -44,7 +60,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
       final path = '${dir.path}/allin_kawsay_update.apk';
       final archivo = File(path);
 
-      // Si ya existe, borrar para evitar problemas
       if (await archivo.exists()) {
         await archivo.delete();
       }
@@ -83,7 +98,6 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
         _mensaje = '¡Descarga completa!';
       });
 
-      // Pequeña espera y lanzamos el instalador
       await Future.delayed(const Duration(milliseconds: 400));
       await _instalar();
     } catch (e) {
@@ -95,11 +109,47 @@ class _ActualizacionScreenState extends State<ActualizacionScreen> {
     }
   }
 
+  /// Pide el permiso de "instalar apps de origen desconocido".
+  /// En Android 8+ el sistema muestra una pantalla de ajustes.
+  Future<bool> _pedirPermisoInstalacion() async {
+    try {
+      var status = await Permission.requestInstallPackages.status;
+      if (status.isGranted) return true;
+      status = await Permission.requestInstallPackages.request();
+      return status.isGranted;
+    } catch (_) {
+      // Si el plugin no soporta el permiso, intentamos instalar igual
+      // (el manifest ya tiene REQUEST_INSTALL_PACKAGES).
+      return true;
+    }
+  }
+
   Future<void> _instalar() async {
     if (_apkFile == null) return;
+
+    // Pedir permiso de origen desconocido
+    final ok = await _pedirPermisoInstalacion();
+    if (!mounted) return;
+    if (!ok) {
+      setState(() {
+        _estado = _EstadoDescarga.error;
+        _error = 'Necesitás habilitar el permiso "Instalar apps '
+            'desconocidas" para Allin Kawsay.\n\n'
+            'Andá a Ajustes → Seguridad → Instalar apps desconocidas → '
+            'Elegí Allin Kawsay → Permitir. Después volvé y reintentá.';
+      });
+      return;
+    }
+
     try {
       await _channel.invokeMethod('instalarApk', {
         'path': _apkFile!.path,
+      });
+
+      // Programar borrado del APK a los 30 segundos.
+      // (Cuando el instalador termine, ya no lo necesitamos.)
+      Future.delayed(const Duration(seconds: 30), () {
+        _borrarApkTemporal();
       });
     } catch (e) {
       if (!mounted) return;
