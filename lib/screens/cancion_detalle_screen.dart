@@ -1,14 +1,10 @@
-import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/cancion.dart';
 import '../models/usuario.dart';
 import '../services/audio_cache_service.dart';
 import '../services/cancion_service.dart';
-import '../services/descarga_service.dart';
 import '../services/player_service.dart';
 import '../services/reproduccion_service.dart';
 import '../services/usuario_service.dart';
@@ -38,7 +34,6 @@ class CancionDetalleScreen extends StatefulWidget {
 class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
   final _player = PlayerService();
   Usuario? _usuario;
-  bool _guardando = false;
 
   @override
   void initState() {
@@ -60,32 +55,11 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
     }
   }
 
-  /// Descarga manual con selector de carpeta (SAF).
-  /// Guarda el MP3 con el nombre "Título - Autor.mp3".
+  /// Descarga manual → guarda directo en Descargas con nombre bonito.
   Future<void> _descargar() async {
     final c = widget.cancion;
     if (c.audioUrl.isEmpty) return;
 
-    // 1) Elegir carpeta destino
-    String? rutaCarpeta;
-    try {
-      rutaCarpeta = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: '¿Dónde guardar el archivo?',
-      );
-    } catch (e) {
-      rutaCarpeta = null;
-    }
-
-    if (rutaCarpeta == null) {
-      // El usuario canceló o falló el selector → fallback a Descargas
-      _descargarADescargas(c);
-      return;
-    }
-
-    // 2) Descargar con progreso
-    if (!mounted) return;
-    setState(() => _guardando = true);
-
     final nombre = _nombreArchivo(c);
     final resultado = await DialogoDescarga.mostrar(
       context,
@@ -95,68 +69,6 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
       titulo: 'Descargando audio',
     );
 
-    if (!mounted) return;
-    setState(() => _guardando = false);
-
-    if (resultado == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo descargar el audio'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // El diálogo guarda en Descargas. Ahora movemos/copiamos a la
-    // carpeta elegida por el usuario.
-    try {
-      final dirDescargas = await _obtenerDirDescargas();
-      final origen = File('${dirDescargas.path}/$nombre');
-      if (await origen.exists()) {
-        final destino = File('$rutaCarpeta/$nombre');
-        await origen.copy(destino.path);
-        try {
-          await origen.delete();
-        } catch (_) {}
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Guardado en: $rutaCarpeta'),
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Guardado en Descargas: $nombre'),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Se guardó en Descargas (no se pudo mover a la carpeta elegida)'),
-          duration: Duration(seconds: 5),
-        ),
-      );
-    }
-  }
-
-  /// Fallback: descarga directo a Descargas.
-  Future<void> _descargarADescargas(Cancion c) async {
-    final nombre = _nombreArchivo(c);
-    final resultado = await DialogoDescarga.mostrar(
-      context,
-      url: c.audioUrl,
-      nombre: nombre,
-      mime: 'audio/mpeg',
-      titulo: 'Descargando audio',
-    );
     if (!mounted) return;
     if (resultado != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -166,17 +78,6 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
         ),
       );
     }
-  }
-
-  Future<Directory> _obtenerDirDescargas() async {
-    final dir = await getExternalStorageDirectory();
-    if (dir != null) {
-      final base = dir.path.replaceAll(RegExp(r'/Android/.*'), '');
-      final download = Directory('$base/Download');
-      if (await download.exists()) return download;
-      return dir;
-    }
-    return await getApplicationDocumentsDirectory();
   }
 
   String _nombreArchivo(Cancion c) {
@@ -193,7 +94,8 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Borrar caché de esta canción',
             style: TextStyle(
                 color: AppColors.granate,
