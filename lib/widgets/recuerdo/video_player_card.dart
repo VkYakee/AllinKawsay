@@ -1,13 +1,17 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../../services/recuerdo_cache_service.dart';
 import '../../theme/colors.dart';
 
 class VideoPlayerCard extends StatefulWidget {
+  final String recuerdoId;
   final String url;
   final int index;
 
   const VideoPlayerCard({
     super.key,
+    required this.recuerdoId,
     required this.url,
     required this.index,
   });
@@ -30,7 +34,9 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
   Future<void> _inicializar() async {
     if (_controller != null) {
       setState(() {
-        _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+        _controller!.value.isPlaying
+            ? _controller!.pause()
+            : _controller!.play();
       });
       return;
     }
@@ -41,10 +47,29 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
     });
 
     try {
-      _controller = VideoPlayerController.networkUrl(
-        Uri.parse(widget.url),
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-      );
+      // 1) Buscar en cache
+      final rutaLocal = await RecuerdoCacheService()
+          .rutaDe(widget.recuerdoId, 'video', widget.index);
+
+      if (rutaLocal != null && await File(rutaLocal).exists()) {
+        // ✅ Usar cache local
+        RecuerdoCacheService()
+            .marcarAcceso(widget.recuerdoId, 'video', widget.index);
+        _controller = VideoPlayerController.file(
+          File(rutaLocal),
+          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        );
+      } else {
+        // 🌐 Streaming + descarga en paralelo
+        _controller = VideoPlayerController.networkUrl(
+          Uri.parse(widget.url),
+          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        );
+        // Descargar en background para el próximo uso
+        RecuerdoCacheService().descargarEnBackground(
+            widget.recuerdoId, 'video', widget.index, widget.url);
+      }
+
       await _controller!.initialize();
       if (mounted) {
         setState(() => _cargando = false);
@@ -73,7 +98,8 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
       child: Column(
         children: [
           AspectRatio(
-            aspectRatio: inicializado ? _controller!.value.aspectRatio : 16 / 9,
+            aspectRatio:
+                inicializado ? _controller!.value.aspectRatio : 16 / 9,
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -86,7 +112,8 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.videocam, size: 48, color: AppColors.dorado),
+                          const Icon(Icons.videocam,
+                              size: 48, color: AppColors.dorado),
                           const SizedBox(height: 8),
                           Text(
                             'Video ${widget.index + 1}',
@@ -100,14 +127,18 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                       ),
                     ),
                   ),
-                if (_cargando) const CircularProgressIndicator(color: AppColors.dorado),
+                if (_cargando)
+                  const CircularProgressIndicator(
+                      color: AppColors.dorado),
                 if (_error != null)
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 32),
+                      const Icon(Icons.error_outline,
+                          color: Colors.red, size: 32),
                       const SizedBox(height: 8),
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      Text(_error!,
+                          style: const TextStyle(color: Colors.red)),
                     ],
                   ),
                 if (!inicializado && !_cargando && _error == null)
@@ -121,7 +152,8 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                           color: AppColors.granate,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.play_arrow, color: AppColors.dorado, size: 32),
+                        child: const Icon(Icons.play_arrow,
+                            color: AppColors.dorado, size: 32),
                       ),
                     ),
                   ),
@@ -130,13 +162,17 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                     bottom: 12,
                     child: IconButton(
                       icon: Icon(
-                        _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                        _controller!.value.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
                         color: AppColors.dorado,
                         size: 32,
                       ),
                       onPressed: () {
                         setState(() {
-                          _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+                          _controller!.value.isPlaying
+                              ? _controller!.pause()
+                              : _controller!.play();
                         });
                       },
                     ),
