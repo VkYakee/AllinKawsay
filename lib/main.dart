@@ -495,11 +495,11 @@ class _AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<_AuthGate> {
-  /// 📅 Fecha de corte: usuarios registrados ANTES de esta fecha
-  /// quedan exentos de verificar su correo (fueron creados antes de
-  /// que existiera el sistema de verificación).
+  /// 📅 FECHA DE CORTE (ajustada al PASADO):
+  /// Cuentas registradas ANTES del 14 de octubre de 2026 quedan
+  /// exentas de verificar. Las creadas el 14 en adelante SÍ verifican.
   static final DateTime _fechaCorteVerificacion =
-      DateTime(2026, 10, 15, 23, 59, 59);
+      DateTime(2026, 10, 14, 0, 0, 0);
 
   StreamSubscription? _userSub;
   String? _ultimoRol;
@@ -553,35 +553,30 @@ class _AuthGateState extends State<_AuthGate> {
     }
   }
 
-  /// ¿Este usuario necesita verificar su correo?
   bool _necesitaVerificar(User user, Usuario? usuarioFirestore) {
     // 1) Ya verificado en Firebase
     if (user.emailVerified) return false;
 
-    // 2) Usuario de Google (Google ya verifica)
+    // 2) Usuario de Google
     final esGoogle = user.providerData
         .any((info) => info.providerId == 'google.com');
     if (esGoogle) return false;
 
-    // 3) Usuario viejo (antes de la fecha de corte)
+    // 3) Sin fecha de registro → exento (usuarios muy viejos)
     final fechaRegistro = usuarioFirestore?.fechaRegistro;
-    if (fechaRegistro != null &&
-        fechaRegistro.isBefore(_fechaCorteVerificacion)) {
+    if (fechaRegistro == null) return false;
+
+    // 4) Registrado ANTES de la fecha de corte → exento
+    if (fechaRegistro.isBefore(_fechaCorteVerificacion)) {
       return false;
     }
 
-    // 4) Usuario sin fecha de registro (muy viejo, sin el campo)
-    if (fechaRegistro == null) return false;
-
-    // 5) Usuario nuevo → debe verificar
+    // 5) Usuario nuevo (14 oct 2026 en adelante) → debe verificar
     return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Escuchamos el notifier de verificación para forzar rebuild cuando
-    // el usuario acaba de verificar el correo y así redirigir al Home
-    // sin necesidad de cerrar y abrir la app.
     return ValueListenableBuilder<int>(
       valueListenable: VerificacionRefresh.notifier,
       builder: (context, _, __) {
@@ -618,7 +613,6 @@ class _AuthGateState extends State<_AuthGate> {
 
                   final u = userSnap.data;
 
-                  // Chequeo de verificación
                   if (_necesitaVerificar(authUser, u)) {
                     ScreenSecurityService.disable();
                     return VerificacionPendienteScreen(
@@ -626,7 +620,6 @@ class _AuthGateState extends State<_AuthGate> {
                     );
                   }
 
-                  // Usuario baneado
                   if (u != null && u.baneado) {
                     return const CuentaSuspendidaScreen();
                   }
