@@ -55,36 +55,32 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           IndexedStack(index: _index, children: pages),
 
-          // ═══ FABs FLOTANTES (izquierda para no tapar el botón +) ═══
+          // ═══ FABs FLOTANTES (arriba-derecha, no tapan el + de admin) ═══
           Positioned(
-            left: 16,
-            bottom: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton.small(
-                  heroTag: 'fab_zampona',
-                  onPressed: _abrirZampona,
-                  backgroundColor: AppColors.granate,
-                  foregroundColor: AppColors.dorado,
-                  elevation: 4,
-                  tooltip: 'Zampoña',
-                  child: const _IconoZampona(
-                    color: AppColors.dorado,
-                    size: 22,
+            top: 8,
+            right: 12,
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _fab(
+                    heroTag: 'fab_busqueda',
+                    tooltip: 'Buscar',
+                    onTap: _abrirBusqueda,
+                    child: const Icon(Icons.search, size: 20),
                   ),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton.small(
-                  heroTag: 'fab_busqueda',
-                  onPressed: _abrirBusqueda,
-                  backgroundColor: AppColors.granate,
-                  foregroundColor: AppColors.dorado,
-                  elevation: 4,
-                  tooltip: 'Buscar',
-                  child: const Icon(Icons.search, size: 20),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  _fab(
+                    heroTag: 'fab_zampona',
+                    tooltip: 'Zampoña',
+                    onTap: _abrirZampona,
+                    child: const _IconoZampona(
+                      color: AppColors.dorado,
+                      size: 22,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -142,6 +138,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _fab({
+    required String heroTag,
+    required String tooltip,
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    return FloatingActionButton.small(
+      heroTag: heroTag,
+      onPressed: onTap,
+      backgroundColor: AppColors.granate,
+      foregroundColor: AppColors.dorado,
+      elevation: 4,
+      tooltip: tooltip,
+      child: child,
+    );
+  }
 }
 
 /// Ícono de zampoña dibujado a mano:
@@ -173,11 +186,9 @@ class _ZamponaPainter extends CustomPainter {
 
     const totalCanias = 4;
     final anchoCania = size.width * 0.16;
-    final gapTotal =
-        size.width - (anchoCania * totalCanias);
+    final gapTotal = size.width - (anchoCania * totalCanias);
     final separacion = gapTotal / (totalCanias - 1);
 
-    // Alturas relativas (aguda → grave)
     const alturas = [0.55, 0.75, 0.9, 1.0];
 
     for (int i = 0; i < totalCanias; i++) {
