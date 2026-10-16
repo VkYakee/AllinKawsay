@@ -12,6 +12,7 @@ import 'services/update_service.dart';
 import 'services/usuario_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/verificacion_pendiente_screen.dart';
 import 'theme/colors.dart';
 import 'theme/theme_provider.dart';
 import 'widgets/dialogo_actualizacion.dart';
@@ -31,12 +32,10 @@ void main() async {
     debugPrint('⚠️ Error al inicializar audio background: $e');
   }
 
-  // Inicializar OneSignal (registra el dispositivo)
   await OneSignalService.init();
 
   await ThemeProvider.cargar();
 
-  // Pedir permiso de notificaciones al primer arranque.
   try {
     final status = await Permission.notification.status;
     if (status.isDenied) {
@@ -538,7 +537,6 @@ class _AuthGateState extends State<_AuthGate> {
     }
   }
 
-  /// Registra o desregistra el usuario en OneSignal según su estado.
   void _syncOneSignal(String? uid) {
     if (uid == _ultimoUid) return;
     _ultimoUid = uid;
@@ -547,6 +545,21 @@ class _AuthGateState extends State<_AuthGate> {
     } else {
       OneSignalService.logout();
     }
+  }
+
+  /// Determina si el usuario necesita verificar su correo.
+  /// Los que entraron con Google ya están verificados por Google.
+  bool _necesitaVerificar(User user) {
+    // Si ya está verificado → no
+    if (user.emailVerified) return false;
+
+    // Si es usuario de Google → no necesita (Google ya verificó)
+    final esGoogle = user.providerData
+        .any((info) => info.providerId == 'google.com');
+    if (esGoogle) return false;
+
+    // En cualquier otro caso → sí necesita
+    return true;
   }
 
   @override
@@ -564,8 +577,19 @@ class _AuthGateState extends State<_AuthGate> {
         }
 
         if (authSnap.hasData && authSnap.data != null) {
-          // Registrar en OneSignal
-          _syncOneSignal(authSnap.data!.uid);
+          final authUser = authSnap.data!;
+
+          // Primero: chequear si necesita verificar correo
+          if (_necesitaVerificar(authUser)) {
+            _syncOneSignal(null);
+            ScreenSecurityService.disable();
+            return VerificacionPendienteScreen(
+              email: authUser.email ?? 'tu correo',
+            );
+          }
+
+          // Si está verificado o es Google → seguimos con OneSignal
+          _syncOneSignal(authUser.uid);
 
           return StreamBuilder<Usuario?>(
             stream: UsuarioService().miUsuario(),
@@ -589,7 +613,6 @@ class _AuthGateState extends State<_AuthGate> {
                 _chequearActualizacion();
               });
 
-              final authUser = authSnap.data!;
               return HomeScreen(
                 nombreUsuario: authUser.displayName ??
                     authUser.email?.split('@').first ??
@@ -599,7 +622,6 @@ class _AuthGateState extends State<_AuthGate> {
           );
         }
 
-        // Sin sesión → logout en OneSignal
         _syncOneSignal(null);
         ScreenSecurityService.disable();
         return const LoginScreen();
