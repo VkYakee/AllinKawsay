@@ -59,16 +59,14 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
   /// Reproduce + suma 1 reproducción SOLO si es la primera vez
   /// que este usuario toca play en esta canción.
   Future<void> _togglePlayReproduccion(Cancion c) async {
-    final estabaSonando = PlayerService().sonando(c.id);
-    await PlayerService().toggle(c);
-
-    // Si acaba de empezar a sonar (no estaba pausada la misma),
-    // intentamos contar la reproducción (una sola vez por usuario).
-    final sonandoAhora = PlayerService().sonando(c.id);
-    if (sonandoAhora && !estabaSonando) {
-      await ReproduccionService.contarUnaVez(c.id);
-    }
+  final estabaSonando = PlayerService().sonando(c.id);
+  await PlayerService().toggle(c);
+  final sonandoAhora = PlayerService().sonando(c.id);
+  if (sonandoAhora && !estabaSonando) {
+    await ReproduccionService.contarUnaVez(c.id);
   }
+}
+
 void _eliminar(Cancion c) async {
   final ok = await showDialog<bool>(
     context: context,
