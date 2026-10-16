@@ -20,6 +20,7 @@ import 'compartir_app_screen.dart';
 import 'estadisticas_admin_screen.dart';
 import 'exportar_respaldo_screen.dart';
 import 'gestion_actualizaciones_screen.dart';
+import 'gestion_cache_screen.dart';
 import 'gestion_categorias_screen.dart';
 import 'gestion_usuarios_screen.dart';
 import 'notificaciones_admin_screen.dart';
@@ -40,7 +41,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
   }
 
   Future<void> _cambiarFoto(Usuario u) async {
-    // Pedir permiso de galería primero
     final ok = await PermisosService.pedirGaleria(context);
     if (!ok || !mounted) return;
 
@@ -404,6 +404,25 @@ void _abrirAjustes() {
                 },
               ),
               const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.storage,
+                    color: AppColors.granate),
+                title: const Text('Almacenamiento',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text(
+                    'Ver y gestionar el cache de audios y recuerdos'),
+                trailing: const Icon(Icons.chevron_right,
+                    color: AppColors.dorado, size: 20),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const GestionCacheScreen()),
+                  );
+                },
+              ),
+              const Divider(height: 1),
               const Padding(
                 padding: EdgeInsets.all(20),
                 child: Column(
@@ -416,7 +435,6 @@ void _abrirAjustes() {
                             color: AppColors.granate,
                             letterSpacing: 2)),
                     SizedBox(height: 10),
-                    Text('• Modo offline'),
                     Text('• Ajuste de tamaño de letra'),
                   ],
                 ),
