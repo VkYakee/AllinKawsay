@@ -56,9 +56,6 @@ class ZamponaService {
     debugPrint('✅ ZamponaService inicializado: ${_players.length} notas');
   }
 
-  /// Reproduce una nota. Patrón que SÍ funciona: stop + resume.
-  /// En modo lowLatency, stop NO libera el source — solo reinicia
-  /// la posición al inicio. resume() la vuelve a reproducir.
   Future<void> tocar(String notaId) async {
     final player = _players[notaId];
     if (player == null) return;
@@ -105,6 +102,32 @@ class ZamponaService {
         }
       },
     );
+  }
+
+  /// Aplica un fade-out corto (~120ms) a la nota y la detiene.
+  /// NO depende del modo activo (a diferencia de `soltar`).
+  /// Se usa en el Modo Ensayo para que el corte entre notas no sea seco.
+  Future<void> fadeOutNota(String notaId) async {
+    final player = _players[notaId];
+    if (player == null) return;
+
+    _fadeTimers[notaId]?.cancel();
+    _fadeTimers[notaId] = null;
+
+    const pasos = 6;
+    const intervaloMs = 20;
+
+    for (int i = 1; i <= pasos; i++) {
+      final vol = (1.0 - i / pasos).clamp(0.0, 1.0);
+      try {
+        await player.setVolume(vol);
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: intervaloMs));
+    }
+    try {
+      await player.stop();
+      await player.setVolume(1.0);
+    } catch (_) {}
   }
 
   Future<void> tocarNota(ZamponaNota nota) => tocar(nota.id);
