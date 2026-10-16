@@ -22,14 +22,11 @@ class MainActivity : AudioServiceActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "enable" -> {
-                        window.setFlags(
-                            WindowManager.LayoutParams.FLAG_SECURE,
-                            WindowManager.LayoutParams.FLAG_SECURE
-                        )
+                        aplicarFlagSecure(true)
                         result.success(true)
                     }
                     "disable" -> {
-                        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        aplicarFlagSecure(false)
                         result.success(true)
                     }
                     "compartirArchivo" -> {
@@ -112,6 +109,30 @@ class MainActivity : AudioServiceActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /// Aplica FLAG_SECURE (bloquea capturas de pantalla).
+    /// En Android 13+ también desactiva la captura de recientes.
+    private fun aplicarFlagSecure(enable: Boolean) {
+        if (enable) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            )
+            // Android 13+: bloquea también la captura en la vista de recientes
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    setRecentsScreenshotEnabled(false)
+                } catch (_: Exception) {}
+            }
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    setRecentsScreenshotEnabled(true)
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     private fun guardarEnDescargas(
