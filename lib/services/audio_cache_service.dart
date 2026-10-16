@@ -3,9 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'cache_manager_service.dart';
 
-/// Cache de audios de canciones. 1 GB máximo.
-/// Los archivos se guardan con extensión .mp3 pero dentro de la
-/// carpeta interna de la app (invisible al usuario).
 class AudioCacheService {
   static final AudioCacheService _instance = AudioCacheService._();
   factory AudioCacheService() => _instance;
@@ -18,6 +15,9 @@ class AudioCacheService {
   );
 
   final Set<String> _descargando = {};
+
+  static const _userAgent =
+      'Mozilla/5.0 (Linux; Android 10) AllinKawsay/1.0';
 
   Future<String?> rutaDe(String cancionId) => _cache.rutaDe(cancionId);
 
@@ -41,21 +41,45 @@ class AudioCacheService {
     try {
       if (await _cache.tiene(cancionId)) return;
 
-      final response = await http.get(Uri.parse(url)).timeout(
-        const Duration(minutes: 5),
-      );
-      if (response.statusCode != 200) return;
+      // Esperar 2 segundos antes de descargar para no chocar con
+      // el streaming inicial del player.
+      await Future.delayed(const Duration(seconds: 2));
+      if (await _cache.tiene(cancionId)) return;
 
-      final Uint8List bytes = response.bodyBytes;
-      if (bytes.isEmpty) return;
+      debugPrint('⬇️ Descargando audio a cache: $cancionId');
 
-      await _cache.guardar(
+      final request = http.Request('GET', Uri.parse(url));
+      request.headers['User-Agent'] = _userAgent;
+      request.headers['Accept'] = '*/*';
+      final streamed = await request.send().timeout(
+            const Duration(minutes: 5),
+          );
+
+      if (streamed.statusCode != 200) {
+        debugPrint(
+            '⚠️ Cache HTTP ${streamed.statusCode} para $cancionId');
+        return;
+      }
+
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in streamed.stream) {
+        builder.add(chunk);
+      }
+      final Uint8List bytes = builder.takeBytes();
+      if (bytes.isEmpty) {
+        debugPrint('⚠️ Bytes vacíos para $cancionId');
+        return;
+      }
+
+      final ok = await _cache.guardar(
         cancionId,
         bytes,
         url: url,
         extension: 'mp3',
       );
-      debugPrint('✅ Audio cacheado: $cancionId (${bytes.length} bytes)');
+      if (ok) {
+        debugPrint('✅ Audio cacheado: $cancionId (${bytes.length} bytes)');
+      }
     } catch (e) {
       debugPrint('⚠️ Error descargando audio a cache: $e');
     }
@@ -65,11 +89,18 @@ class AudioCacheService {
     if (url.isEmpty) return false;
     if (await _cache.tiene(cancionId)) return true;
     try {
-      final response = await http.get(Uri.parse(url)).timeout(
-        const Duration(minutes: 5),
-      );
-      if (response.statusCode != 200) return false;
-      final Uint8List bytes = response.bodyBytes;
+      final request = http.Request('GET', Uri.parse(url));
+      request.headers['User-Agent'] = _userAgent;
+      request.headers['Accept'] = '*/*';
+      final streamed = await request.send().timeout(
+            const Duration(minutes: 5),
+          );
+      if (streamed.statusCode != 200) return false;
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in streamed.stream) {
+        builder.add(chunk);
+      }
+      final bytes = builder.takeBytes();
       if (bytes.isEmpty) return false;
       return await _cache.guardar(
         cancionId,
