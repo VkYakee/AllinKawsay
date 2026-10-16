@@ -1,11 +1,14 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../services/descarga_service.dart';
+import '../../services/recuerdo_cache_service.dart';
 import '../../theme/colors.dart';
 import '../../screens/foto_fullscreen_screen.dart';
 import '../dialogo_descarga.dart';
 
 class GaleriaFotos extends StatelessWidget {
+  final String recuerdoId;
   final List<String> fotos;
   final String tituloRecuerdo;
   final bool puedeDescargar;
@@ -13,6 +16,7 @@ class GaleriaFotos extends StatelessWidget {
 
   const GaleriaFotos({
     super.key,
+    required this.recuerdoId,
     required this.fotos,
     required this.tituloRecuerdo,
     required this.puedeDescargar,
@@ -30,6 +34,10 @@ class GaleriaFotos extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: fotos.length,
       itemBuilder: (context, i) {
+        // Disparar descarga en background (para el cache)
+        RecuerdoCacheService().descargarEnBackground(
+            recuerdoId, 'foto', i, fotos[i]);
+
         return Padding(
           padding: EdgeInsets.only(
               bottom: i < fotos.length - 1 ? 12 : 0),
@@ -69,7 +77,38 @@ class GaleriaFotos extends StatelessWidget {
   }
 
   Widget _imagenConHero(String url, int index) {
-    final imagen = CachedNetworkImage(
+    final imagen = _imagenConCache(url, index);
+
+    if (heroPrefix.isEmpty) return imagen;
+    return Hero(tag: _tagDe(index), child: imagen);
+  }
+
+  /// Muestra la imagen desde el cache local si existe,
+  /// si no, la carga desde la red.
+  Widget _imagenConCache(String url, int index) {
+    return FutureBuilder<String?>(
+      future: RecuerdoCacheService().rutaDe(recuerdoId, 'foto', index),
+      builder: (context, snap) {
+        final rutaLocal = snap.data;
+
+        if (rutaLocal != null) {
+          // Marcar como accedido (LRU)
+          RecuerdoCacheService().marcarAcceso(recuerdoId, 'foto', index);
+          return Image.file(
+            File(rutaLocal),
+            width: double.infinity,
+            height: 300,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _imagenRemota(url),
+          );
+        }
+        return _imagenRemota(url);
+      },
+    );
+  }
+
+  Widget _imagenRemota(String url) {
+    return CachedNetworkImage(
       imageUrl: url,
       width: double.infinity,
       height: 300,
@@ -90,9 +129,6 @@ class GaleriaFotos extends StatelessWidget {
             color: AppColors.granate, size: 48),
       ),
     );
-
-    if (heroPrefix.isEmpty) return imagen;
-    return Hero(tag: _tagDe(index), child: imagen);
   }
 
   void _verFoto(BuildContext context, String url, int index) {
