@@ -15,6 +15,7 @@ import 'busqueda_global_screen.dart';
 import 'cancion_detalle_screen.dart';
 import 'historia_screen.dart';
 import 'recuerdo_detalle_screen.dart';
+import 'zampona_screen.dart';
 
 class InicioScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -64,7 +65,6 @@ class _InicioScreenState extends State<InicioScreen> {
               children: [
                 _header(context),
 
-                // Banner de evento nuevo
                 if (_eventoNuevo != null && !_bannerCerrado)
                   BannerNovedades(
                     icono: Icons.celebration,
@@ -196,27 +196,57 @@ class _InicioScreenState extends State<InicioScreen> {
         Positioned(
           top: 8,
           right: 8,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(30),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const BusquedaGlobalScreen()),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: AppColors.dorado.withOpacity(0.3)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Botón Zampoña
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ZamponaScreen()),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: AppColors.dorado.withOpacity(0.3)),
+                    ),
+                    child: const Icon(Icons.piano,
+                        color: AppColors.dorado, size: 22),
+                  ),
                 ),
-                child: const Icon(Icons.search,
-                    color: AppColors.dorado, size: 22),
               ),
-            ),
+              const SizedBox(width: 8),
+              // Botón Búsqueda
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const BusquedaGlobalScreen()),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: AppColors.dorado.withOpacity(0.3)),
+                    ),
+                    child: const Icon(Icons.search,
+                        color: AppColors.dorado, size: 22),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
