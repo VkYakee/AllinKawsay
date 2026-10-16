@@ -495,11 +495,14 @@ class _AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<_AuthGate> {
-  /// 📅 FECHA DE CORTE (ajustada al PASADO):
-  /// Cuentas registradas ANTES del 14 de octubre de 2026 quedan
-  /// exentas de verificar. Las creadas el 14 en adelante SÍ verifican.
+  /// 📅 Fecha de corte: cuentas creadas ANTES de esta fecha quedan
+  /// exentas de verificar el correo (son anteriores al sistema).
+  ///
+  /// Usamos `user.metadata.creationTime` (Firebase Auth) en lugar de
+  /// la fecha de Firestore, porque está disponible AL INSTANTE y no
+  /// depende de que el documento se haya sincronizado.
   static final DateTime _fechaCorteVerificacion =
-      DateTime(2026, 10, 14, 0, 0, 0);
+      DateTime(2026, 10, 15, 12, 0, 0); // 15 oct 2026 a las 12:00
 
   StreamSubscription? _userSub;
   String? _ultimoRol;
@@ -553,8 +556,16 @@ class _AuthGateState extends State<_AuthGate> {
     }
   }
 
-  bool _necesitaVerificar(User user, Usuario? usuarioFirestore) {
-    // 1) Ya verificado en Firebase
+  /// ¿Este usuario necesita verificar su correo?
+  ///
+  /// Reglas (en orden):
+  /// 1. Ya verificado en Firebase → NO.
+  /// 2. Usuario de Google → NO (Google ya verificó).
+  /// 3. Sin `creationTime` (raro) → NO.
+  /// 4. Cuenta creada ANTES de la fecha de corte → NO.
+  /// 5. Cuenta creada DESPUÉS → SÍ debe verificar.
+  bool _necesitaVerificar(User user) {
+    // 1) Ya verificado
     if (user.emailVerified) return false;
 
     // 2) Usuario de Google
@@ -562,16 +573,16 @@ class _AuthGateState extends State<_AuthGate> {
         .any((info) => info.providerId == 'google.com');
     if (esGoogle) return false;
 
-    // 3) Sin fecha de registro → exento (usuarios muy viejos)
-    final fechaRegistro = usuarioFirestore?.fechaRegistro;
-    if (fechaRegistro == null) return false;
+    // 3) Sin fecha de creación (no debería pasar)
+    final creationTime = user.metadata.creationTime;
+    if (creationTime == null) return false;
 
-    // 4) Registrado ANTES de la fecha de corte → exento
-    if (fechaRegistro.isBefore(_fechaCorteVerificacion)) {
+    // 4) Cuenta vieja → exenta
+    if (creationTime.isBefore(_fechaCorteVerificacion)) {
       return false;
     }
 
-    // 5) Usuario nuevo (14 oct 2026 en adelante) → debe verificar
+    // 5) Cuenta nueva → debe verificar
     return true;
   }
 
@@ -595,6 +606,18 @@ class _AuthGateState extends State<_AuthGate> {
 
             if (authSnap.hasData && authSnap.data != null) {
               final authUser = authSnap.data!;
+
+              // Chequeo de verificación ANTES de OneSignal (para no
+              // registrar cuentas sin verificar).
+              if (_necesitaVerificar(authUser)) {
+                _syncOneSignal(null);
+                ScreenSecurityService.disable();
+                return VerificacionPendienteScreen(
+                  email: authUser.email ?? 'tu correo',
+                );
+              }
+
+              // Ya verificado o exento → seguimos
               _syncOneSignal(authUser.uid);
 
               return StreamBuilder<Usuario?>(
@@ -612,13 +635,6 @@ class _AuthGateState extends State<_AuthGate> {
                   }
 
                   final u = userSnap.data;
-
-                  if (_necesitaVerificar(authUser, u)) {
-                    ScreenSecurityService.disable();
-                    return VerificacionPendienteScreen(
-                      email: authUser.email ?? 'tu correo',
-                    );
-                  }
 
                   if (u != null && u.baneado) {
                     return const CuentaSuspendidaScreen();
