@@ -4,10 +4,6 @@ import 'package:flutter/foundation.dart';
 import '../data/zampona_catalogo.dart';
 import '../models/zampona_nota.dart';
 
-/// Modo de reproducción de la zampoña.
-///
-/// - sostenido: la nota suena hasta el final sola. Tocar otra corta la anterior.
-/// - pulsado: la nota suena mientras tengas el dedo apoyado. Al soltar, fade-out suave.
 enum ZamponaModo { sostenido, pulsado }
 
 class ZamponaService {
@@ -20,15 +16,11 @@ class ZamponaService {
   final Map<String, Timer?> _fadeTimers = {};
 
   bool _inicializado = false;
-
   ZamponaModo _modo = ZamponaModo.sostenido;
   ZamponaModo get modo => _modo;
 
   void setModo(ZamponaModo m) {
     _modo = m;
-
-    // Si volvemos a sostenido, restaurar volumen de todos los players
-    // (por si alguno quedó a medio fade).
     if (m == ZamponaModo.sostenido) {
       for (final p in _players.values) {
         try {
@@ -64,22 +56,20 @@ class ZamponaService {
     debugPrint('✅ ZamponaService inicializado: ${_players.length} notas');
   }
 
-  /// Reproduce una nota por su ID.
-  /// Si ya estaba sonando, la reinicia desde el principio.
+  /// Reproduce una nota. SIN stop() previo (ese era el bug).
   Future<void> tocar(String notaId) async {
     final player = _players[notaId];
     if (player == null) return;
 
     try {
-      // Cancelar fade pendiente (por si venía de un "soltar")
+      // Cancelar fade pendiente
       _fadeTimers[notaId]?.cancel();
       _fadeTimers[notaId] = null;
 
-      // Volumen al máximo (por si quedó a medio fade)
+      // Restaurar volumen
       await player.setVolume(1.0);
 
-      // Fix del "pop": stop + seek(0) + resume en ese orden.
-      await player.stop();
+      // Reiniciar desde el principio sin soltar el buffer
       await player.seek(Duration.zero);
       await player.resume();
     } catch (e) {
@@ -87,18 +77,16 @@ class ZamponaService {
     }
   }
 
-  /// Suelta una nota (solo en modo PULSADO). Aplica fade-out suave.
+  /// Suelta una nota (solo modo PULSADO). Fade-out suave.
   Future<void> soltar(String notaId) async {
     if (_modo != ZamponaModo.pulsado) return;
     final player = _players[notaId];
     if (player == null) return;
 
-    // Cancelar cualquier fade pendiente
     _fadeTimers[notaId]?.cancel();
 
     const pasos = 8;
-    const duracionMs = 140;
-    const intervaloMs = duracionMs ~/ pasos;
+    const intervaloMs = 18;
     int paso = 0;
 
     _fadeTimers[notaId] = Timer.periodic(
@@ -124,7 +112,6 @@ class ZamponaService {
 
   Future<void> tocarNota(ZamponaNota nota) => tocar(nota.id);
 
-  /// Detiene todas las reproducciones en curso.
   Future<void> detener() async {
     for (final e in _fadeTimers.entries) {
       e.value?.cancel();
