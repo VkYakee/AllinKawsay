@@ -185,7 +185,10 @@ class CacheManagerService {
   }
 
   Future<void> _limpiarLRU() async {
-    int totalBytes = _items.values.fold(0, (s, i) => s + i.bytes);
+    int totalBytes = 0;
+    for (final item in _items.values) {
+      totalBytes += item.bytes;
+    }
     if (totalBytes <= limiteBytes) return;
 
     final ordenados = _items.values.toList()
@@ -205,7 +208,11 @@ class CacheManagerService {
 
   Future<int> espacioUsado() async {
     await init();
-    return _items.values.fold(0, (s, i) => s + i.bytes);
+    int total = 0;
+    for (final item in _items.values) {
+      total += item.bytes;
+    }
+    return total;
   }
 
   Future<int> cantidad() async {
