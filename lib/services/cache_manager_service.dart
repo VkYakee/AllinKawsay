@@ -9,7 +9,7 @@ class CacheItem {
   String archivo;
   int bytes;
   DateTime ultimoAcceso;
-  String? url; // opcional, para saber de dónde vino
+  String? url;
 
   CacheItem({
     required this.id,
@@ -37,16 +37,7 @@ class CacheItem {
       );
 }
 
-/// Gestor genérico de cache con política LRU (Least Recently Used).
-///
-/// Uso:
-/// ```dart
-/// final cache = CacheManagerService(
-///   nombreCarpeta: 'audio_cache',
-///   limiteBytes: 1024 * 1024 * 1024, // 1 GB
-/// );
-/// await cache.init();
-/// ```
+/// Gestor genérico de cache con política LRU.
 class CacheManagerService {
   final String nombreCarpeta;
   final int limiteBytes;
@@ -57,10 +48,9 @@ class CacheManagerService {
 
   CacheManagerService({
     required this.nombreCarpeta,
-    this.limiteBytes = 1024 * 1024 * 1024, // 1 GB por defecto
+    this.limiteBytes = 1024 * 1024 * 1024,
   });
 
-  /// Inicializa el cache: crea la carpeta y carga metadata.
   Future<void> init() async {
     if (_inicializado) return;
     final baseDir = await getApplicationSupportDirectory();
@@ -83,7 +73,6 @@ class CacheManagerService {
       _items.clear();
       for (final item in lista) {
         final c = CacheItem.fromMap(Map<String, dynamic>.from(item));
-        // Verificar que el archivo físico todavía exista
         if (await File('${_carpeta.path}/${c.archivo}').exists()) {
           _items[c.id] = c;
         }
@@ -105,41 +94,39 @@ class CacheManagerService {
     }
   }
 
-  /// ¿Existe este ID en el cache?
   Future<bool> tiene(String id) async {
     await init();
     final item = _items[id];
     if (item == null) return false;
-    final f = File('${_carpeta.path}/${item.archivo}');
-    return await f.exists();
+    return await File('${_carpeta.path}/${item.archivo}').exists();
   }
 
-  /// Devuelve la ruta local del archivo o null si no está.
   Future<String?> rutaDe(String id) async {
     await init();
     final item = _items[id];
     if (item == null) return null;
     final path = '${_carpeta.path}/${item.archivo}';
-    final f = File(path);
-    if (!await f.exists()) {
+    if (!await File(path).exists()) {
       _items.remove(id);
       return null;
     }
     return path;
   }
 
-  /// Guarda un archivo (bytes) en el cache con el ID dado.
-  /// Actualiza LRU y limpia si es necesario.
-  Future<bool> guardar(String id, List<int> bytes, {String? url}) async {
+  /// Guarda un archivo. [extension] sin punto (ej: "mp4", "jpg", "cache").
+  Future<bool> guardar(
+    String id,
+    List<int> bytes, {
+    String? url,
+    String extension = 'cache',
+  }) async {
     await init();
     try {
-      // Nombre de archivo: hash-ish único
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final archivo = '${id}_$timestamp.cache';
+      final archivo = '${id}_$timestamp.$extension';
       final f = File('${_carpeta.path}/$archivo');
       await f.writeAsBytes(bytes);
 
-      // Si ya existía un archivo para este ID, lo borramos
       final anterior = _items[id];
       if (anterior != null && anterior.archivo != archivo) {
         try {
@@ -165,18 +152,14 @@ class CacheManagerService {
     }
   }
 
-  /// Marca un item como recién usado (actualiza su timestamp).
-  /// No hace IO de escritura del archivo, solo metadata.
   Future<void> marcarAcceso(String id) async {
     await init();
     final item = _items[id];
     if (item == null) return;
     item.ultimoAcceso = DateTime.now();
-    // Guardado diferido: no bloqueamos al llamador
     _guardarMetadata();
   }
 
-  /// Elimina un item específico.
   Future<void> eliminar(String id) async {
     await init();
     final item = _items[id];
@@ -189,7 +172,6 @@ class CacheManagerService {
     await _guardarMetadata();
   }
 
-  /// Borra TODO el cache.
   Future<void> limpiarTodo() async {
     await init();
     try {
@@ -202,13 +184,10 @@ class CacheManagerService {
     await _guardarMetadata();
   }
 
-  /// Aplica política LRU: si el tamaño total supera [limiteBytes],
-  /// borra los archivos más viejos hasta estar por debajo.
   Future<void> _limpiarLRU() async {
     int totalBytes = _items.values.fold(0, (s, i) => s + i.bytes);
     if (totalBytes <= limiteBytes) return;
 
-    // Ordenar por último acceso (más viejo primero)
     final ordenados = _items.values.toList()
       ..sort((a, b) => a.ultimoAcceso.compareTo(b.ultimoAcceso));
 
@@ -224,21 +203,26 @@ class CacheManagerService {
     await _guardarMetadata();
   }
 
-  /// Espacio total usado en bytes.
   Future<int> espacioUsado() async {
     await init();
     return _items.values.fold(0, (s, i) => s + i.bytes);
   }
 
-  /// Cantidad de items cacheados.
   Future<int> cantidad() async {
     await init();
     return _items.length;
   }
 
-  /// Lista de IDs cacheados.
   Future<List<String>> ids() async {
     await init();
     return _items.keys.toList();
+  }
+
+  /// Lista con más info (útil para el panel de gestión).
+  Future<List<CacheItem>> items() async {
+    await init();
+    final lista = _items.values.toList()
+      ..sort((a, b) => b.ultimoAcceso.compareTo(a.ultimoAcceso));
+    return lista;
   }
 }
