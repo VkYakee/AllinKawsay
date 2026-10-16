@@ -34,6 +34,11 @@ class UsuarioService {
     return u?.esAdmin ?? false;
   }
 
+  Future<bool> soyDev() async {
+    final u = await miUsuarioActual();
+    return u?.esDev ?? false;
+  }
+
   Stream<List<Usuario>> listar() {
     return _db
         .collection('usuarios')
@@ -84,8 +89,6 @@ class UsuarioService {
     );
   }
 
-  /// Alterna favorito de manera ATÓMICA con `arrayUnion` / `arrayRemove`.
-  /// Así evitamos race conditions si el usuario toca varias veces rápido.
   Future<void> toggleFavorito(String cancionId) async {
     final uid = miUid();
     if (uid == null) return;
