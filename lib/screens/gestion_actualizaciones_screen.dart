@@ -5,7 +5,7 @@ import '../services/update_service.dart';
 import '../services/usuario_service.dart';
 import '../theme/colors.dart';
 import '../widgets/comunes/seccion_card.dart';
-import 'actualizacion_screen.dart';
+import '../widgets/dialogo_descarga_apk.dart';
 
 class GestionActualizacionesScreen extends StatefulWidget {
   const GestionActualizacionesScreen({super.key});
@@ -100,22 +100,13 @@ class _GestionActualizacionesScreenState
     }
   }
 
-  /// Descarga + instala directamente usando el flujo completo.
-  /// Simplemente navega a ActualizacionScreen con los datos de la release.
-  void _descargarRelease(ReleaseInfo r) {
-    final infoTemp = InfoVersion(
-      build: r.build,
-      version: r.versionLegible,
-      url: r.urlApk,
-      critica: false,
-      notas: r.notas,
-      aprobadaPor: '',
-    );
-    Navigator.push(
+  /// Descarga + instala usando el diálogo flotante compacto.
+  Future<void> _descargarRelease(ReleaseInfo r) async {
+    await DialogoDescargaApk.mostrar(
       context,
-      MaterialPageRoute(
-        builder: (_) => ActualizacionScreen(info: infoTemp),
-      ),
+      url: r.urlApk,
+      nombre: 'AllinKawsay_${r.versionLegible}.apk',
+      versionLegible: r.versionLegible,
     );
   }
 Future<void> _aprobarRelease(ReleaseInfo r) async {
