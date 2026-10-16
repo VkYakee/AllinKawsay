@@ -174,9 +174,6 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ZAMPOÑA — vista "de frente a los tubos"
-  // ═══════════════════════════════════════════════════════════
   Widget _zampona() {
     return Container(
       decoration: BoxDecoration(
@@ -193,21 +190,15 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
       ),
       child: LayoutBuilder(
         builder: (context, cons) {
-          // Calculamos el tamaño del hueco (círculo) según el ancho
-          // disponible. Fila 7 tiene 7 cañas, fila 6 tiene 6 → siempre
-          // mando por el ancho de 7 columnas para alinear.
           const separacion = 3.0;
           final disponible = cons.maxWidth - (separacion * 6) - 16;
           final anchoCania = disponible / 7;
-
-          // Hueco: 90% del ancho de la columna (redondo)
           final diametro = anchoCania * 0.92;
 
           return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ─── FILA 7 (arriba, al frente) ───
               _filaTubos(
                 notas: notasFila7,
                 diametro: diametro,
@@ -215,8 +206,6 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
                 colorMaderaClaro: AppColors.granateClaro,
                 colorMaderaOscuro: const Color(0xFF3A0810),
               ),
-
-              // ─── LISTÓN (madera oscura con línea dorada) ───
               Container(
                 height: 14,
                 margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -244,8 +233,6 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
                   ],
                 ),
               ),
-
-              // ─── FILA 6 (abajo, detrás) ───
               _filaTubos(
                 notas: notasFila6,
                 diametro: diametro,
@@ -284,9 +271,6 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // TUBO INDIVIDUAL (círculo con hueco visible)
-  // ═══════════════════════════════════════════════════════════
   Widget _tubo({
     required ZamponaNota nota,
     required double diametro,
@@ -302,17 +286,13 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
       height: diametro,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        // Gradiente radial que simula:
-        //   centro = hueco oscuro (interior del tubo)
-        //   medio = sombra interna
-        //   borde = madera (color del tubo)
         gradient: RadialGradient(
           colors: sonando
               ? [
-                  const Color(0xFF0A0103), // hueco centro
+                  const Color(0xFF0A0103),
                   const Color(0xFF1A0205),
                   AppColors.granate,
-                  AppColors.dorado, // aro dorado exterior (brillo)
+                  AppColors.dorado,
                 ]
               : [
                   const Color(0xFF0A0103),
@@ -329,13 +309,11 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
           width: sonando ? 2 : 1.2,
         ),
         boxShadow: [
-          // Sombra externa (profundidad)
           BoxShadow(
             color: Colors.black.withOpacity(0.85),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
-          // Brillo cuando suena
           if (sonando)
             BoxShadow(
               color: AppColors.dorado.withOpacity(0.7),
@@ -344,7 +322,6 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
             ),
         ],
       ),
-      // Número en el centro del hueco
       child: Center(
         child: Text(
           '${nota.posicion}',
