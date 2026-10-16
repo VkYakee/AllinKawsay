@@ -852,7 +852,7 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
       ),
     );
   }
-}
+
   /// Vista índice: solo título, ordenado A-Z, formato compacto.
   Widget _buildListaIndice(List<Cancion> filtradas, Color onSurface) {
     final ordenadas = _ordenarAlfabetico(filtradas);
