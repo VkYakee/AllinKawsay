@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../theme/colors.dart';
 
+/// Notifier global para que el _AuthGate se entere cuando el usuario
+/// acaba de verificar el correo, y redirija automáticamente al Home.
+class VerificacionRefresh {
+  static final ValueNotifier<int> notifier = ValueNotifier<int>(0);
+  static void trigger() => notifier.value++;
+}
+
 class VerificacionPendienteScreen extends StatefulWidget {
   final String email;
   const VerificacionPendienteScreen({super.key, required this.email});
@@ -98,15 +105,8 @@ class _VerificacionPendienteScreenState
       final actualizado = FirebaseAuth.instance.currentUser;
 
       if (actualizado != null && actualizado.emailVerified) {
-        // Ya verificado → el AuthGate lo detectará y lo dejará pasar
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('¡Verificado! Bienvenido/a.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+        // Ya verificado → trigger al AuthGate para que redirija
+        VerificacionRefresh.trigger();
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -135,8 +135,6 @@ class _VerificacionPendienteScreenState
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -158,7 +156,6 @@ class _VerificacionPendienteScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Ícono
                   Container(
                     width: 110,
                     height: 110,
@@ -208,7 +205,6 @@ class _VerificacionPendienteScreenState
 
                   const SizedBox(height: 24),
 
-                  // Card informativa
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
@@ -245,13 +241,12 @@ class _VerificacionPendienteScreenState
                           numero: '3',
                           titulo: 'Volvé a la app',
                           descripcion:
-                              'Tocá "YA VERIFIQUÉ" para continuar.',
+                              'Tocá "YA VERIFIQUÉ" y entrás automáticamente.',
                           ultimo: true,
                         ),
 
                         const SizedBox(height: 24),
 
-                        // Botón principal
                         SizedBox(
                           width: double.infinity,
                           height: 54,
@@ -290,7 +285,6 @@ class _VerificacionPendienteScreenState
                         ),
                         const SizedBox(height: 12),
 
-                        // Reenviar
                         SizedBox(
                           width: double.infinity,
                           height: 48,
@@ -348,19 +342,6 @@ class _VerificacionPendienteScreenState
                         color: AppColors.dorado.withOpacity(0.7),
                         fontSize: 13,
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Text(
-                    'Si el email no llega en 2 minutos, revisá la\n'
-                    'carpeta de SPAM o tocá REENVIAR.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.dorado.withOpacity(0.5),
-                      height: 1.5,
                     ),
                   ),
                 ],
