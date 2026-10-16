@@ -4,8 +4,9 @@ import '../models/zampona_nota.dart';
 import '../services/zampona_service.dart';
 import '../theme/colors.dart';
 
-/// Pantalla de la mini zampoña. Muestra las 13 cañas distribuidas
-/// en 2 filas (arriba = 7, abajo = 6). Tocás una → suena.
+/// Pantalla de la mini zampoña con diseño realista.
+/// Las cañas tienen hueco visible (como la zampoña real) y
+/// las dos filas están pegadas para no mover mucho los dedos.
 class ZamponaScreen extends StatefulWidget {
   const ZamponaScreen({super.key});
 
@@ -34,8 +35,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
   Future<void> _tocar(ZamponaNota nota) async {
     setState(() => _sonando.add(nota.id));
     await _service.tocar(nota.id);
-    // Apagar el brillo después de 250ms
-    Future.delayed(const Duration(milliseconds: 250), () {
+    Future.delayed(const Duration(milliseconds: 280), () {
       if (mounted) setState(() => _sonando.remove(nota.id));
     });
   }
@@ -43,8 +43,11 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('ZAMPOÑA'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.volume_off),
@@ -55,79 +58,15 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
       ),
       body: _cargando
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.granate))
-          : Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.granate.withOpacity(0.05),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
+              child: CircularProgressIndicator(color: AppColors.dorado))
+          : SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
                 child: Column(
                   children: [
-                    _header(context),
-                    const SizedBox(height: 24),
-
-                    // Fila 7 (arriba)
-                    _tituloFila(context, 'HILERA SUPERIOR · 7 cañas',
-                        Icons.arrow_upward),
-                    const SizedBox(height: 10),
-                    _filaCanas(context, notasFila7, esArriba: true),
-
-                    const SizedBox(height: 32),
-
-                    // Separador visual
-                    _separador(context),
-
-                    const SizedBox(height: 32),
-
-                    // Fila 6 (abajo)
-                    _tituloFila(context, 'HILERA INFERIOR · 6 cañas',
-                        Icons.arrow_downward),
-                    const SizedBox(height: 10),
-                    _filaCanas(context, notasFila6, esArriba: false),
-
-                    const SizedBox(height: 40),
-
-                    // Tip
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.dorado.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: AppColors.dorado.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.tips_and_updates_outlined,
-                              size: 16, color: AppColors.granate),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Tocá cada caña para escuchar su nota. '
-                              'Las cañas más chicas (izquierda) son las más '
-                              'agudas; las más grandes (derecha), las más '
-                              'graves.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.75),
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _zampona(),
+                    const SizedBox(height: 20),
+                    _leyenda(),
                   ],
                 ),
               ),
@@ -135,208 +74,288 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
     );
   }
 
-  Widget _header(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+  // ═══════════════════════════════════════════════════════════
+  // ZAMPOÑA (contenedor principal)
+  // ═══════════════════════════════════════════════════════════
+  Widget _zampona() {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        gradient: RadialGradient(
+          center: const Alignment(0, -0.6),
+          radius: 1.4,
           colors: [
-            AppColors.granate.withOpacity(0.08),
-            AppColors.dorado.withOpacity(0.05),
+            const Color(0xFF1A0A0D),
+            Colors.black,
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: AppColors.gradienteGranate,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.granate.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.music_note,
-                color: AppColors.dorado, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ZAMPOÑA INTERACTIVA',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.seccionTitulo(context),
-                    fontSize: 13,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Practicá la posición de las cañas y escuchá cada nota',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: onSurface.withOpacity(0.65),
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.dorado.withOpacity(0.35),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.granate.withOpacity(0.25),
+            blurRadius: 30,
+            spreadRadius: 2,
           ),
         ],
       ),
+      child: LayoutBuilder(
+        builder: (context, cons) {
+          // Ancho de cada caña calculado sobre 7 columnas fijas
+          // (así fila 7 y fila 6 tienen el mismo ancho de caña).
+          const separacion = 4.0;
+          final disponible = cons.maxWidth - (separacion * 6);
+          final anchoCania = disponible / 7;
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ─── FILA 7 (arriba) ───
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final nota in notasFila7)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: separacion / 2),
+                      child: SizedBox(
+                        width: anchoCania,
+                        child: _cania(nota, esArriba: true),
+                      ),
+                    ),
+                ],
+              ),
+
+              // ─── LISTÓN CENTRAL ───
+              const SizedBox(height: 6),
+              _liston(),
+              const SizedBox(height: 6),
+
+              // ─── FILA 6 (abajo) ───
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final nota in notasFila6)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: separacion / 2),
+                      child: SizedBox(
+                        width: anchoCania,
+                        child: _cania(nota, esArriba: false),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _tituloFila(BuildContext context, String texto, IconData icono) {
-    return Row(
-      children: [
-        Icon(icono, size: 14, color: AppColors.granate),
-        const SizedBox(width: 8),
-        Text(
-          texto,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: AppColors.granate,
-            letterSpacing: 1.5,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _separador(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-            child: Divider(color: AppColors.granate.withOpacity(0.2))),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'ZAMPOÑA',
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              color: AppColors.granate.withOpacity(0.4),
-              letterSpacing: 3,
-            ),
-          ),
-        ),
-        Expanded(
-            child: Divider(color: AppColors.granate.withOpacity(0.2))),
-      ],
-    );
-  }
-
-  Widget _filaCanas(BuildContext context,
-      List<ZamponaNota> notas, {required bool esArriba}) {
+  // ═══════════════════════════════════════════════════════════
+  // LISTÓN DORADO CENTRAL
+  // ═══════════════════════════════════════════════════════════
+  Widget _liston() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      height: 12,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.dorado.withOpacity(0.05),
-            AppColors.granate.withOpacity(0.08),
+            AppColors.doradoOscuro,
+            AppColors.dorado,
+            AppColors.doradoOscuro,
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (final nota in notas)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: _cania(context, nota, esArriba: esArriba),
-            ),
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.dorado.withOpacity(0.4),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
         ],
       ),
     );
   }
 
-  Widget _cania(BuildContext context, ZamponaNota nota,
-      {required bool esArriba}) {
+  // ═══════════════════════════════════════════════════════════
+  // CAÑA INDIVIDUAL
+  // ═══════════════════════════════════════════════════════════
+  Widget _cania(ZamponaNota nota, {required bool esArriba}) {
     final sonando = _sonando.contains(nota.id);
 
-    // Altura de la caña proporcional a su posición:
-    // posicion 1 = más chica (aguda) → altura menor
-    // posicion N = más grande (grave) → altura mayor
+    // Altura proporcional a su posición (aguda = corta, grave = larga)
     final total = esArriba ? 7.0 : 6.0;
-    final alturaMin = esArriba ? 70.0 : 60.0;
-    final alturaMax = esArriba ? 140.0 : 120.0;
+    final alturaMin = esArriba ? 70.0 : 62.0;
+    final alturaMax = esArriba ? 135.0 : 120.0;
     final factor = nota.posicion / total;
     final altura = alturaMin + (alturaMax - alturaMin) * factor;
 
     return GestureDetector(
       onTapDown: (_) => _tocar(nota),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Nota
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 150),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: sonando
-                  ? AppColors.dorado
-                  : AppColors.granate.withOpacity(0.7),
-              letterSpacing: 0.5,
-            ),
-            child: Text(nota.nota),
-          ),
-          const SizedBox(height: 4),
-          // Caña
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            curve: Curves.easeOut,
-            width: 32,
-            height: altura,
-            decoration: BoxDecoration(
-              gradient: sonando
-                  ? AppColors.gradienteDorado
-                  : AppColors.gradienteGranate,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: (sonando ? AppColors.dorado : AppColors.granate)
-                      .withOpacity(sonando ? 0.6 : 0.25),
-                  blurRadius: sonando ? 16 : 6,
-                  spreadRadius: sonando ? 2 : 0,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              border: Border.all(
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: sonando ? 1.06 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ─── NOMBRE DE LA NOTA (arriba) ───
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 150),
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
                 color: sonando
                     ? AppColors.dorado
-                    : AppColors.granate.withOpacity(0.3),
-                width: sonando ? 2 : 1,
+                    : AppColors.dorado.withOpacity(0.7),
+                letterSpacing: 0.3,
+                height: 1.0,
+              ),
+              child: Text(nota.nota),
+            ),
+            const SizedBox(height: 5),
+
+            // ─── HUECO (orificio del tubo) ───
+            AspectRatio(
+              aspectRatio: 1,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 130),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: sonando
+                        ? [
+                            const Color(0xFF3A0810),
+                            AppColors.granate,
+                            AppColors.dorado.withOpacity(0.95),
+                          ]
+                        : [
+                            Colors.black,
+                            const Color(0xFF0A0305),
+                            AppColors.granateOscuro,
+                          ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                  border: Border.all(
+                    color: sonando
+                        ? AppColors.dorado
+                        : AppColors.dorado.withOpacity(0.35),
+                    width: sonando ? 2.5 : 1.3,
+                  ),
+                  boxShadow: sonando
+                      ? [
+                          BoxShadow(
+                            color: AppColors.dorado.withOpacity(0.8),
+                            blurRadius: 16,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.7),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                ),
               ),
             ),
-            child: Center(
-              child: Icon(
-                Icons.circle,
-                size: 6,
-                color: sonando
-                    ? AppColors.granate
-                    : AppColors.dorado.withOpacity(0.6),
+            const SizedBox(height: 3),
+
+            // ─── CUERPO DE LA CAÑA (cilíndrico) ───
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 130),
+              width: double.infinity,
+              height: altura,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: sonando
+                      ? [
+                          AppColors.doradoOscuro,
+                          AppColors.dorado,
+                          AppColors.doradoClaro,
+                          AppColors.dorado,
+                          AppColors.doradoOscuro,
+                        ]
+                      : [
+                          const Color(0xFF3A0810),
+                          AppColors.granate,
+                          AppColors.granateClaro,
+                          AppColors.granate,
+                          AppColors.granateOscuro,
+                        ],
+                  stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(8),
+                ),
+                border: Border.all(
+                  color: sonando
+                      ? AppColors.dorado
+                      : AppColors.dorado.withOpacity(0.15),
+                  width: 1,
+                ),
+                boxShadow: [
+                  // Sombra lateral derecha (efecto 3D cilíndrico)
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 5,
+                    offset: const Offset(3, 3),
+                  ),
+                  if (sonando)
+                    BoxShadow(
+                      color: AppColors.dorado.withOpacity(0.55),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LEYENDA INFERIOR
+  // ═══════════════════════════════════════════════════════════
+  Widget _leyenda() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.dorado.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.tips_and_updates_outlined,
+              size: 16, color: AppColors.dorado),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Tocá cada caña para escuchar su nota. '
+              'Las cañas más chicas (izquierda) son las más agudas; '
+              'las más grandes (derecha), las más graves.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.75),
+                height: 1.5,
               ),
             ),
           ),
