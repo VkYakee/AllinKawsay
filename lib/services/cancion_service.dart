@@ -52,6 +52,8 @@ class CancionService {
     );
   }
 
+  /// Incrementa reproducciones SOLO si [uid] no está en la lista
+  /// `usuariosQueReprodujeron` de la canción.
   Future<bool> incrementarReproduccionUnaVez(
       String cancionId, String uid) async {
     if (cancionId.isEmpty || uid.isEmpty) return false;
@@ -86,16 +88,30 @@ class CancionService {
     }
   }
 
-  /// Cuenta cuántas canciones subió el usuario (por creadoPor exacto).
-  Future<int> contarPorUsuario(String uid) async {
+  /// Cuenta cuántas canciones subió el usuario.
+  /// Si se pasa [nombre], también cuenta las que no tengan `creadoPor`
+  /// pero cuyo `creadorNombre` coincida.
+  Future<int> contarPorUsuario(String uid, {String? nombre}) async {
     if (uid.isEmpty) return 0;
     try {
       final snap = await _db.collection('canciones').get();
       int total = 0;
+      final nombreLower = (nombre ?? '').trim().toLowerCase();
       for (final doc in snap.docs) {
         final d = doc.data();
         final creadoPor = (d['creadoPor'] ?? '').toString().trim();
-        if (creadoPor == uid) total++;
+        final creadorNombre =
+            (d['creadorNombre'] ?? '').toString().trim().toLowerCase();
+        if (creadoPor == uid) {
+          total++;
+          continue;
+        }
+        // Fallback: doc sin dueño pero con nombre coincidente
+        if (creadoPor.isEmpty &&
+            nombreLower.isNotEmpty &&
+            creadorNombre == nombreLower) {
+          total++;
+        }
       }
       return total;
     } catch (_) {
@@ -103,15 +119,25 @@ class CancionService {
     }
   }
 
-  Future<int> totalReproduccionesDeUsuario(String uid) async {
+  /// Suma las reproducciones de las canciones subidas por el usuario.
+  /// Mismo criterio de fallback que [contarPorUsuario].
+  Future<int> totalReproduccionesDeUsuario(String uid,
+      {String? nombre}) async {
     if (uid.isEmpty) return 0;
     try {
       final snap = await _db.collection('canciones').get();
       int total = 0;
+      final nombreLower = (nombre ?? '').trim().toLowerCase();
       for (final doc in snap.docs) {
         final d = doc.data();
         final creadoPor = (d['creadoPor'] ?? '').toString().trim();
-        if (creadoPor == uid) {
+        final creadorNombre =
+            (d['creadorNombre'] ?? '').toString().trim().toLowerCase();
+        final esMia = creadoPor == uid ||
+            (creadoPor.isEmpty &&
+                nombreLower.isNotEmpty &&
+                creadorNombre == nombreLower);
+        if (esMia) {
           final r = d['reproducciones'];
           if (r is int) total += r;
         }
@@ -122,10 +148,8 @@ class CancionService {
     }
   }
 
-  /// 🔧 REASIGNACIÓN AGRESIVA:
-  /// Asigna al usuario actual TODAS las canciones cuyo `creadoPor`
-  /// esté vacío. Ignora el `creadorNombre` (porque puede estar vacío).
-  /// Solo reasigna si el usuario es admin (validación en Firestore).
+  /// 🔧 REASIGNACIÓN AGRESIVA: asigna TODAS las canciones cuyo
+  /// `creadoPor` esté vacío al usuario actual.
   Future<int> reasignarMisCanciones(String uid, String nombre) async {
     if (uid.isEmpty) return 0;
     try {
@@ -134,7 +158,6 @@ class CancionService {
       for (final doc in snap.docs) {
         final d = doc.data();
         final creadoPor = (d['creadoPor'] ?? '').toString().trim();
-        // Solo reasignamos las que no tienen dueño
         if (creadoPor.isEmpty) {
           await doc.reference.update({
             'creadoPor': uid,
@@ -149,7 +172,6 @@ class CancionService {
     }
   }
 
-  /// Cuenta cuántas canciones están sin dueño.
   Future<int> contarSinDueno() async {
     try {
       final snap = await _db.collection('canciones').get();
