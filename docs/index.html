@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allin Kawsay · Descargar App</title>
+<link rel="icon" href="logo.png">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(180deg, #0F0F0F 0%, #4A0D18 55%, #6E1423 100%);
+    min-height: 100vh;
+    color: #E8E8E8;
+    padding: 24px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .container { max-width: 480px; width: 100%; }
+  .logo-wrap {
+    width: 130px;
+    height: 130px;
+    margin: 8px auto 20px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(212, 175, 55, 0.4), 0 0 80px rgba(212, 175, 55, 0.2);
+    border: 3px solid #D4AF37;
+  }
+  .logo-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  h1 {
+    font-size: 30px;
+    font-weight: 800;
+    color: #D4AF37;
+    text-align: center;
+    letter-spacing: 5px;
+    margin-bottom: 6px;
+    text-shadow: 0 2px 12px rgba(212, 175, 55, 0.4);
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(212, 175, 55, 0.85);
+    font-size: 13px;
+    letter-spacing: 3px;
+    margin-bottom: 4px;
+  }
+  .subtitle2 {
+    text-align: center;
+    color: rgba(212, 175, 55, 0.5);
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-bottom: 32px;
+  }
+  .btn-descarga {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #D4AF37, #A67C00);
+    color: #4A0D18;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 2px;
+    padding: 20px 24px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(212, 175, 55, 0.45), 0 0 0 4px rgba(212, 175, 55, 0.15);
+    transition: transform 0.15s, box-shadow 0.15s;
+    margin-bottom: 14px;
+  }
+  .btn-descarga:active { transform: scale(0.97); }
+  .btn-descarga svg { width: 24px; height: 24px; }
+  .btn-info {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(232, 232, 232, 0.5);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+  .card {
+    background: #FFFFFF;
+    color: #1A1A1A;
+    border-radius: 24px;
+    padding: 24px 20px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    border: 2px solid rgba(212, 175, 55, 0.4);
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    color: #6E1423;
+    font-size: 16px;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+  }
+  .step:last-child { margin-bottom: 0; }
+  .step-num {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4A0D18, #6E1423);
+    color: #D4AF37;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 3px 10px rgba(110, 20, 35, 0.35);
+  }
+  .step-body { flex: 1; padding-top: 2px; }
+  .step-title {
+    font-weight: 700;
+    color: #6E1423;
+    font-size: 14px;
+    margin-bottom: 3px;
+  }
+  .step-desc {
+    font-size: 12px;
+    color: rgba(26, 26, 26, 0.65);
+    line-height: 1.5;
+  }
+  .step-desc strong { color: #6E1423; }
+  .tip {
+    background: rgba(212, 175, 55, 0.12);
+    border-left: 4px solid #D4AF37;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 18px;
+    font-size: 12px;
+    color: rgba(26, 26, 26, 0.8);
+    line-height: 1.6;
+  }
+  .tip strong { color: #6E1423; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(110, 20, 35, 0.08);
+    color: #6E1423;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(110, 20, 35, 0.2);
+    margin: 0 auto 14px;
+  }
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(212, 175, 55, 0.4);
+    letter-spacing: 1px;
+    margin-top: 12px;
+    line-height: 1.8;
+  }
+  .footer a { color: rgba(212, 175, 55, 0.6); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- LOGO -->
+  <div class="logo-wrap">
+    <img src="logo.png" alt="Allin Kawsay">
+  </div>
+
+  <!-- TÍTULOS -->
+  <h1>ALLIN KAWSAY</h1>
+  <div class="subtitle">BIENVENIDO A LA APP OFICIAL</div>
+  <div class="subtitle2">C.I.A.C. ALLIN KAWSAY · JULIACA · PERÚ</div>
+
+  <!-- BOTÓN DE DESCARGA (link directo al APK) -->
+  <a class="btn-descarga"
+     href="https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk"
+     download>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    DESCARGAR APP
+  </a>
+
+  <div class="btn-info">
+    Se descargará el archivo <strong>AllinKawsay.apk</strong> (~30 MB)<br>
+    Tu descarga se guardará en <strong>/Descargas</strong>
+  </div>
+
+  <!-- TARJETA: GUÍA PLAY PROTECT -->
+  <div class="card">
+    <h2>📱 CÓMO INSTALAR LA APP</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Abrí tus Descargas</div>
+        <div class="step-desc">
+          Andá a la app <strong>Archivos</strong> o <strong>Administrador de archivos</strong>
+          y buscá el archivo <strong>AllinKawsay.apk</strong> en la carpeta Descargas.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Tocalo para instalar</div>
+        <div class="step-desc">
+          Android te va a preguntar si querés permitir instalar apps
+          de <strong>origen desconocido</strong>. Tocá <strong>"Permitir"</strong> o
+          <strong>"Configuración"</strong> y activá el permiso para tu navegador
+          o administrador de archivos.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Play Protect te va a avisar</div>
+        <div class="step-desc">
+          Como la app no está en Play Store, va a decir
+          <strong>"app no reconocida"</strong> o <strong>"puede ser sospechosa"</strong>.
+          Es normal y <strong>no hay peligro</strong>.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Tocá "Más detalles"</div>
+        <div class="step-desc">
+          Debajo del aviso rojo. Ahí se despliegan más opciones.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Tocá "Instalar de todas formas"</div>
+        <div class="step-desc">
+          Si te ofrece <strong>"Enviar a analizar"</strong>, tocalo. Esperá 5-10 segundos
+          hasta que diga <strong>"No se detectó ninguna amenaza"</strong>.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="step-title">¡Listo!</div>
+        <div class="step-desc">
+          Cuando termine de instalar, tocá <strong>"Abrir"</strong> y
+          logueate con tu email.
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      💡 <strong>¿Todavía tenés dudas?</strong><br>
+      Play Protect hace este aviso con <strong>cualquier app</strong> que no esté en Play Store
+      (WhatsApp Plus, apps de bancos pequeños, etc.). Tu cuenta y datos están seguros
+      porque la app usa Firebase, la misma tecnología que usan apps como Duolingo.
+    </div>
+  </div>
+
+  <!-- TARJETA: PREGUNTAS -->
+  <div class="card">
+    <h2>❓ PREGUNTAS FRECUENTES</h2>
+
+    <div class="badge">🎵 ¿ES GRATIS?</div>
+    <div class="step-desc" style="margin-bottom: 20px;">
+      Sí, es totalmente gratis para el grupo y los invitados. No tiene publicidad
+      ni compras dentro de la app.
+    </div>
+
+    <div class="badge">🔒 ¿ES SEGURA?</div>
+    <div class="step-desc" style="margin-bottom: 20px;">
+      Sí. La app solo accede a los datos que vos le das (email, fotos que subís).
+      Toda la información se guarda encriptada en Firebase.
+    </div>
+
+    <div class="badge">📶 ¿NECESITA INTERNET?</div>
+    <div class="step-desc">
+      Solo la primera vez que la abrís. Después podés usar el cancionero sin conexión
+      (los audios y partituras se guardan en tu celu automáticamente).
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    Hecha con ❤️ para el grupo<br>
+    <a href="https://github.com/yeo-drake/AllinKawsay">Ver repositorio</a>
+  </div>
+
+</div>
+</body>
+</html>
