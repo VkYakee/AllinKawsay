@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, experimental/zampona ]
   workflow_dispatch:
     inputs:
       motivo:
@@ -53,7 +53,6 @@ jobs:
           mkdir -p android/app/src/main/res/xml
           cp android_config/file_paths.xml android/app/src/main/res/xml/file_paths.xml
 
-          # Copiar íconos de notificación al proyecto Android
           mkdir -p android/app/src/main/res/drawable-mdpi
           mkdir -p android/app/src/main/res/drawable-hdpi
           mkdir -p android/app/src/main/res/drawable-xhdpi
@@ -255,6 +254,4 @@ jobs:
               --title "v${VERSION}.${RUN}" \
               --notes-file /tmp/notas.md
             echo "✅ Release ESTABLE creado: $TAG"
-            echo "📥 Link de descarga directa:"
-            echo "https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk"
           fi
