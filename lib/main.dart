@@ -496,13 +496,12 @@ class _AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<_AuthGate> {
   /// 📅 Fecha de corte: cuentas creadas ANTES de esta fecha quedan
-  /// exentas de verificar el correo (son anteriores al sistema).
+  /// exentas de verificar el correo. Las que se creen DESPUÉS
+  /// (incluyendo hoy mismo después de esa hora) deben verificar.
   ///
-  /// Usamos `user.metadata.creationTime` (Firebase Auth) en lugar de
-  /// la fecha de Firestore, porque está disponible AL INSTANTE y no
-  /// depende de que el documento se haya sincronizado.
+  /// Cambiá esta fecha si necesitás reiniciar el corte.
   static final DateTime _fechaCorteVerificacion =
-      DateTime(2026, 10, 15, 12, 0, 0); // 15 oct 2026 a las 12:00
+      DateTime(2026, 10, 15, 0, 0, 0); // 15 oct 2026 a medianoche
 
   StreamSubscription? _userSub;
   String? _ultimoRol;
@@ -561,10 +560,10 @@ class _AuthGateState extends State<_AuthGate> {
   /// Reglas (en orden):
   /// 1. Ya verificado en Firebase → NO.
   /// 2. Usuario de Google → NO (Google ya verificó).
-  /// 3. Sin `creationTime` (raro) → NO.
+  /// 3. Sin `creationTime` en Auth → intenta con Firestore.
   /// 4. Cuenta creada ANTES de la fecha de corte → NO.
-  /// 5. Cuenta creada DESPUÉS → SÍ debe verificar.
-  bool _necesitaVerificar(User user) {
+  /// 5. Cuenta creada DESPUÉS → SÍ.
+  bool _necesitaVerificar(User user, Usuario? usuarioFirestore) {
     // 1) Ya verificado
     if (user.emailVerified) return false;
 
@@ -573,16 +572,21 @@ class _AuthGateState extends State<_AuthGate> {
         .any((info) => info.providerId == 'google.com');
     if (esGoogle) return false;
 
-    // 3) Sin fecha de creación (no debería pasar)
+    // 3) Prioridad 1: metadata de Auth (más confiable, siempre disponible)
     final creationTime = user.metadata.creationTime;
-    if (creationTime == null) return false;
-
-    // 4) Cuenta vieja → exenta
-    if (creationTime.isBefore(_fechaCorteVerificacion)) {
-      return false;
+    if (creationTime != null) {
+      // Cuenta vieja → exenta
+      if (creationTime.isBefore(_fechaCorteVerificacion)) return false;
+      // Cuenta nueva → debe verificar
+      return true;
     }
 
-    // 5) Cuenta nueva → debe verificar
+    // 4) Fallback: Firestore (por si metadata no está disponible)
+    final fechaRegistro = usuarioFirestore?.fechaRegistro;
+    if (fechaRegistro == null) return false;
+    if (fechaRegistro.isBefore(_fechaCorteVerificacion)) return false;
+
+    // 5) Sin datos claros → exigir verificación para estar seguros
     return true;
   }
 
@@ -606,23 +610,22 @@ class _AuthGateState extends State<_AuthGate> {
 
             if (authSnap.hasData && authSnap.data != null) {
               final authUser = authSnap.data!;
-
-              // Chequeo de verificación ANTES de OneSignal (para no
-              // registrar cuentas sin verificar).
-              if (_necesitaVerificar(authUser)) {
-                _syncOneSignal(null);
-                ScreenSecurityService.disable();
-                return VerificacionPendienteScreen(
-                  email: authUser.email ?? 'tu correo',
-                );
-              }
-
-              // Ya verificado o exento → seguimos
               _syncOneSignal(authUser.uid);
 
               return StreamBuilder<Usuario?>(
                 stream: UsuarioService().miUsuario(),
                 builder: (context, userSnap) {
+                  final u = userSnap.data;
+
+                  // Chequeo de verificación (no depende de Firestore)
+                  if (_necesitaVerificar(authUser, u)) {
+                    ScreenSecurityService.disable();
+                    return VerificacionPendienteScreen(
+                      email: authUser.email ?? 'tu correo',
+                    );
+                  }
+
+                  // Si todavía carga el doc de Firestore, esperamos
                   if (userSnap.connectionState ==
                       ConnectionState.waiting) {
                     return const Scaffold(
@@ -634,8 +637,7 @@ class _AuthGateState extends State<_AuthGate> {
                     );
                   }
 
-                  final u = userSnap.data;
-
+                  // Usuario baneado
                   if (u != null && u.baneado) {
                     return const CuentaSuspendidaScreen();
                   }
