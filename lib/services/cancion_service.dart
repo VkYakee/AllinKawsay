@@ -23,7 +23,6 @@ class CancionService {
       'crear_cancion',
       'Subió la canción "${c.titulo}"',
     );
-    // Incrementar contador de canciones sin notificar
     await _incrementarContadorCanciones();
     return ref.id;
   }
@@ -53,23 +52,66 @@ class CancionService {
     );
   }
 
-  Future<void> incrementarReproduccion(String id) async {
+  /// Incrementa reproducciones SOLO si [uid] no está en la lista
+  /// `usuariosQueReprodujeron` de la canción. Atómico y persistente.
+  Future<bool> incrementarReproduccionUnaVez(
+      String cancionId, String uid) async {
+    if (cancionId.isEmpty || uid.isEmpty) return false;
     try {
-      await _db.collection('canciones').doc(id).update({
+      final ref = _db.collection('canciones').doc(cancionId);
+      final doc = await ref.get();
+      if (!doc.exists) return false;
+
+      final lista = List<String>.from(
+          doc.data()?['usuariosQueReprodujeron'] ?? <String>[]);
+      if (lista.contains(uid)) return false;
+
+      await ref.update({
         'reproducciones': FieldValue.increment(1),
+        'usuariosQueReprodujeron': FieldValue.arrayUnion([uid]),
       });
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  Future<int> contarPorUsuario(String uid) async {
+  /// Compatibilidad: cuenta por usuario si se pasa uid, sino incrementa
+  /// directo (para compatibilidad con código viejo).
+  Future<void> incrementarReproduccion(String id, {String? uid}) async {
+    if (uid != null && uid.isNotEmpty) {
+      await incrementarReproduccionUnaVez(id, uid);
+    } else {
+      try {
+        await _db.collection('canciones').doc(id).update({
+          'reproducciones': FieldValue.increment(1),
+        });
+      } catch (_) {}
+    }
+  }
+
+  Future<int> contarPorUsuario(String uid, {String? nombre}) async {
     if (uid.isEmpty) return 0;
     try {
       final snap = await _db.collection('canciones').get();
       int total = 0;
+      final nombreLower = (nombre ?? '').trim().toLowerCase();
       for (final doc in snap.docs) {
         final d = doc.data();
         final creadoPor = (d['creadoPor'] ?? '').toString().trim();
-        if (creadoPor == uid) total++;
+        final creadorNombre =
+            (d['creadorNombre'] ?? '').toString().trim().toLowerCase();
+        // Cuenta si coincide el UID
+        if (creadoPor == uid) {
+          total++;
+          continue;
+        }
+        // Fallback: si no hay UID pero el nombre coincide
+        if (creadoPor.isEmpty &&
+            nombreLower.isNotEmpty &&
+            creadorNombre == nombreLower) {
+          total++;
+        }
       }
       return total;
     } catch (_) {
@@ -77,15 +119,23 @@ class CancionService {
     }
   }
 
-  Future<int> totalReproduccionesDeUsuario(String uid) async {
+  Future<int> totalReproduccionesDeUsuario(String uid,
+      {String? nombre}) async {
     if (uid.isEmpty) return 0;
     try {
       final snap = await _db.collection('canciones').get();
       int total = 0;
+      final nombreLower = (nombre ?? '').trim().toLowerCase();
       for (final doc in snap.docs) {
         final d = doc.data();
         final creadoPor = (d['creadoPor'] ?? '').toString().trim();
-        if (creadoPor == uid) {
+        final creadorNombre =
+            (d['creadorNombre'] ?? '').toString().trim().toLowerCase();
+        final esMia = creadoPor == uid ||
+            (creadoPor.isEmpty &&
+                nombreLower.isNotEmpty &&
+                creadorNombre == nombreLower);
+        if (esMia) {
           final r = d['reproducciones'];
           if (r is int) total += r;
         }
@@ -96,24 +146,43 @@ class CancionService {
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // CONTADOR DE CANCIONES PENDIENTES DE NOTIFICAR
-  // ══════════════════════════════════════════════════════════════════
+  /// Reasigna el `creadoPor`/`creadorNombre` de todas las canciones
+  /// que coincidan con [nombre] pero tengan `creadoPor` vacío.
+  /// Devuelve la cantidad de canciones actualizadas.
+  Future<int> reasignarMisCanciones(String uid, String nombre) async {
+    if (uid.isEmpty || nombre.isEmpty) return 0;
+    final nombreLower = nombre.trim().toLowerCase();
+    try {
+      final snap = await _db.collection('canciones').get();
+      int actualizadas = 0;
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        final creadoPor = (d['creadoPor'] ?? '').toString().trim();
+        final creadorNombre =
+            (d['creadorNombre'] ?? '').toString().trim().toLowerCase();
+        if (creadoPor.isEmpty && creadorNombre == nombreLower) {
+          await doc.reference.update({
+            'creadoPor': uid,
+            'creadorNombre': nombre,
+          });
+          actualizadas++;
+        }
+      }
+      return actualizadas;
+    } catch (_) {
+      return 0;
+    }
+  }
 
-  /// Incrementa el contador de canciones nuevas sin notificar.
-  /// El admin decide cuándo enviar el resumen con un botón.
   Future<void> _incrementarContadorCanciones() async {
     try {
       final ref = _db.collection('config').doc('notificaciones');
       await ref.set({
         'cancionesPendientes': FieldValue.increment(1),
       }, SetOptions(merge: true));
-    } catch (_) {
-      // Silencioso
-    }
+    } catch (_) {}
   }
 
-  /// Devuelve cuántas canciones hay pendientes de notificar.
   Future<int> contarCancionesPendientes() async {
     try {
       final doc =
@@ -126,7 +195,6 @@ class CancionService {
     }
   }
 
-  /// Resetea el contador a 0 (llamar después de notificar).
   Future<void> resetearContadorCanciones() async {
     try {
       await _db
