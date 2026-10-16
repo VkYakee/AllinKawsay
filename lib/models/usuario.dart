@@ -27,17 +27,28 @@ class Usuario {
     this.fechaRegistro,
   });
 
-  bool get esAdmin => rol == 'admin';
-  bool get esMiembro => rol == 'miembro' || rol == 'admin';
+  /// Dev: por encima de admin. Ve prereleases y gestiona admins.
+  bool get esDev => rol == 'dev';
+
+  /// Admin O dev. Todo el código que antes chequeaba esAdmin
+  /// sigue funcionando igual para devs.
+  bool get esAdmin => rol == 'admin' || rol == 'dev';
+
+  bool get esMiembro => rol == 'miembro' || esAdmin;
   bool get esPublico => rol == 'publico';
 
   bool get puedeDescargar => !baneado && (esAdmin || rol == 'miembro');
   bool get puedeComentar => !baneado && (esAdmin || rol == 'miembro');
   bool get puedeSubir => !baneado && esAdmin;
 
+  /// Solo dev puede gestionar roles de admin.
+  bool get puedeGestionarAdmins => !baneado && esDev;
+
   String get rolNombre {
     if (baneado) return 'SUSPENDIDO';
     switch (rol) {
+      case 'dev':
+        return 'DESARROLLADOR';
       case 'admin':
         return 'ADMINISTRADOR';
       case 'miembro':
