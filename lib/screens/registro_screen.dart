@@ -14,15 +14,35 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _email = TextEditingController();
   final _pass = TextEditingController();
   final _pass2 = TextEditingController();
+  // 🍯 Honeypot: campo invisible para bots.
+  // Los humanos nunca lo ven ni lo completan.
+  final _honeypot = TextEditingController();
+
   bool _loading = false;
   bool _loadingGoogle = false;
   bool _verPass = false;
+  final DateTime _inicioFormulario = DateTime.now();
 
   Future<void> _registrar() async {
     final nombre = _nombre.text.trim();
     final email = _email.text.trim();
     final pass = _pass.text;
     final pass2 = _pass2.text;
+
+    // 🍯 Anti-bot 1: honeypot
+    if (_honeypot.text.isNotEmpty) {
+      // Es un bot. No le decimos nada, solo fingimos un error genérico.
+      _snack('No se pudo crear la cuenta. Intentá más tarde.');
+      return;
+    }
+
+    // 🍯 Anti-bot 2: tiempo mínimo de llenado
+    final segundosTranscurridos =
+        DateTime.now().difference(_inicioFormulario).inSeconds;
+    if (segundosTranscurridos < 3) {
+      _snack('El formulario se envió demasiado rápido. Intentá de nuevo.');
+      return;
+    }
 
     if (nombre.isEmpty || email.isEmpty || pass.isEmpty) {
       _snack('Completa todos los campos');
@@ -39,9 +59,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
     setState(() => _loading = true);
     try {
-      await AuthService().registrar(email, pass, nombre);
+      final user = await AuthService().registrar(email, pass, nombre);
+      // Enviar email de verificación automáticamente
+      try {
+        await user?.sendEmailVerification();
+      } catch (_) {
+        // Silencioso: si falla, el AuthGate lo redirige igual
+      }
       if (mounted) {
-        _snack('¡Cuenta creada! Bienvenido/a $nombre');
+        _snack('¡Cuenta creada! Revisá tu correo para verificar.');
         Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
@@ -66,6 +92,14 @@ class _RegistroScreenState extends State<RegistroScreen> {
   }
 
   Future<void> _registrarConGoogle() async {
+    // 🍯 Anti-bot: misma validación de tiempo
+    final segundosTranscurridos =
+        DateTime.now().difference(_inicioFormulario).inSeconds;
+    if (segundosTranscurridos < 2) {
+      _snack('Esperá un momento antes de continuar.');
+      return;
+    }
+
     setState(() => _loadingGoogle = true);
     try {
       final user = await AuthService().loginConGoogle();
@@ -106,6 +140,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _email.dispose();
     _pass.dispose();
     _pass2.dispose();
+    _honeypot.dispose();
     super.dispose();
   }
   @override
@@ -131,7 +166,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ══════ LOGO REAL ══════
                   Container(
                     width: 110,
                     height: 110,
@@ -159,7 +193,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ══════ TEXTOS ══════
                   const Text(
                     'ÚNETE AL GRUPO',
                     style: TextStyle(
@@ -191,7 +224,24 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // ══════ CARD DE REGISTRO ══════
+                  // 🍯 Honeypot invisible
+                  // Es un campo que los bots "ven" pero los humanos no.
+                  // Si tiene texto → es bot.
+                  Offstage(
+                    offstage: true,
+                    child: SizedBox(
+                      height: 0,
+                      child: TextField(
+                        controller: _honeypot,
+                        autofocus: false,
+                        decoration: const InputDecoration(
+                          labelText: 'Website',
+                          hintText: 'http://',
+                        ),
+                      ),
+                    ),
+                  ),
+
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -395,8 +445,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
     );
   }
 
-  /// Decoration para los campos de texto con label DORADO/GRANATE
-  /// explícito, para que sea visible en cualquier modo.
   InputDecoration _deco(String label, IconData icono) {
     return InputDecoration(
       labelText: label,
