@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../data/zampona_catalogo.dart';
 import '../models/zampona_nota.dart';
 import '../services/zampona_service.dart';
 import '../theme/colors.dart';
 
-/// Pantalla de la mini zampoña con diseño realista.
-/// Las cañas tienen hueco visible (como la zampoña real) y
-/// las dos filas están pegadas para no mover mucho los dedos.
+/// Pantalla de la mini zampoña en modo horizontal (landscape),
+/// pantalla completa (immersive), con las 2 filas pegadas para
+/// mínima distancia entre dedos.
 class ZamponaScreen extends StatefulWidget {
   const ZamponaScreen({super.key});
 
@@ -17,14 +18,30 @@ class ZamponaScreen extends StatefulWidget {
 class _ZamponaScreenState extends State<ZamponaScreen> {
   final _service = ZamponaService();
   bool _cargando = true;
-
-  /// IDs que están sonando (para la animación de brillo).
   final Set<String> _sonando = {};
 
   @override
   void initState() {
     super.initState();
+
+    // Forzar landscape + pantalla completa
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
     _inicializar();
+  }
+
+  @override
+  void dispose() {
+    // Restaurar orientación y barras
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
   }
 
   Future<void> _inicializar() async {
@@ -44,52 +61,76 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('ZAMPOÑA'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.volume_off),
-            tooltip: 'Detener sonidos',
-            onPressed: () => _service.detener(),
-          ),
-        ],
-      ),
-      body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.dorado))
-          : SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                child: Column(
-                  children: [
-                    _zampona(),
-                    const SizedBox(height: 20),
-                    _leyenda(),
-                  ],
-                ),
+      body: SafeArea(
+        child: _cargando
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.dorado))
+            : Stack(
+                children: [
+                  // Zampoña centrada
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 44, 12, 12),
+                      child: _zampona(),
+                    ),
+                  ),
+
+                  // Barra superior flotante
+                  Positioned(
+                    top: 4,
+                    left: 8,
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back,
+                              color: AppColors.dorado),
+                          tooltip: 'Volver',
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const Text(
+                          'ZAMPOÑA',
+                          style: TextStyle(
+                            color: AppColors.dorado,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 3,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.volume_off,
+                          color: AppColors.dorado),
+                      tooltip: 'Detener sonidos',
+                      onPressed: () => _service.detener(),
+                    ),
+                  ),
+                ],
               ),
-            ),
+      ),
     );
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ZAMPOÑA (contenedor principal)
+  // ZAMPOÑA (fila 7 arriba + fila 6 pegada abajo)
   // ═══════════════════════════════════════════════════════════
   Widget _zampona() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 18),
       decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: const Alignment(0, -0.6),
-          radius: 1.4,
+        gradient: const RadialGradient(
+          center: Alignment(0, -0.6),
+          radius: 1.6,
           colors: [
-            const Color(0xFF1A0A0D),
+            Color(0xFF1A0A0D),
             Colors.black,
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AppColors.dorado.withOpacity(0.35),
           width: 1.5,
@@ -104,13 +145,13 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
       ),
       child: LayoutBuilder(
         builder: (context, cons) {
-          // Ancho de cada caña calculado sobre 7 columnas fijas
-          // (así fila 7 y fila 6 tienen el mismo ancho de caña).
+          // Ancho por caña (basado en 7 columnas para alinear filas)
           const separacion = 4.0;
           final disponible = cons.maxWidth - (separacion * 6);
           final anchoCania = disponible / 7;
 
           return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
               // ─── FILA 7 (arriba) ───
@@ -130,12 +171,9 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
                 ],
               ),
 
-              // ─── LISTÓN CENTRAL ───
-              const SizedBox(height: 6),
-              _liston(),
-              const SizedBox(height: 6),
+              // ─── FILA 6 pegada (sin listón central) ───
+              const SizedBox(height: 2),
 
-              // ─── FILA 6 (abajo) ───
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,44 +197,15 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // LISTÓN DORADO CENTRAL
-  // ═══════════════════════════════════════════════════════════
-  Widget _liston() {
-    return Container(
-      height: 12,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.doradoOscuro,
-            AppColors.dorado,
-            AppColors.doradoOscuro,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(4),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.dorado.withOpacity(0.4),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // CAÑA INDIVIDUAL
+  // CAÑA INDIVIDUAL (hueco con número + cuerpo cilíndrico)
   // ═══════════════════════════════════════════════════════════
   Widget _cania(ZamponaNota nota, {required bool esArriba}) {
     final sonando = _sonando.contains(nota.id);
 
     // Altura proporcional a su posición (aguda = corta, grave = larga)
     final total = esArriba ? 7.0 : 6.0;
-    final alturaMin = esArriba ? 70.0 : 62.0;
-    final alturaMax = esArriba ? 135.0 : 120.0;
+    final alturaMin = esArriba ? 48.0 : 42.0;
+    final alturaMax = esArriba ? 92.0 : 80.0;
     final factor = nota.posicion / total;
     final altura = alturaMin + (alturaMax - alturaMin) * factor;
 
@@ -210,23 +219,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ─── NOMBRE DE LA NOTA (arriba) ───
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 150),
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.bold,
-                color: sonando
-                    ? AppColors.dorado
-                    : AppColors.dorado.withOpacity(0.7),
-                letterSpacing: 0.3,
-                height: 1.0,
-              ),
-              child: Text(nota.nota),
-            ),
-            const SizedBox(height: 5),
-
-            // ─── HUECO (orificio del tubo) ───
+            // ─── HUECO con NÚMERO adentro ───
             AspectRatio(
               aspectRatio: 1,
               child: AnimatedContainer(
@@ -250,7 +243,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
                   border: Border.all(
                     color: sonando
                         ? AppColors.dorado
-                        : AppColors.dorado.withOpacity(0.35),
+                        : AppColors.dorado.withOpacity(0.45),
                     width: sonando ? 2.5 : 1.3,
                   ),
                   boxShadow: sonando
@@ -269,11 +262,36 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
                           ),
                         ],
                 ),
+                child: Center(
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      final lado = c.maxWidth;
+                      return Text(
+                        '${nota.posicion}',
+                        style: TextStyle(
+                          color: sonando
+                              ? AppColors.dorado
+                              : AppColors.dorado.withOpacity(0.9),
+                          fontWeight: FontWeight.bold,
+                          fontSize: (lado * 0.5).clamp(11.0, 26.0),
+                          height: 1.0,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.7),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
 
-            // ─── CUERPO DE LA CAÑA (cilíndrico) ───
+            // ─── CUERPO cilíndrico ───
             AnimatedContainer(
               duration: const Duration(milliseconds: 130),
               width: double.infinity,
@@ -309,7 +327,6 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
                   width: 1,
                 ),
                 boxShadow: [
-                  // Sombra lateral derecha (efecto 3D cilíndrico)
                   BoxShadow(
                     color: Colors.black.withOpacity(0.5),
                     blurRadius: 5,
@@ -326,40 +343,6 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // LEYENDA INFERIOR
-  // ═══════════════════════════════════════════════════════════
-  Widget _leyenda() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.dorado.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.tips_and_updates_outlined,
-              size: 16, color: AppColors.dorado),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Tocá cada caña para escuchar su nota. '
-              'Las cañas más chicas (izquierda) son las más agudas; '
-              'las más grandes (derecha), las más graves.',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.75),
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
