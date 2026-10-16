@@ -21,6 +21,7 @@ import '../widgets/visor_letras.dart';
 import '../widgets/visor_numerofonia.dart';
 import '../widgets/watermark_overlay.dart';
 import 'compartir_imagen_screen.dart';
+import 'modo_ensayo_screen.dart';
 import 'presentacion_screen.dart';
 
 class CancionDetalleScreen extends StatefulWidget {
@@ -176,201 +177,226 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
       }
     }
   }
-  @override
-  Widget build(BuildContext context) {
-    final c = widget.cancion;
-    final puedeDescargar = _usuario?.puedeDescargar ?? false;
-    final puedeComentar = _usuario?.puedeComentar ?? false;
-    final esFavorito = _usuario?.esFavorito(c.id) ?? false;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(c.titulo),
-        actions: [
-          IconButton(
-            icon: Icon(
-                esFavorito ? Icons.favorite : Icons.favorite_border),
-            tooltip: 'Favorito',
-            onPressed: () async {
-              await UsuarioService().toggleFavorito(c.id);
-              await _cargarUsuario();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.slideshow),
-            tooltip: 'Modo presentación',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    PresentacionScreen(cancion: widget.cancion),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.image),
-            tooltip: 'Compartir como imagen',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    CompartirImagenScreen(cancion: widget.cancion),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            tooltip: 'Compartir texto',
-            onPressed: _compartir,
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
-            onSelected: (v) {
-              if (v == 'borrar_cache') {
-                _borrarCacheDeEsta();
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'borrar_cache',
-                child: Row(
-                  children: [
-                    Icon(Icons.cleaning_services_outlined,
-                        size: 20, color: Colors.orange),
-                    SizedBox(width: 10),
-                    Text('Borrar caché de esta canción'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: WatermarkOverlay(
-        opacity: 0.04,
-        child: ListView(
-          children: [
-            _heroTitulo(c, onSurface),
-            const SizedBox(height: 20),
-
-            if (c.tieneNumerofonia) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: HeaderNumerofonia(cancion: c),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: VisorNumerofonia(estrofas: c.estrofas),
-              ),
-              const SizedBox(height: 20),
-            ] else if (c.tieneNumerofoniaString) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SeccionCard(
-                  icono: Icons.grid_on,
-                  titulo: 'Numerofonía',
-                  child: Text(
-                    c.numerofonia,
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 14,
-                      color: onSurface,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: AudioPlayerCompacto(
-                cancion: c,
-                puedeDescargar: puedeDescargar,
-                player: _player,
-                onTogglePlay: _togglePlay,
-                onDescargar: (String url,
-                        {String? nombre, String mime = 'audio/mpeg'}) =>
-                    _descargar(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            if (c.tieneLetra) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: VisorLetras(letras: c.letras),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            if (c.descripcion.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SeccionCard(
-                  icono: Icons.notes,
-                  titulo: 'Descripción',
-                  child: Text(
-                    c.descripcion,
-                    style: TextStyle(
-                        fontSize: 14,
-                        height: 1.5,
-                        color: onSurface.withOpacity(0.85)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: InformacionExpandible(cancion: c),
-            ),
-            const SizedBox(height: 16),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _expansionCard(
-                context,
-                icono: Icons.comment,
-                titulo: 'Comentarios',
-                child: ComentariosSection(
-                  cancionId: c.id,
-                  puedeComentar: puedeComentar,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: NotaPersonalCard(
-                cancionId: c.id,
-                usuario: _usuario,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            if (c.tieneVideo) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TarjetaVideo(url: c.videoUrl, titulo: c.titulo),
-              ),
-              const SizedBox(height: 32),
-            ] else ...[
-              const SizedBox(height: 32),
-            ],
-          ],
+  /// Abre la pantalla de modo ensayo si la canción tiene numerofonía.
+  void _abrirModoEnsayo() {
+    if (!widget.cancion.tieneNumerofonia) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Esta canción no tiene numerofonía para practicar'),
         ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ModoEnsayoScreen(cancion: widget.cancion),
       ),
     );
   }
+@override
+Widget build(BuildContext context) {
+  final c = widget.cancion;
+  final puedeDescargar = _usuario?.puedeDescargar ?? false;
+  final puedeComentar = _usuario?.puedeComentar ?? false;
+  final esFavorito = _usuario?.esFavorito(c.id) ?? false;
+  final onSurface = Theme.of(context).colorScheme.onSurface;
 
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(c.titulo),
+      actions: [
+        IconButton(
+          icon: Icon(
+              esFavorito ? Icons.favorite : Icons.favorite_border),
+          tooltip: 'Favorito',
+          onPressed: () async {
+            await UsuarioService().toggleFavorito(c.id);
+            await _cargarUsuario();
+          },
+        ),
+        // 🏋️ Modo ensayo
+        if (c.tieneNumerofonia)
+          IconButton(
+            icon: const Icon(Icons.school),
+            tooltip: 'Modo ensayo',
+            onPressed: _abrirModoEnsayo,
+          ),
+        IconButton(
+          icon: const Icon(Icons.slideshow),
+          tooltip: 'Modo presentación',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  PresentacionScreen(cancion: widget.cancion),
+            ),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.image),
+          tooltip: 'Compartir como imagen',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  CompartirImagenScreen(cancion: widget.cancion),
+            ),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.share),
+          tooltip: 'Compartir texto',
+          onPressed: _compartir,
+        ),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          onSelected: (v) {
+            if (v == 'borrar_cache') {
+              _borrarCacheDeEsta();
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 'borrar_cache',
+              child: Row(
+                children: [
+                  Icon(Icons.cleaning_services_outlined,
+                      size: 20, color: Colors.orange),
+                  SizedBox(width: 10),
+                  Text('Borrar caché de esta canción'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+    body: WatermarkOverlay(
+      opacity: 0.04,
+      child: ListView(
+        children: [
+          _heroTitulo(c, onSurface),
+          const SizedBox(height: 20),
+
+          if (c.tieneNumerofonia) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: HeaderNumerofonia(cancion: c),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: VisorNumerofonia(estrofas: c.estrofas),
+            ),
+            const SizedBox(height: 20),
+          ] else if (c.tieneNumerofoniaString) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SeccionCard(
+                icono: Icons.grid_on,
+                titulo: 'Numerofonía',
+                child: Text(
+                  c.numerofonia,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                    color: onSurface,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: AudioPlayerCompacto(
+              cancion: c,
+              puedeDescargar: puedeDescargar,
+              player: _player,
+              onTogglePlay: _togglePlay,
+              onDescargar: (String url,
+                      {String? nombre, String mime = 'audio/mpeg'}) =>
+                  _descargar(),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (c.tieneLetra) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: VisorLetras(letras: c.letras),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (c.descripcion.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SeccionCard(
+                icono: Icons.notes,
+                titulo: 'Descripción',
+                child: Text(
+                  c.descripcion,
+                  style: TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: onSurface.withOpacity(0.85)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: InformacionExpandible(cancion: c),
+          ),
+          const SizedBox(height: 16),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _expansionCard(
+              context,
+              icono: Icons.comment,
+              titulo: 'Comentarios',
+              child: ComentariosSection(
+                cancionId: c.id,
+                puedeComentar: puedeComentar,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: NotaPersonalCard(
+              cancionId: c.id,
+              usuario: _usuario,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (c.tieneVideo) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TarjetaVideo(url: c.videoUrl, titulo: c.titulo),
+            ),
+            const SizedBox(height: 32),
+          ] else ...[
+            const SizedBox(height: 32),
+          ],
+        ],
+      ),
+    ),
+  );
+}
   Widget _heroTitulo(Cancion c, Color onSurface) {
     return Container(
       width: double.infinity,
