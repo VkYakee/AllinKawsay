@@ -35,6 +35,7 @@ class PerfilScreen extends StatefulWidget {
 
 class _PerfilScreenState extends State<PerfilScreen> {
   bool _subiendoFoto = false;
+  bool _reasignando = false;
 
   Future<void> _onRefresh() async {
     await Future.delayed(const Duration(milliseconds: 800));
@@ -113,6 +114,61 @@ class _PerfilScreenState extends State<PerfilScreen> {
           );
         }
       }
+    }
+  }
+
+  /// Reasigna todas las canciones/recuerdos que tengan `creadoPor`
+  /// vacío pero cuyo `creadorNombre` coincida con el usuario.
+  Future<void> _reasignarMisSubidas(Usuario u) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Reasignar mis subidas',
+            style: TextStyle(
+                color: AppColors.granate,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
+        content: Text(
+            'Se marcarán como tuyas las canciones y recuerdos que '
+            'tengan tu nombre ("${u.nombre}") pero no tengan dueño '
+            'asignado.\n\n'
+            'Útil para arreglar contenido subido antes de la '
+            'actualización. ¿Continuar?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Reasignar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() => _reasignando = true);
+    try {
+      final c = await CancionService().reasignarMisCanciones(u.uid, u.nombre);
+      final r = await RecuerdoService().reasignarMisRecuerdos(u.uid, u.nombre);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Se reasignaron $c canciones y $r recuerdos'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _reasignando = false);
     }
   }
 
@@ -317,7 +373,7 @@ Widget _subtitulo(String t) {
   );
 }
 
-void _abrirAjustes() {
+void _abrirAjustes(Usuario? u) {
   showModalBottomSheet(
     context: context,
     backgroundColor: Theme.of(context).cardColor,
@@ -327,120 +383,147 @@ void _abrirAjustes() {
       builder: (context, setSheetState) {
         final onSurface = Theme.of(context).colorScheme.onSurface;
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: AppColors.dorado,
-                      borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 16),
-              Text('Ajustes',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: onSurface,
-                      letterSpacing: 0.5)),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              ValueListenableBuilder<ThemeMode>(
-                valueListenable: ThemeProvider.mode,
-                builder: (context, modo, _) {
-                  return Column(
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(20, 12, 20, 4),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('TEMA DE LA APP',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                  color: AppColors.granate,
-                                  letterSpacing: 2)),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: AppColors.dorado,
+                        borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 16),
+                Text('Ajustes',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: onSurface,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                ValueListenableBuilder<ThemeMode>(
+                  valueListenable: ThemeProvider.mode,
+                  builder: (context, modo, _) {
+                    return Column(
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(20, 12, 20, 4),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('TEMA DE LA APP',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    color: AppColors.granate,
+                                    letterSpacing: 2)),
+                          ),
                         ),
-                      ),
-                      RadioListTile<ThemeMode>(
-                        value: ThemeMode.light,
-                        groupValue: modo,
-                        activeColor: AppColors.granate,
-                        title: const Text('Claro'),
-                        secondary: const Icon(Icons.light_mode,
-                            color: AppColors.granate),
-                        onChanged: (v) {
-                          ThemeProvider.cambiar(ThemeMode.light);
-                          setSheetState(() {});
-                        },
-                      ),
-                      RadioListTile<ThemeMode>(
-                        value: ThemeMode.dark,
-                        groupValue: modo,
-                        activeColor: AppColors.granate,
-                        title: const Text('Oscuro'),
-                        secondary: const Icon(Icons.dark_mode,
-                            color: AppColors.granate),
-                        onChanged: (v) {
-                          ThemeProvider.cambiar(ThemeMode.dark);
-                          setSheetState(() {});
-                        },
-                      ),
-                      RadioListTile<ThemeMode>(
-                        value: ThemeMode.system,
-                        groupValue: modo,
-                        activeColor: AppColors.granate,
-                        title: const Text('Automático (sistema)'),
-                        secondary: const Icon(Icons.brightness_auto,
-                            color: AppColors.granate),
-                        onChanged: (v) {
-                          ThemeProvider.cambiar(ThemeMode.system);
-                          setSheetState(() {});
-                        },
-                      ),
-                    ],
-                  );
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.storage,
-                    color: AppColors.granate),
-                title: const Text('Almacenamiento',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text(
-                    'Ver y gestionar el cache de audios y recuerdos'),
-                trailing: const Icon(Icons.chevron_right,
-                    color: AppColors.dorado, size: 20),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const GestionCacheScreen()),
-                  );
-                },
-              ),
-              const Divider(height: 1),
-              const Padding(
-                padding: EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('PRÓXIMAMENTE',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                            color: AppColors.granate,
-                            letterSpacing: 2)),
-                    SizedBox(height: 10),
-                    Text('• Ajuste de tamaño de letra'),
-                  ],
+                        RadioListTile<ThemeMode>(
+                          value: ThemeMode.light,
+                          groupValue: modo,
+                          activeColor: AppColors.granate,
+                          title: const Text('Claro'),
+                          secondary: const Icon(Icons.light_mode,
+                              color: AppColors.granate),
+                          onChanged: (v) {
+                            ThemeProvider.cambiar(ThemeMode.light);
+                            setSheetState(() {});
+                          },
+                        ),
+                        RadioListTile<ThemeMode>(
+                          value: ThemeMode.dark,
+                          groupValue: modo,
+                          activeColor: AppColors.granate,
+                          title: const Text('Oscuro'),
+                          secondary: const Icon(Icons.dark_mode,
+                              color: AppColors.granate),
+                          onChanged: (v) {
+                            ThemeProvider.cambiar(ThemeMode.dark);
+                            setSheetState(() {});
+                          },
+                        ),
+                        RadioListTile<ThemeMode>(
+                          value: ThemeMode.system,
+                          groupValue: modo,
+                          activeColor: AppColors.granate,
+                          title: const Text('Automático (sistema)'),
+                          secondary: const Icon(Icons.brightness_auto,
+                              color: AppColors.granate),
+                          onChanged: (v) {
+                            ThemeProvider.cambiar(ThemeMode.system);
+                            setSheetState(() {});
+                          },
+                        ),
+                      ],
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
-            ],
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.storage,
+                      color: AppColors.granate),
+                  title: const Text('Almacenamiento',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text(
+                      'Ver y gestionar el cache de audios y recuerdos'),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppColors.dorado, size: 20),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const GestionCacheScreen()),
+                    );
+                  },
+                ),
+                if (u != null)
+                  ListTile(
+                    leading: _reasignando
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                color: AppColors.granate,
+                                strokeWidth: 2.5),
+                          )
+                        : const Icon(Icons.assignment_ind,
+                            color: AppColors.granate),
+                    title: const Text('Reasignar mis subidas',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text(
+                        'Marcar como tuyas las canciones/recuerdos sin dueño'),
+                    trailing: const Icon(Icons.chevron_right,
+                        color: AppColors.dorado, size: 20),
+                    onTap: _reasignando
+                        ? null
+                        : () {
+                            Navigator.pop(context);
+                            _reasignarMisSubidas(u);
+                          },
+                  ),
+                const Divider(height: 1),
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('PRÓXIMAMENTE',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              color: AppColors.granate,
+                              letterSpacing: 2)),
+                      SizedBox(height: 10),
+                      Text('• Ajuste de tamaño de letra'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         );
       },
@@ -564,7 +647,7 @@ Widget build(BuildContext context) {
               _headerPerfil(context, u, rol, onSurface),
               const SizedBox(height: 20),
               if (u != null)
-                _estadisticasPersonales(u.uid)
+                _estadisticasPersonales(u)
               else
                 const SizedBox.shrink(),
               const SizedBox(height: 12),
@@ -596,7 +679,7 @@ Widget build(BuildContext context) {
                 'Ajustes',
                 'Tema, notificaciones y preferencias',
                 onSurface,
-                onTap: _abrirAjustes,
+                onTap: () => _abrirAjustes(u),
               ),
               _itemMenu(
                 Icons.info_outline,
@@ -931,7 +1014,7 @@ Widget _itemMenu(IconData icono, String titulo, String subtitulo,
     ),
   );
 }
-  Widget _estadisticasPersonales(String uid) {
+  Widget _estadisticasPersonales(Usuario u) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
@@ -968,7 +1051,8 @@ Widget _itemMenu(IconData icono, String titulo, String subtitulo,
               children: [
                 Expanded(
                   child: FutureBuilder<int>(
-                    future: CancionService().contarPorUsuario(uid),
+                    future: CancionService()
+                        .contarPorUsuario(u.uid, nombre: u.nombre),
                     builder: (context, snap) {
                       if (snap.connectionState ==
                           ConnectionState.waiting) {
@@ -982,8 +1066,9 @@ Widget _itemMenu(IconData icono, String titulo, String subtitulo,
                 const SizedBox(width: 10),
                 Expanded(
                   child: FutureBuilder<int>(
-                    future:
-                        CancionService().totalReproduccionesDeUsuario(uid),
+                    future: CancionService()
+                        .totalReproduccionesDeUsuario(u.uid,
+                            nombre: u.nombre),
                     builder: (context, snap) {
                       if (snap.connectionState ==
                           ConnectionState.waiting) {
