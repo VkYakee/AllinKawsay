@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'cache_manager_service.dart';
 
-/// Cache de fotos y videos de recuerdos. 1 GB máximo.
 class RecuerdoCacheService {
   static final RecuerdoCacheService _instance = RecuerdoCacheService._();
   factory RecuerdoCacheService() => _instance;
@@ -17,10 +16,12 @@ class RecuerdoCacheService {
 
   final Set<String> _descargando = {};
 
+  static const _userAgent =
+      'Mozilla/5.0 (Linux; Android 10) AllinKawsay/1.0';
+
   String _clave(String recuerdoId, String tipo, int index) =>
       'recuerdo_${recuerdoId}_${tipo}_$index';
 
-  /// Detecta la extensión del archivo a partir de la URL.
   String _extensionDe(String url, String tipo) {
     final lower = url.toLowerCase();
     if (tipo == 'video') {
@@ -58,12 +59,22 @@ class RecuerdoCacheService {
   Future<void> _descargar(String clave, String url, String tipo) async {
     try {
       if (await _cache.tiene(clave)) return;
-      final response = await http.get(Uri.parse(url)).timeout(
-        const Duration(minutes: 10),
-      );
-      if (response.statusCode != 200) return;
-      final Uint8List bytes = response.bodyBytes;
+
+      final request = http.Request('GET', Uri.parse(url));
+      request.headers['User-Agent'] = _userAgent;
+      request.headers['Accept'] = '*/*';
+      final streamed = await request.send().timeout(
+            const Duration(minutes: 10),
+          );
+      if (streamed.statusCode != 200) return;
+
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in streamed.stream) {
+        builder.add(chunk);
+      }
+      final Uint8List bytes = builder.takeBytes();
       if (bytes.isEmpty) return;
+
       await _cache.guardar(
         clave,
         bytes,
