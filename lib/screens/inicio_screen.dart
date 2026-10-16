@@ -11,9 +11,11 @@ import '../theme/colors.dart';
 import '../widgets/banner_novedades.dart';
 import '../widgets/social_buttons.dart';
 import '../widgets/watermark_overlay.dart';
+import 'busqueda_global_screen.dart';
 import 'cancion_detalle_screen.dart';
 import 'historia_screen.dart';
 import 'recuerdo_detalle_screen.dart';
+import 'zampona_screen.dart';
 
 class InicioScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -63,7 +65,6 @@ class _InicioScreenState extends State<InicioScreen> {
               children: [
                 _header(context),
 
-                // Banner de evento nuevo
                 if (_eventoNuevo != null && !_bannerCerrado)
                   BannerNovedades(
                     icono: Icons.celebration,
@@ -98,7 +99,7 @@ class _InicioScreenState extends State<InicioScreen> {
                 const Divider(),
                 const SizedBox(height: 8),
                 const SocialButtons(),
-                const SizedBox(height: 100), // espacio para los FABs
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -110,7 +111,7 @@ class _InicioScreenState extends State<InicioScreen> {
   Widget _header(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 40),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -135,6 +136,34 @@ class _InicioScreenState extends State<InicioScreen> {
       ),
       child: Column(
         children: [
+          // Fila superior: 2 botones a la derecha
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _botonHeader(
+                icono: Icons.search,
+                tooltip: 'Buscar',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const BusquedaGlobalScreen()),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _botonHeader(
+                icono: Icons.piano,
+                tooltip: 'Zampoña',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ZamponaScreen()),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+
+          // Logo
           Container(
             width: 90,
             height: 90,
@@ -188,6 +217,33 @@ class _InicioScreenState extends State<InicioScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _botonHeader({
+    required IconData icono,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(30),
+        onTap: onTap,
+        child: Tooltip(
+          message: tooltip,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: AppColors.dorado.withOpacity(0.3)),
+            ),
+            child: Icon(icono, color: AppColors.dorado, size: 22),
+          ),
+        ),
       ),
     );
   }
