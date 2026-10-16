@@ -54,6 +54,16 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     _trabajo = widget.estrofaInicial.copy();
+
+    // Limpiar columnas VACÍAS del final (el editor crea estrofas
+    // nuevas con 2 columnas vacías por defecto; si el usuario abre
+    // el grabador en una estrofa en blanco, queremos empezar a
+    // escribir desde la PRIMERA columna de datos, no desde la 3ª).
+    while (_trabajo.columnas.isNotEmpty &&
+        _trabajo.columnas.last.vacia) {
+      _trabajo.columnas.removeLast();
+    }
+
     _inicializar();
   }
 
@@ -76,17 +86,14 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
   // LÓGICA DE GRABACIÓN
   // ═══════════════════════════════════════════════════════════
   void _tocarCania(ZamponaNota nota) async {
-    // Sonar la nota (feedback auditivo)
     setState(() => _sonando.add(nota.id));
     await _service.tocar(nota.id);
     Future.delayed(const Duration(milliseconds: 250), () {
       if (mounted) setState(() => _sonando.remove(nota.id));
     });
 
-    // Guardar snapshot para deshacer
     _historial.add(_Snapshot(_trabajo.copy(), _filaActiva));
 
-    // Calcular delta de tiempo desde el último toque
     final ahora = DateTime.now();
     final delta = _ultimoToque == null
         ? 0
@@ -98,7 +105,6 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
 
     setState(() {
       if (_filaActiva == null || _filaActiva != fila) {
-        // Cambio de fila (o primer toque) → nueva columna
         final nueva = ColumnaNumerofonia();
         if (fila == 7) {
           nueva.nota7 = numero;
@@ -110,10 +116,7 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
         _trabajo.columnas.add(nueva);
         _filaActiva = fila;
       } else {
-        // Misma fila → concatenar en la última columna
-        if (_trabajo.columnas.isEmpty) {
-          return;
-        }
+        if (_trabajo.columnas.isEmpty) return;
         final ultima = _trabajo.columnas.last;
         if (fila == 7) {
           ultima.nota7 = '${ultima.nota7}$numero';
@@ -125,7 +128,6 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
       }
     });
 
-    // Auto-scroll al final
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
@@ -496,7 +498,7 @@ Widget _botonAccion({
   );
 }
   // ═══════════════════════════════════════════════════════════
-  // ZAMPOÑA (círculos con hueco)
+  // ZAMPOÑA
   // ═══════════════════════════════════════════════════════════
   Widget _zampona() {
     return LayoutBuilder(
