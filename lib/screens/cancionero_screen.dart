@@ -16,6 +16,8 @@ import 'cancion_detalle_screen.dart';
 
 enum _OrdenCancion { fecha, titulo, autor, reproducciones }
 
+enum _ModoVista { tarjetas, indice }
+
 class CancioneroScreen extends StatefulWidget {
   const CancioneroScreen({super.key});
 
@@ -33,6 +35,7 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
   bool _soloFavoritos = false;
   _OrdenCancion _orden = _OrdenCancion.titulo;
   bool _ascendente = true;
+  _ModoVista _modoVista = _ModoVista.tarjetas;
 
   @override
   void initState() {
@@ -56,17 +59,31 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
     super.dispose();
   }
 
-  /// Reproduce + suma 1 reproducción SOLO si es la primera vez
-  /// que este usuario toca play en esta canción.
   Future<void> _togglePlayReproduccion(Cancion c) async {
-  final estabaSonando = PlayerService().sonando(c.id);
-  await PlayerService().toggle(c);
-  final sonandoAhora = PlayerService().sonando(c.id);
-  if (sonandoAhora && !estabaSonando) {
-    await ReproduccionService.contarUnaVez(c.id);
+    final estabaSonando = PlayerService().sonando(c.id);
+    await PlayerService().toggle(c);
+    final sonandoAhora = PlayerService().sonando(c.id);
+    if (sonandoAhora && !estabaSonando) {
+      await ReproduccionService.contarUnaVez(c.id);
+    }
   }
-}
 
+  void _abrirCancion(Cancion c) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CancionDetalleScreen(cancion: c),
+      ),
+    );
+  }
+
+  void _toggleModoVista() {
+    setState(() {
+      _modoVista = _modoVista == _ModoVista.tarjetas
+          ? _ModoVista.indice
+          : _ModoVista.tarjetas;
+    });
+  }
 void _eliminar(Cancion c) async {
   final ok = await showDialog<bool>(
     context: context,
@@ -244,6 +261,15 @@ List<Cancion> _filtrar(List<Cancion> lista, List<String> favoritos) {
   return r;
 }
 
+/// Ordena SIEMPRE alfabéticamente por título. Se usa en la
+/// vista índice (ignora el orden elegido en el menú).
+List<Cancion> _ordenarAlfabetico(List<Cancion> lista) {
+  final copia = List<Cancion>.from(lista);
+  copia.sort((a, b) =>
+      a.titulo.toLowerCase().compareTo(b.titulo.toLowerCase()));
+  return copia;
+}
+
 List<String> _todosLosTags(List<Cancion> lista) {
   final set = <String>{};
   for (final c in lista) {
@@ -371,15 +397,30 @@ PreferredSizeWidget _buildAppBar() {
       ],
     ),
     actions: [
+      // Toggle entre vistas
       IconButton(
-        icon: const Icon(Icons.sort),
-        tooltip: 'Ordenar',
-        onPressed: _abrirMenuOrden,
+        icon: Icon(
+          _modoVista == _ModoVista.tarjetas
+              ? Icons.view_list_rounded
+              : Icons.grid_view_rounded,
+        ),
+        tooltip: _modoVista == _ModoVista.tarjetas
+            ? 'Vista índice'
+            : 'Vista tarjetas',
+        onPressed: _toggleModoVista,
       ),
+      // Menú de orden (solo visible en modo tarjetas)
+      if (_modoVista == _ModoVista.tarjetas)
+        IconButton(
+          icon: const Icon(Icons.sort),
+          tooltip: 'Ordenar',
+          onPressed: _abrirMenuOrden,
+        ),
       const SizedBox(width: 4),
     ],
   );
 }
+
 Widget _buildBarraBusqueda() {
   return Padding(
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -406,6 +447,14 @@ Widget _buildBarraBusqueda() {
 
 Widget _buildInfoOrden() {
   final onSurface = Theme.of(context).colorScheme.onSurface;
+  // En modo índice siempre mostramos "A-Z" porque forzamos ese orden.
+  final texto = _modoVista == _ModoVista.indice
+      ? 'Ordenado alfabéticamente (A-Z)'
+      : 'Ordenado por ${_nombreOrden()} ${_ascendente ? '↑' : '↓'}';
+  final icono = _modoVista == _ModoVista.indice
+      ? Icons.sort_by_alpha
+      : Icons.sort;
+
   return Padding(
     padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
     child: Row(
@@ -416,12 +465,11 @@ Widget _buildInfoOrden() {
             color: AppColors.granate.withOpacity(0.08),
             borderRadius: BorderRadius.circular(6),
           ),
-          child: const Icon(Icons.sort,
-              size: 11, color: AppColors.granate),
+          child: Icon(icono, size: 11, color: AppColors.granate),
         ),
         const SizedBox(width: 6),
         Text(
-          'Ordenado por ${_nombreOrden()} ${_ascendente ? '↑' : '↓'}',
+          texto,
           style: TextStyle(
             fontSize: 11,
             color: onSurface.withOpacity(0.55),
@@ -467,28 +515,10 @@ Widget _buildContenido(List<Cancion> lista, List<String> favs,
                       fontStyle: FontStyle.italic),
                 ),
               )
-            : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                itemCount: filtradas.length,
-                itemBuilder: (context, i) {
-                  return TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: Duration(milliseconds: 300 + (i * 50)),
-                    curve: Curves.easeOut,
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Transform.translate(
-                          offset: Offset(0, 20 * (1 - value)),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _tarjetaCancion(
-                        context, filtradas[i], i, favs, estado, onSurface),
-                  );
-                },
-              ),
+            : _modoVista == _ModoVista.tarjetas
+                ? _buildListaTarjetas(
+                    filtradas, favs, estado, onSurface)
+                : _buildListaIndice(filtradas, onSurface),
       ),
     ],
   );
@@ -578,6 +608,32 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
     ),
   );
 }
+  Widget _buildListaTarjetas(List<Cancion> filtradas,
+      List<String> favs, EstadoPlayer estado, Color onSurface) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+      itemCount: filtradas.length,
+      itemBuilder: (context, i) {
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 300 + (i * 50)),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
+            );
+          },
+          child: _tarjetaCancion(
+              context, filtradas[i], i, favs, estado, onSurface),
+        );
+      },
+    );
+  }
+
   Widget _tarjetaCancion(
     BuildContext context,
     Cancion c,
@@ -597,11 +653,7 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => CancionDetalleScreen(cancion: c)),
-          ),
+          onTap: () => _abrirCancion(c),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -801,6 +853,93 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
     );
   }
 }
+  /// Vista índice: solo título, ordenado A-Z, formato compacto.
+  Widget _buildListaIndice(List<Cancion> filtradas, Color onSurface) {
+    final ordenadas = _ordenarAlfabetico(filtradas);
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+      itemCount: ordenadas.length,
+      itemBuilder: (context, i) {
+        final c = ordenadas[i];
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 200 + (i * 20)),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 10 * (1 - value)),
+                child: child,
+              ),
+            );
+          },
+          child: _filaIndice(context, c, onSurface),
+        );
+      },
+    );
+  }
+
+  Widget _filaIndice(
+      BuildContext context, Cancion c, Color onSurface) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _abrirCancion(c),
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: AppColors.dorado.withOpacity(0.15),
+                width: 1,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Puntito decorativo
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: AppColors.granate.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Título
+              Expanded(
+                child: Text(
+                  c.titulo,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: onSurface,
+                    letterSpacing: 0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Chevron
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.dorado.withOpacity(0.6),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _LoadingSkeleton extends StatelessWidget {
   const _LoadingSkeleton();
 
