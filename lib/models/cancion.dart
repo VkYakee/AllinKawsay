@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'bloque_audio.dart';
 import 'numerofonia.dart';
 
 /// Una letra completa (con sus estrofas adentro) y un título opcional.
@@ -32,6 +33,7 @@ class Cancion {
   final List<EstrofaNumerofonia> estrofas;
   final String letra; // legacy: texto plano combinado
   final List<Letra> letras; // NUEVO: letras con título
+  final List<BloqueAudio> setlist; // NUEVO: bloques del audio
   final String imagenUrl;
   final String audioUrl;
   final String videoUrl;
@@ -54,6 +56,7 @@ class Cancion {
     required this.estrofas,
     required this.letra,
     this.letras = const [],
+    this.setlist = const [],
     required this.imagenUrl,
     required this.audioUrl,
     this.videoUrl = '',
@@ -71,6 +74,13 @@ class Cancion {
   bool get tieneVideo => videoUrl.isNotEmpty;
   bool get tieneCategoria => categoriaId.isNotEmpty;
   bool get tieneLetra => letras.any((l) => !l.vacia);
+
+  /// ¿Tiene un setlist grabado para el modo Audio URL?
+  bool get tieneSetlist => setlist.isNotEmpty;
+
+  /// ¿Se puede usar el modo Audio URL con esta canción?
+  bool get puedeAudioUrl =>
+      tieneSetlist && audioUrl.isNotEmpty && tieneNumerofonia;
 
   factory Cancion.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -93,6 +103,13 @@ class Cancion {
       letras = leg.trim().isEmpty ? [] : [Letra(texto: leg)];
     }
 
+    // Setlist
+    final setlistRaw = d['setlist'] as List?;
+    final setlist = setlistRaw
+            ?.map((x) => BloqueAudio.fromMap(Map<String, dynamic>.from(x)))
+            .toList() ??
+        <BloqueAudio>[];
+
     return Cancion(
       id: doc.id,
       titulo: d['titulo'] ?? '',
@@ -104,6 +121,7 @@ class Cancion {
       estrofas: lista,
       letra: (d['letra'] ?? '') as String,
       letras: letras,
+      setlist: setlist,
       imagenUrl: d['imagenUrl'] ?? '',
       audioUrl: d['audioUrl'] ?? '',
       videoUrl: d['videoUrl'] ?? '',
@@ -119,16 +137,12 @@ class Cancion {
     );
   }
 
-  /// Normaliza las letras: si no hay `letras` pero sí `letra` legacy,
-  /// la convierte. Si no hay ninguna, devuelve lista vacía.
   List<Letra> _letrasFinal() {
     if (letras.isNotEmpty) return letras;
     if (letra.trim().isEmpty) return const [];
     return [Letra(texto: letra)];
   }
 
-  /// SOLO usar al CREAR una canción nueva.
-  /// Incluye `fechaCreacion` (server timestamp) y `creadoPor`/`creadorNombre`.
   Map<String, dynamic> toMapCrear() {
     final finales = _letrasFinal();
     return {
@@ -141,6 +155,7 @@ class Cancion {
       'estrofas': estrofas.map((e) => e.toMap()).toList(),
       'letra': finales.map((l) => l.texto).join('\n\n'),
       'letras': finales.map((l) => l.toMap()).toList(),
+      'setlist': setlist.map((b) => b.toMap()).toList(),
       'imagenUrl': imagenUrl,
       'audioUrl': audioUrl,
       'videoUrl': videoUrl,
@@ -154,8 +169,6 @@ class Cancion {
     };
   }
 
-  /// SOLO usar al EDITAR una canción existente.
-  /// NUNCA pisa `fechaCreacion`, `creadoPor` ni `creadorNombre`.
   Map<String, dynamic> toMapEditar() {
     final finales = _letrasFinal();
     return {
@@ -168,6 +181,7 @@ class Cancion {
       'estrofas': estrofas.map((e) => e.toMap()).toList(),
       'letra': finales.map((l) => l.texto).join('\n\n'),
       'letras': finales.map((l) => l.toMap()).toList(),
+      'setlist': setlist.map((b) => b.toMap()).toList(),
       'imagenUrl': imagenUrl,
       'audioUrl': audioUrl,
       'videoUrl': videoUrl,
