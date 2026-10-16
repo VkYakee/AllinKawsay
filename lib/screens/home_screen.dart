@@ -23,7 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar el contador de eventos nuevos al abrir la app
     NovedadesService.refrescar();
   }
 
@@ -56,9 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           IndexedStack(index: _index, children: pages),
 
-          // ═══ FABs FLOTANTES (arriba del NavigationBar) ═══
+          // ═══ FABs FLOTANTES (izquierda para no tapar el botón +) ═══
           Positioned(
-            right: 16,
+            left: 16,
             bottom: 16,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -70,9 +69,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   foregroundColor: AppColors.dorado,
                   elevation: 4,
                   tooltip: 'Zampoña',
-                  child: const Icon(Icons.music_note, size: 20),
+                  child: const _IconoZampona(
+                    color: AppColors.dorado,
+                    size: 22,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 FloatingActionButton.small(
                   heroTag: 'fab_busqueda',
                   onPressed: _abrirBusqueda,
@@ -140,4 +142,56 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+/// Ícono de zampoña dibujado a mano:
+/// 4 cañitas verticales con alturas variadas (agudo → grave).
+class _IconoZampona extends StatelessWidget {
+  final Color color;
+  final double size;
+  const _IconoZampona({required this.color, this.size = 22});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _ZamponaPainter(color: color)),
+    );
+  }
+}
+
+class _ZamponaPainter extends CustomPainter {
+  final Color color;
+  _ZamponaPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    const totalCanias = 4;
+    final anchoCania = size.width * 0.16;
+    final gapTotal =
+        size.width - (anchoCania * totalCanias);
+    final separacion = gapTotal / (totalCanias - 1);
+
+    // Alturas relativas (aguda → grave)
+    const alturas = [0.55, 0.75, 0.9, 1.0];
+
+    for (int i = 0; i < totalCanias; i++) {
+      final x = i * (anchoCania + separacion);
+      final h = size.height * alturas[i];
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, size.height - h, anchoCania, h),
+        Radius.circular(anchoCania * 0.45),
+      );
+      canvas.drawRRect(rect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ZamponaPainter old) =>
+      old.color != color;
 }
