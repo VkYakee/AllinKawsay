@@ -75,7 +75,7 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
   // ═══════════════════════════════════════════════════════════
   // LÓGICA DE GRABACIÓN
   // ═══════════════════════════════════════════════════════════
-  void _tocarCaña(ZamponaNota nota) async {
+  void _tocarCania(ZamponaNota nota) async {
     // Sonar la nota (feedback auditivo)
     setState(() => _sonando.add(nota.id));
     await _service.tocar(nota.id);
@@ -112,7 +112,6 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
       } else {
         // Misma fila → concatenar en la última columna
         if (_trabajo.columnas.isEmpty) {
-          // Caso borde: no debería pasar
           return;
         }
         final ultima = _trabajo.columnas.last;
@@ -219,75 +218,88 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
     );
     if (ok == true && mounted) Navigator.pop(context);
   }
-
-  // ═══════════════════════════════════════════════════════════
-  // BUILD
-  // ═══════════════════════════════════════════════════════════
-  @override
-  Widget build(BuildContext context) {
-    if (_cargando) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.dorado),
-        ),
-      );
-    }
-
-    return Scaffold(
+@override
+Widget build(BuildContext context) {
+  if (_cargando) {
+    return const Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _barraSuperior(),
-            _previewEstrofa(),
-            const SizedBox(height: 6),
-            _barraAcciones(),
-            const SizedBox(height: 6),
-            Expanded(child: _zampoña()),
-          ],
-        ),
+      body: Center(
+        child: CircularProgressIndicator(color: AppColors.dorado),
       ),
     );
   }
 
-  Widget _barraSuperior() {
-    final total = _trabajo.columnas.fold<int>(
-      0,
-      (s, c) => s + c.nota7.length + c.nota6.length,
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-      child: Row(
+  return Scaffold(
+    backgroundColor: Colors.black,
+    body: SafeArea(
+      child: Column(
         children: [
-          IconButton(
-            icon: const Icon(Icons.close, color: AppColors.dorado),
-            onPressed: _cancelar,
-            tooltip: 'Cancelar',
+          _barraSuperior(),
+          _previewEstrofa(),
+          const SizedBox(height: 6),
+          _barraAcciones(),
+          const SizedBox(height: 6),
+          Expanded(child: _zampona()),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _barraSuperior() {
+  final total = _trabajo.columnas.fold<int>(
+    0,
+    (s, c) => s + c.nota7.length + c.nota6.length,
+  );
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+    child: Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.close, color: AppColors.dorado),
+          onPressed: _cancelar,
+          tooltip: 'Cancelar',
+        ),
+        const SizedBox(width: 4),
+        const Icon(Icons.fiber_manual_record,
+            color: Colors.redAccent, size: 14),
+        const SizedBox(width: 6),
+        const Text(
+          'GRABANDO',
+          style: TextStyle(
+            color: Colors.redAccent,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+            fontSize: 12,
           ),
-          const SizedBox(width: 4),
-          const Icon(Icons.fiber_manual_record,
-              color: Colors.redAccent, size: 14),
-          const SizedBox(width: 6),
-          const Text(
-            'GRABANDO',
-            style: TextStyle(
-              color: Colors.redAccent,
+        ),
+        const SizedBox(width: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.granate.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.dorado.withOpacity(0.4)),
+          ),
+          child: Text(
+            '$total nota${total == 1 ? '' : 's'}',
+            style: const TextStyle(
+              color: AppColors.dorado,
               fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-              fontSize: 12,
+              fontSize: 11,
             ),
           ),
-          const SizedBox(width: 16),
+        ),
+        const Spacer(),
+        if (_filaActiva != null)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.granate.withOpacity(0.3),
+              color: AppColors.granate.withOpacity(0.25),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.dorado.withOpacity(0.4)),
             ),
             child: Text(
-              '$total nota${total == 1 ? '' : 's'}',
+              'Fila $_filaActiva',
               style: const TextStyle(
                 color: AppColors.dorado,
                 fontWeight: FontWeight.bold,
@@ -295,224 +307,202 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
               ),
             ),
           ),
-          const Spacer(),
-          if (_filaActiva != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.granate.withOpacity(0.25),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Fila $_filaActiva',
-                style: const TextStyle(
-                  color: AppColors.dorado,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
-  // ═══════════════════════════════════════════════════════════
-  // PREVIEW EN VIVO DE LA ESTROFA
-  // ═══════════════════════════════════════════════════════════
-  Widget _previewEstrofa() {
-    // Si no hay columnas, mostramos columnas vacías iniciales (2)
-    final cols = _trabajo.columnas.isEmpty
-        ? [ColumnaNumerofonia(), ColumnaNumerofonia()]
-        : _trabajo.columnas;
+// ═══════════════════════════════════════════════════════════
+// PREVIEW EN VIVO DE LA ESTROFA
+// ═══════════════════════════════════════════════════════════
+Widget _previewEstrofa() {
+  final cols = _trabajo.columnas.isEmpty
+      ? [ColumnaNumerofonia(), ColumnaNumerofonia()]
+      : _trabajo.columnas;
 
-    return Container(
-      height: 62,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF14080A),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.4)),
-      ),
-      child: Row(
-        children: [
-          // Etiquetas fijas 7 / 6
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              _EtiquetaFila('7'),
-              SizedBox(height: 2),
-              _EtiquetaFila('6'),
-            ],
-          ),
-          const SizedBox(width: 6),
-          // Celdas con scroll
-          Expanded(
-            child: SingleChildScrollView(
-              controller: _scrollCtrl,
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (int i = 0; i < cols.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: _celdaPreview(cols[i]),
-                    ),
-                ],
-              ),
+  return Container(
+    height: 62,
+    margin: const EdgeInsets.symmetric(horizontal: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: const Color(0xFF14080A),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.dorado.withOpacity(0.4)),
+    ),
+    child: Row(
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            _EtiquetaFila('7'),
+            SizedBox(height: 2),
+            _EtiquetaFila('6'),
+          ],
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: SingleChildScrollView(
+            controller: _scrollCtrl,
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (int i = 0; i < cols.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: _celdaPreview(cols[i]),
+                  ),
+              ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _celdaPreview(ColumnaNumerofonia c) {
-    final ancho = (c.maxLen.clamp(1, 8) * 14.0).clamp(28.0, 120.0);
-    return Container(
-      width: ancho,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.35)),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Text(
-                c.nota7,
-                style: const TextStyle(
-                  color: AppColors.dorado,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-          Container(
-            height: 1,
-            color: AppColors.dorado.withOpacity(0.25),
-          ),
-          Expanded(
-            child: Center(
-              child: Text(
-                c.nota6,
-                style: const TextStyle(
-                  color: AppColors.dorado,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // BOTONES DE ACCIÓN
-  // ═══════════════════════════════════════════════════════════
-  Widget _barraAcciones() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: _botonAccion(
-              icono: Icons.undo,
-              label: 'DESHACER',
-              color: Colors.orange,
-              onTap: _historial.isEmpty ? null : _deshacer,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: _botonAccion(
-              icono: Icons.delete_sweep,
-              label: 'LIMPIAR',
-              color: Colors.redAccent,
-              onTap: _trabajo.columnas.isEmpty ? null : _limpiar,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            flex: 2,
-            child: _botonAccion(
-              icono: Icons.check,
-              label: 'TERMINAR',
-              color: Colors.green,
-              filled: true,
-              onTap: _terminar,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _botonAccion({
-    required IconData icono,
-    required String label,
-    required Color color,
-    required VoidCallback? onTap,
-    bool filled = false,
-  }) {
-    final habilitado = onTap != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: filled
-                ? color.withOpacity(habilitado ? 0.25 : 0.08)
-                : Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: color.withOpacity(habilitado ? 0.7 : 0.25),
-              width: 1.2,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icono,
-                  color: color.withOpacity(habilitado ? 1.0 : 0.4),
-                  size: 16),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color.withOpacity(habilitado ? 1.0 : 0.4),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
+Widget _celdaPreview(ColumnaNumerofonia c) {
+  final ancho = (c.maxLen.clamp(1, 8) * 14.0).clamp(28.0, 120.0);
+  return Container(
+    width: ancho,
+    height: 44,
+    decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.5),
+      border: Border.all(color: AppColors.dorado.withOpacity(0.35)),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: Text(
+              c.nota7,
+              style: const TextStyle(
+                color: AppColors.dorado,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+        Container(
+          height: 1,
+          color: AppColors.dorado.withOpacity(0.25),
+        ),
+        Expanded(
+          child: Center(
+            child: Text(
+              c.nota6,
+              style: const TextStyle(
+                color: AppColors.dorado,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOTONES DE ACCIÓN
+// ═══════════════════════════════════════════════════════════
+Widget _barraAcciones() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    child: Row(
+      children: [
+        Expanded(
+          child: _botonAccion(
+            icono: Icons.undo,
+            label: 'DESHACER',
+            color: Colors.orange,
+            onTap: _historial.isEmpty ? null : _deshacer,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: _botonAccion(
+            icono: Icons.delete_sweep,
+            label: 'LIMPIAR',
+            color: Colors.redAccent,
+            onTap: _trabajo.columnas.isEmpty ? null : _limpiar,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          flex: 2,
+          child: _botonAccion(
+            icono: Icons.check,
+            label: 'TERMINAR',
+            color: Colors.green,
+            filled: true,
+            onTap: _terminar,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _botonAccion({
+  required IconData icono,
+  required String label,
+  required Color color,
+  required VoidCallback? onTap,
+  bool filled = false,
+}) {
+  final habilitado = onTap != null;
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: filled
+              ? color.withOpacity(habilitado ? 0.25 : 0.08)
+              : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: color.withOpacity(habilitado ? 0.7 : 0.25),
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icono,
+                color: color.withOpacity(habilitado ? 1.0 : 0.4),
+                size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color.withOpacity(habilitado ? 1.0 : 0.4),
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
   // ═══════════════════════════════════════════════════════════
   // ZAMPOÑA (círculos con hueco)
   // ═══════════════════════════════════════════════════════════
-  Widget _zampoña() {
+  Widget _zampona() {
     return LayoutBuilder(
       builder: (context, cons) {
         const separacion = 3.0;
         final disponible = cons.maxWidth - (separacion * 6) - 24;
-        // Limitar el diámetro para que quepa en la altura disponible
         final maxPorAltura = (cons.maxHeight - 20) / 2.2;
         final diametroBase = disponible / 7;
         final diametro = diametroBase < maxPorAltura
@@ -577,7 +567,7 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
     final sonando = _sonando.contains(nota.id);
 
     return GestureDetector(
-      onTapDown: (_) => _tocarCaña(nota),
+      onTapDown: (_) => _tocarCania(nota),
       behavior: HitTestBehavior.opaque,
       child: AnimatedScale(
         scale: sonando ? 1.08 : 1.0,
