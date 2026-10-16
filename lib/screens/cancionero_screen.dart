@@ -5,6 +5,7 @@ import '../models/usuario.dart';
 import '../services/cancion_service.dart';
 import '../services/categoria_service.dart';
 import '../services/player_service.dart';
+import '../services/reproduccion_service.dart';
 import '../services/usuario_service.dart';
 import '../theme/colors.dart';
 import '../widgets/comunes/empty_state.dart';
@@ -55,20 +56,17 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
     super.dispose();
   }
 
-  /// Alterna reproducción y suma 1 al contador SOLO cuando empieza
-  /// a sonar (no cuando pausa ni cuando se detiene).
+  /// Reproduce + suma 1 reproducción SOLO si es la primera vez
+  /// que este usuario toca play en esta canción.
   Future<void> _togglePlayReproduccion(Cancion c) async {
-    final estabaPausado = PlayerService().sonando(c.id) == false;
-    final eraLaActual =
-        PlayerService().cancionActualId == c.id && estabaPausado;
-
+    final estabaSonando = PlayerService().sonando(c.id);
     await PlayerService().toggle(c);
 
-    // Si acaba de empezar a sonar (no estaba pausada la misma canción),
-    // contamos como reproducción nueva.
+    // Si acaba de empezar a sonar (no estaba pausada la misma),
+    // intentamos contar la reproducción (una sola vez por usuario).
     final sonandoAhora = PlayerService().sonando(c.id);
-    if (sonandoAhora && !eraLaActual) {
-      await CancionService().incrementarReproduccion(c.id);
+    if (sonandoAhora && !estabaSonando) {
+      await ReproduccionService.contarUnaVez(c.id);
     }
   }
 void _eliminar(Cancion c) async {
@@ -627,7 +625,6 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
             ),
             child: Row(
               children: [
-                // ⬇️ PLAY con contador de reproducciones
                 GestureDetector(
                   onTap: () => _togglePlayReproduccion(c),
                   child: Container(
