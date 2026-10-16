@@ -21,7 +21,7 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
       MethodChannel('com.allinkawsay/native');
 
   static const String _enlaceDescarga =
-      'https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk';
+    'https://yeo-drake.github.io/AllinKawsay/';
 
   bool _descargandoApk = false;
 
