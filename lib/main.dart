@@ -495,6 +495,12 @@ class _AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<_AuthGate> {
+  /// 📅 Fecha de corte: usuarios registrados ANTES de esta fecha
+  /// quedan exentos de verificar su correo (fueron creados antes de
+  /// que existiera el sistema de verificación).
+  static final DateTime _fechaCorteVerificacion =
+      DateTime(2026, 10, 15, 23, 59, 59);
+
   StreamSubscription? _userSub;
   String? _ultimoRol;
   String? _ultimoUid;
@@ -547,84 +553,102 @@ class _AuthGateState extends State<_AuthGate> {
     }
   }
 
-  /// Determina si el usuario necesita verificar su correo.
-  /// Los que entraron con Google ya están verificados por Google.
-  bool _necesitaVerificar(User user) {
-    // Si ya está verificado → no
+  /// ¿Este usuario necesita verificar su correo?
+  bool _necesitaVerificar(User user, Usuario? usuarioFirestore) {
+    // 1) Ya verificado en Firebase
     if (user.emailVerified) return false;
 
-    // Si es usuario de Google → no necesita (Google ya verificó)
+    // 2) Usuario de Google (Google ya verifica)
     final esGoogle = user.providerData
         .any((info) => info.providerId == 'google.com');
     if (esGoogle) return false;
 
-    // En cualquier otro caso → sí necesita
+    // 3) Usuario viejo (antes de la fecha de corte)
+    final fechaRegistro = usuarioFirestore?.fechaRegistro;
+    if (fechaRegistro != null &&
+        fechaRegistro.isBefore(_fechaCorteVerificacion)) {
+      return false;
+    }
+
+    // 4) Usuario sin fecha de registro (muy viejo, sin el campo)
+    if (fechaRegistro == null) return false;
+
+    // 5) Usuario nuevo → debe verificar
     return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, authSnap) {
-        if (authSnap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: AppColors.negro,
-            body: Center(
-              child: CircularProgressIndicator(color: AppColors.dorado),
-            ),
-          );
-        }
+    // Escuchamos el notifier de verificación para forzar rebuild cuando
+    // el usuario acaba de verificar el correo y así redirigir al Home
+    // sin necesidad de cerrar y abrir la app.
+    return ValueListenableBuilder<int>(
+      valueListenable: VerificacionRefresh.notifier,
+      builder: (context, _, __) {
+        return StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, authSnap) {
+            if (authSnap.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                backgroundColor: AppColors.negro,
+                body: Center(
+                  child: CircularProgressIndicator(
+                      color: AppColors.dorado),
+                ),
+              );
+            }
 
-        if (authSnap.hasData && authSnap.data != null) {
-          final authUser = authSnap.data!;
+            if (authSnap.hasData && authSnap.data != null) {
+              final authUser = authSnap.data!;
+              _syncOneSignal(authUser.uid);
 
-          // Primero: chequear si necesita verificar correo
-          if (_necesitaVerificar(authUser)) {
+              return StreamBuilder<Usuario?>(
+                stream: UsuarioService().miUsuario(),
+                builder: (context, userSnap) {
+                  if (userSnap.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Scaffold(
+                      backgroundColor: AppColors.negro,
+                      body: Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.dorado),
+                      ),
+                    );
+                  }
+
+                  final u = userSnap.data;
+
+                  // Chequeo de verificación
+                  if (_necesitaVerificar(authUser, u)) {
+                    ScreenSecurityService.disable();
+                    return VerificacionPendienteScreen(
+                      email: authUser.email ?? 'tu correo',
+                    );
+                  }
+
+                  // Usuario baneado
+                  if (u != null && u.baneado) {
+                    return const CuentaSuspendidaScreen();
+                  }
+
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _chequearActualizacion();
+                  });
+
+                  return HomeScreen(
+                    nombreUsuario: authUser.displayName ??
+                        authUser.email?.split('@').first ??
+                        'Usuario',
+                  );
+                },
+              );
+            }
+
             _syncOneSignal(null);
             ScreenSecurityService.disable();
-            return VerificacionPendienteScreen(
-              email: authUser.email ?? 'tu correo',
-            );
-          }
-
-          // Si está verificado o es Google → seguimos con OneSignal
-          _syncOneSignal(authUser.uid);
-
-          return StreamBuilder<Usuario?>(
-            stream: UsuarioService().miUsuario(),
-            builder: (context, userSnap) {
-              if (userSnap.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  backgroundColor: AppColors.negro,
-                  body: Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.dorado),
-                  ),
-                );
-              }
-
-              final u = userSnap.data;
-              if (u != null && u.baneado) {
-                return const CuentaSuspendidaScreen();
-              }
-
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _chequearActualizacion();
-              });
-
-              return HomeScreen(
-                nombreUsuario: authUser.displayName ??
-                    authUser.email?.split('@').first ??
-                    'Usuario',
-              );
-            },
-          );
-        }
-
-        _syncOneSignal(null);
-        ScreenSecurityService.disable();
-        return const LoginScreen();
+            return const LoginScreen();
+          },
+        );
       },
     );
   }
