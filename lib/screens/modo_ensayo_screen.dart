@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../data/zampona_catalogo.dart';
 import '../models/cancion.dart';
-import '../models/numerofonia.dart';
 import '../models/zampona_nota.dart';
 import '../services/zampona_service.dart';
 import '../theme/colors.dart';
@@ -26,8 +25,8 @@ class _NotaEnsayable {
   final int estrofa;
   final int columna;
   final bool esFila7;
-  final int notaIndex; // índice del carácter dentro de la celda
-  final int delayMs;   // ms desde el toque anterior
+  final int notaIndex;
+  final int delayMs;
 
   _NotaEnsayable({
     required this.estrofa,
@@ -51,6 +50,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
   int _estrofaActual = 0;
   _NotaEnsayable? _notaActiva;
   String? _notaSonando;
+  String? _ultimaNotaSonada;
 
   int _runId = 0;
 
@@ -78,7 +78,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     if (mounted) setState(() => _cargando = false);
   }
 
-  /// Extrae todas las notas de la canción en orden de reproducción.
   List<_NotaEnsayable> _extraerNotas() {
     final estrofas =
         widget.cancion.estrofas.where((e) => !e.vacia).toList();
@@ -92,7 +91,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       for (int c = 0; c < cols.length; c++) {
         final col = cols[c];
 
-        // Fila 7
         final n7 = col.nota7.trim();
         for (int i = 0; i < n7.length; i++) {
           final delay = i < col.timings7.length
@@ -107,7 +105,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
           ));
         }
 
-        // Fila 6
         final n6 = col.nota6.trim();
         for (int i = 0; i < n6.length; i++) {
           final delay = i < col.timings6.length
@@ -163,14 +160,18 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
         return !esFila7;
     }
   }
+
+  bool get _esModoSolo =>
+      _modoAudio == ModoAudio.solo7 || _modoAudio == ModoAudio.solo6;
 // ═══════════════════════════════════════════════════════════
-// LOOP DE REPRODUCCIÓN
+// LOOP DE REPRODUCCIÓN (FIX: delay ANTES de tocar)
 // ═══════════════════════════════════════════════════════════
 Future<void> _reproducir() async {
   final id = ++_runId;
   setState(() {
     _reproduciendo = true;
     _pausa = false;
+    _ultimaNotaSonada = null;
   });
 
   final notas = _extraerNotas();
@@ -190,6 +191,13 @@ Future<void> _reproducir() async {
       }
       if (id != _runId) return;
 
+      // ⚠️ FIX: esperar el delay ANTES de tocar la nota.
+      final delay = (n.delayMs / _velocidad).round();
+      if (delay > 0) {
+        await Future.delayed(Duration(milliseconds: delay));
+        if (id != _runId) return;
+      }
+
       if (mounted) {
         setState(() {
           _estrofaActual = n.estrofa;
@@ -200,27 +208,50 @@ Future<void> _reproducir() async {
       final caracter = _caracterDe(n);
       final nota = _zamponaDe(caracter, n.esFila7);
 
-      if (nota != null) {
-        if (mounted) setState(() => _notaSonando = nota.id);
+      if (nota == null) {
+        // Nota no tocable (punto, etc). En modo solo, cortar la que suena.
+        if (_esModoSolo && _ultimaNotaSonada != null) {
+          final anterior = _ultimaNotaSonada!;
+          _ultimaNotaSonada = null;
+          _service.fadeOutNota(anterior);
+        }
+        continue;
+      }
 
-        if (_debeSonar(n.esFila7)) {
+      if (mounted) setState(() => _notaSonando = nota.id);
+
+      final debeSonar = _debeSonar(n.esFila7);
+
+      if (_esModoSolo) {
+        // En modo solo: aplicar fade a la nota anterior si es diferente
+        // (o si esta nueva nota no va a sonar, cortar también la anterior).
+        if (_ultimaNotaSonada != null &&
+            _ultimaNotaSonada != nota.id) {
+          final anterior = _ultimaNotaSonada!;
+          _ultimaNotaSonada = null;
+          _service.fadeOutNota(anterior);
+        }
+        if (debeSonar) {
+          try {
+            await _service.tocar(nota.id);
+            _ultimaNotaSonada = nota.id;
+          } catch (_) {}
+        }
+      } else {
+        // Modo silencio o ambas: comportamiento simple
+        if (debeSonar) {
           try {
             await _service.tocar(nota.id);
           } catch (_) {}
         }
-
-        final brilloMs = (260 / _velocidad).round().clamp(80, 800);
-        Future.delayed(Duration(milliseconds: brilloMs), () {
-          if (mounted && id == _runId) {
-            setState(() => _notaSonando = null);
-          }
-        });
       }
 
-      final delay = (n.delayMs / _velocidad).round();
-      if (delay > 0) {
-        await Future.delayed(Duration(milliseconds: delay));
-      }
+      final brilloMs = (260 / _velocidad).round().clamp(80, 800);
+      Future.delayed(Duration(milliseconds: brilloMs), () {
+        if (mounted && id == _runId) {
+          setState(() => _notaSonando = null);
+        }
+      });
     }
 
     if (!_bucle) break;
@@ -235,6 +266,11 @@ Future<void> _reproducir() async {
       _notaActiva = null;
       _notaSonando = null;
     });
+    final ultima = _ultimaNotaSonada;
+    _ultimaNotaSonada = null;
+    if (ultima != null) {
+      _service.fadeOutNota(ultima);
+    }
   }
 }
 
@@ -243,18 +279,26 @@ void _reanudar() => setState(() => _pausa = false);
 
 void _detener() {
   _runId++;
+  final ultima = _ultimaNotaSonada;
+  _ultimaNotaSonada = null;
   setState(() {
     _reproduciendo = false;
     _pausa = false;
     _notaActiva = null;
     _notaSonando = null;
   });
-  _service.detener();
+  if (ultima != null) {
+    _service.fadeOutNota(ultima);
+  }
+  // Después del fade, cortar todo por si quedó algo colgado
+  Future.delayed(const Duration(milliseconds: 200), () {
+    _service.detener();
+  });
 }
 
 void _reiniciar() {
   _detener();
-  Future.delayed(const Duration(milliseconds: 120), () {
+  Future.delayed(const Duration(milliseconds: 300), () {
     if (mounted) _reproducir();
   });
 }
@@ -336,12 +380,15 @@ Widget _barraSuperior() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════
+// CHIPS DE MODO (embellecidos)
+// ═══════════════════════════════════════════════════════════
 Widget _filaModos() {
-  final modos = <(ModoAudio, String, IconData)>[
-    (ModoAudio.silencio, 'Silencio', Icons.volume_off),
-    (ModoAudio.ambas, 'Ambas', Icons.music_note),
-    (ModoAudio.solo7, 'Solo 7', Icons.arrow_upward),
-    (ModoAudio.solo6, 'Solo 6', Icons.arrow_downward),
+  final modos = <(ModoAudio, String, IconData, Color)>[
+    (ModoAudio.silencio, 'Silencio', Icons.volume_off, Colors.grey),
+    (ModoAudio.ambas, 'Ambas', Icons.music_note, AppColors.dorado),
+    (ModoAudio.solo7, 'Solo 7', Icons.arrow_upward, Colors.green),
+    (ModoAudio.solo6, 'Solo 6', Icons.arrow_downward, Colors.blueAccent),
   ];
 
   return Padding(
@@ -352,9 +399,10 @@ Widget _filaModos() {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: _chip(
+              child: _chipModo(
                 label: m.$2,
                 icono: m.$3,
+                color: m.$4,
                 activo: _modoAudio == m.$1,
                 onTap: () => setState(() => _modoAudio = m.$1),
               ),
@@ -365,41 +413,69 @@ Widget _filaModos() {
   );
 }
 
-Widget _chip({
+Widget _chipModo({
   required String label,
   required IconData icono,
+  required Color color,
   required bool activo,
   required VoidCallback onTap,
 }) {
   return GestureDetector(
     onTap: onTap,
     child: AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
-        gradient: activo ? AppColors.gradienteDorado : null,
-        color: activo ? null : Colors.white.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(10),
+        gradient: activo
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withOpacity(0.95),
+                  color.withOpacity(0.55),
+                ],
+              )
+            : null,
+        color: activo ? null : Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: activo
-              ? AppColors.dorado
-              : AppColors.dorado.withOpacity(0.35),
+          color: activo ? color : color.withOpacity(0.3),
+          width: activo ? 1.8 : 1.2,
         ),
+        boxShadow: activo
+            ? [
+                BoxShadow(
+                  color: color.withOpacity(0.5),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icono,
-              size: 13,
-              color: activo ? AppColors.granate : AppColors.dorado),
-          const SizedBox(width: 4),
+          Icon(
+            icono,
+            size: 15,
+            color: activo ? Colors.white : color,
+          ),
+          const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
-              color: activo ? AppColors.granate : AppColors.dorado,
-              fontSize: 10,
+              color: activo ? Colors.white : color.withOpacity(0.9),
+              fontSize: 10.5,
               fontWeight: FontWeight.bold,
               letterSpacing: 1,
+              shadows: activo
+                  ? [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.4),
+                        blurRadius: 3,
+                      ),
+                    ]
+                  : null,
             ),
           ),
         ],
@@ -467,9 +543,6 @@ Widget _chip({
     final idx = _estrofaActual.clamp(0, estrofas.length - 1);
     final estrofa = estrofas[idx];
 
-    // ⚠️ FIX: construimos el CeldaActiva correctamente.
-    // - Si la nota activa es de ESTA estrofa → la mostramos.
-    // - El índice de estrofa siempre es 0 porque le pasamos SOLO 1 estrofa.
     CeldaActiva? activa;
     if (_notaActiva != null && _notaActiva!.estrofa == idx) {
       activa = CeldaActiva(
@@ -607,9 +680,6 @@ Widget _chip({
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ZAMPOÑA MINI (guía visual)
-  // ═══════════════════════════════════════════════════════════
   Widget _zamponaMini() {
     return LayoutBuilder(
       builder: (context, cons) {
