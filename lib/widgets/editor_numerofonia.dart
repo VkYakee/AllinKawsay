@@ -48,8 +48,17 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
       ),
     );
     if (resultado == null) return;
+
+    // Si el grabador devolvió la estrofa sin columnas (el usuario no
+    // escribió nada), le ponemos 2 vacías por defecto para que el
+    // editor la pueda seguir mostrando.
+    var estrofa = resultado;
+    if (estrofa.columnas.isEmpty) {
+      estrofa = EstrofaNumerofonia.nueva();
+    }
+
     setState(() {
-      _estrofas[i] = resultado;
+      _estrofas[i] = estrofa;
       _notify();
     });
   }
@@ -89,6 +98,12 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
                 onAgregarColumna: () => setState(() {
                   _estrofas[i].columnas.add(ColumnaNumerofonia());
                   _notify();
+                }),
+                onQuitarColumna: () => setState(() {
+                  if (_estrofas[i].columnas.isNotEmpty) {
+                    _estrofas[i].columnas.removeLast();
+                    _notify();
+                  }
                 }),
                 onEliminar: () => setState(() {
                   _estrofas.removeAt(i);
@@ -138,6 +153,7 @@ class _EditorEstrofa extends StatelessWidget {
   final VoidCallback onCelda;
   final VoidCallback onToggleBis;
   final VoidCallback onAgregarColumna;
+  final VoidCallback onQuitarColumna;
   final VoidCallback onEliminar;
   final VoidCallback onGrabar;
 
@@ -149,6 +165,7 @@ class _EditorEstrofa extends StatelessWidget {
     required this.onCelda,
     required this.onToggleBis,
     required this.onAgregarColumna,
+    required this.onQuitarColumna,
     required this.onEliminar,
     required this.onGrabar,
   });
@@ -162,7 +179,6 @@ class _EditorEstrofa extends StatelessWidget {
 
   static double baseDe(EstrofaNumerofonia e) =>
       18 + e.columnas.fold<double>(0, (s, c) => s + anchoCol(c, 1.0));
-
   @override
   Widget build(BuildContext context) {
     final e = escala;
@@ -231,30 +247,20 @@ class _EditorEstrofa extends StatelessWidget {
         const SizedBox(height: 4),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: tabla),
         const SizedBox(height: 2),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: onAgregarColumna,
-            icon: const Icon(Icons.add, size: 14, color: AppColors.granate),
-            label: const Text(
-              'COLUMNA',
-              style: TextStyle(
-                color: AppColors.granate,
-                fontWeight: FontWeight.bold,
-                fontSize: 9,
-                letterSpacing: 1,
-              ),
+        // Fila inferior: agregar / quitar columna
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            _botonColumna(
+              icono: Icons.remove,
+              onTap: estrofa.columnas.isEmpty ? null : onQuitarColumna,
             ),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              side: BorderSide(color: AppColors.granate.withOpacity(0.4)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+            const SizedBox(width: 6),
+            _botonColumna(
+              icono: Icons.add,
+              onTap: onAgregarColumna,
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -292,6 +298,46 @@ class _EditorEstrofa extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Botón chico para agregar o quitar columnas.
+  /// [onTap] null = deshabilitado.
+  Widget _botonColumna({
+    required IconData icono,
+    required VoidCallback? onTap,
+  }) {
+    final habilitado = onTap != null;
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(
+        icono,
+        size: 14,
+        color: habilitado
+            ? AppColors.granate
+            : AppColors.granate.withOpacity(0.3),
+      ),
+      label: const Text(
+        'COLUMNA',
+        style: TextStyle(
+          color: AppColors.granate,
+          fontWeight: FontWeight.bold,
+          fontSize: 9,
+          letterSpacing: 1,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        side: BorderSide(
+          color: AppColors.granate
+              .withOpacity(habilitado ? 0.4 : 0.15),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
         ),
       ),
     );
