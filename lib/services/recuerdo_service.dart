@@ -20,7 +20,6 @@ class RecuerdoService {
       'crear_recuerdo',
       'Subió el recuerdo "${r.titulo}" (${r.fotos.length} fotos, ${r.videos.length} videos)',
     );
-    // Notificación push a todos
     _notificarRecuerdo(r);
     return ref.id;
   }
@@ -48,7 +47,33 @@ class RecuerdoService {
     );
   }
 
-  /// Envía la notificación push silenciosamente (fire-and-forget).
+  /// Reasigna el `creadoPor` de los recuerdos que coincidan con
+  /// [nombre] pero tengan `creadoPor` vacío.
+  Future<int> reasignarMisRecuerdos(String uid, String nombre) async {
+    if (uid.isEmpty || nombre.isEmpty) return 0;
+    final nombreLower = nombre.trim().toLowerCase();
+    try {
+      final snap = await _db.collection('recuerdos').get();
+      int actualizadas = 0;
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        final creadoPor = (d['creadoPor'] ?? '').toString().trim();
+        final creadorNombre =
+            (d['creadorNombre'] ?? '').toString().trim().toLowerCase();
+        if (creadoPor.isEmpty && creadorNombre == nombreLower) {
+          await doc.reference.update({
+            'creadoPor': uid,
+            'creadorNombre': nombre,
+          });
+          actualizadas++;
+        }
+      }
+      return actualizadas;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   void _notificarRecuerdo(Recuerdo r) {
     final total = r.fotos.length + r.videos.length;
     final detalle = <String>[];
