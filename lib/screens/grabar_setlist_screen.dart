@@ -7,8 +7,8 @@ import 'package:just_audio_background/just_audio_background.dart';
 import '../models/bloque_audio.dart';
 import '../models/cancion.dart';
 import '../theme/colors.dart';
+import 'grabar_timing_bloque_screen.dart';
 
-/// Pantalla para MARCAR EL SETLIST del audio de una canción.
 class GrabarSetlistScreen extends StatefulWidget {
   final Cancion cancion;
   final List<BloqueAudio> setlistInicial;
@@ -70,7 +70,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
         return;
       }
 
-      // ⚠️ FIX: just_audio_background exige MediaItem obligatoriamente.
       final tag = MediaItem(
         id: 'setlist_${widget.cancion.id}',
         title: 'Setlist: ${widget.cancion.titulo}',
@@ -131,9 +130,50 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
     await _player.seek(d);
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // MARCAR BLOQUE
-  // ═══════════════════════════════════════════════════════════
+  /// Pregunta al usuario si quiere grabar el timing A de un bloque.
+  /// Devuelve la lista de timings o null si no quiere grabar.
+  Future<List<int>?> _preguntarGrabarTiming(BloqueAudio bloque) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text('¿Grabar timing?',
+            style: TextStyle(
+                color: AppColors.granate,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
+        content: const Text(
+            'Para que el modo ensayo funcione en modo Audio URL, '
+            'necesitás grabar cuándo suena cada nota del bloque.\n\n'
+            '¿Grabar el timing de este bloque ahora?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Después')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Grabar ahora'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return null;
+
+    if (!mounted) return null;
+
+    final resultado = await Navigator.push<List<int>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GrabarTimingBloqueScreen(
+          cancion: widget.cancion,
+          bloque: bloque,
+        ),
+      ),
+    );
+    return resultado;
+  }
+
   Future<void> _marcarBloque() async {
     final estabaReproduciendo = _reproduciendo;
     if (estabaReproduciendo) {
@@ -163,8 +203,20 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
     if (!mounted) return;
 
     if (resultado != null) {
+      // Si es un bloque con visual (estrofa/bis/ligero), preguntar timing.
+      List<int>? timings;
+      if (resultado.tieneVisual) {
+        timings = await _preguntarGrabarTiming(resultado);
+      }
+
+      if (!mounted) return;
+
+      final bloqueFinal = timings != null
+          ? resultado.copyConTimings(timings)
+          : resultado;
+
       setState(() {
-        _bloques.add(resultado);
+        _bloques.add(bloqueFinal);
       });
       _autoScroll();
     }
@@ -204,8 +256,53 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
             widget.cancion.letras.where((l) => !l.vacia).length,
       ),
     );
+
+    if (resultado == null || !mounted) return;
+
+    // Preservar timings si sigue siendo el mismo tipo/estrofa.
+    List<int> timings = [];
+    if (resultado.tieneVisual) {
+      final mismoDestino =
+          resultado.estrofaRef == actual.estrofaRef &&
+          resultado.tipo == actual.tipo;
+      if (mismoDestino) {
+        timings = actual.timingsMs;
+      } else {
+        final grabados = await _preguntarGrabarTiming(resultado);
+        timings = grabados ?? [];
+      }
+    }
+
+    if (!mounted) return;
+
+    final bloqueFinal = timings.isNotEmpty
+        ? resultado.copyConTimings(timings)
+        : resultado.copyConTimings([]);
+
+    setState(() => _bloques[index] = bloqueFinal);
+  }
+
+  Future<void> _regrabarTiming(int index) async {
+    final actual = _bloques[index];
+    final resultado = await Navigator.push<List<int>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GrabarTimingBloqueScreen(
+          cancion: widget.cancion,
+          bloque: actual,
+        ),
+      ),
+    );
     if (resultado != null && mounted) {
-      setState(() => _bloques[index] = resultado);
+      setState(() {
+        _bloques[index] = actual.copyConTimings(resultado);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Timing A actualizado'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -647,6 +744,36 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
                                   fontFamily: 'monospace',
                                 ),
                               ),
+                              if (b.tieneTimingA) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green
+                                        .withOpacity(0.2),
+                                    borderRadius:
+                                        BorderRadius.circular(6),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle,
+                                          size: 9,
+                                          color: Colors.green),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'TIMING A',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               if (b.tipo == TipoBloque.ligero) ...[
                                 const SizedBox(width: 8),
                                 Container(
@@ -668,32 +795,23 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
                                   ),
                                 ),
                               ],
-                              if (b.conLetra) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blueAccent
-                                        .withOpacity(0.2),
-                                    borderRadius:
-                                        BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'CON LETRA',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blueAccent,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ],
                           ),
                         ],
                       ),
                     ),
+                    if (b.tieneVisual)
+                      IconButton(
+                        icon: Icon(Icons.timer,
+                            size: 20,
+                            color: b.tieneTimingA
+                                ? Colors.green
+                                : Colors.grey.withOpacity(0.6)),
+                        tooltip: b.tieneTimingA
+                            ? 'Regrabar timing A'
+                            : 'Grabar timing A',
+                        onPressed: () => _regrabarTiming(i),
+                      ),
                     IconButton(
                       icon: Icon(Icons.delete_outline,
                           size: 20,
