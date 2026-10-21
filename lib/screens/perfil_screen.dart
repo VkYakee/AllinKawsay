@@ -117,8 +117,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
     }
   }
 
-  /// Reasigna todas las canciones/recuerdos que tengan `creadoPor`
-  /// vacío pero cuyo `creadorNombre` coincida con el usuario.
   Future<void> _reasignarMisSubidas(Usuario u) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -372,7 +370,6 @@ Widget _subtitulo(String t) {
     ),
   );
 }
-
 void _abrirAjustes(Usuario? u) {
   showModalBottomSheet(
     context: context,
@@ -599,7 +596,7 @@ void _abrirAcercaDe() {
                   const Icon(Icons.tag,
                       size: 12, color: AppColors.granate),
                   const SizedBox(width: 4),
-                  Text('Versión ${AppVersion.full}',
+                  Text('Versión ${AppVersion.display}',
                       style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -626,6 +623,7 @@ void _abrirAcercaDe() {
     ),
   );
 }
+
 @override
 Widget build(BuildContext context) {
   final onSurface = Theme.of(context).colorScheme.onSurface;
@@ -711,309 +709,309 @@ Widget build(BuildContext context) {
     ),
   );
 }
-
-Widget _headerPerfil(
-    BuildContext context, Usuario? u, String rol, Color onSurface) {
-  return Container(
-    padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          AppColors.granate.withOpacity(0.08),
-          AppColors.dorado.withOpacity(0.05),
-        ],
+  Widget _headerPerfil(
+      BuildContext context, Usuario? u, String rol, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.granate.withOpacity(0.08),
+            AppColors.dorado.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(32),
+            bottomRight: Radius.circular(32)),
       ),
-      borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32)),
-    ),
-    child: Column(
-      children: [
-        Center(
-          child: Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.gradienteDorado,
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppColors.dorado.withOpacity(0.3),
-                        blurRadius: 20,
-                        spreadRadius: 2)
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 52,
-                  backgroundColor: AppColors.granate,
-                  backgroundImage:
-                      (u?.fotoUrl.isNotEmpty ?? false)
-                          ? NetworkImage(u!.fotoUrl)
-                          : null,
-                  child: (u?.fotoUrl.isEmpty ?? true)
-                      ? const Icon(Icons.person,
-                          size: 56, color: AppColors.dorado)
-                      : null,
-                ),
-              ),
-              if (u != null)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: _subiendoFoto
-                        ? null
-                        : () => _cambiarFoto(u),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.gradienteDorado,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: AppColors.granate, width: 2.5),
-                        boxShadow: [
-                          BoxShadow(
-                              color:
-                                  AppColors.dorado.withOpacity(0.4),
-                              blurRadius: 8)
-                        ],
-                      ),
-                      child: _subiendoFoto
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  color: AppColors.granate,
-                                  strokeWidth: 2))
-                          : const Icon(Icons.camera_alt,
-                              size: 16, color: AppColors.granate),
-                    ),
+      child: Column(
+        children: [
+          Center(
+            child: Stack(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppColors.gradienteDorado,
+                    boxShadow: [
+                      BoxShadow(
+                          color: AppColors.dorado.withOpacity(0.3),
+                          blurRadius: 20,
+                          spreadRadius: 2)
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 52,
+                    backgroundColor: AppColors.granate,
+                    backgroundImage:
+                        (u?.fotoUrl.isNotEmpty ?? false)
+                            ? NetworkImage(u!.fotoUrl)
+                            : null,
+                    child: (u?.fotoUrl.isEmpty ?? true)
+                        ? const Icon(Icons.person,
+                            size: 56, color: AppColors.dorado)
+                        : null,
                   ),
                 ),
-            ],
+                if (u != null)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: _subiendoFoto
+                          ? null
+                          : () => _cambiarFoto(u),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.gradienteDorado,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: AppColors.granate, width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                                color:
+                                    AppColors.dorado.withOpacity(0.4),
+                                blurRadius: 8)
+                          ],
+                        ),
+                        child: _subiendoFoto
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    color: AppColors.granate,
+                                    strokeWidth: 2))
+                            : const Icon(Icons.camera_alt,
+                                size: 16, color: AppColors.granate),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(u?.nombre ?? widget.nombreUsuario,
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: onSurface,
-                    letterSpacing: 0.3)),
-            if (u != null) ...[
-              const SizedBox(width: 4),
-              IconButton(
-                  icon: const Icon(Icons.edit,
-                      size: 16, color: AppColors.granate),
-                  onPressed: () => _cambiarNombre(u)),
-            ],
-          ],
-        ),
-        Text(u?.email ?? '',
-            style: TextStyle(
-                color: onSurface.withOpacity(0.55), fontSize: 13)),
-        const SizedBox(height: 14),
-        Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-          decoration: BoxDecoration(
-            gradient: _colorRol(rol) == AppColors.negro
-                ? LinearGradient(colors: [
-                    AppColors.negro,
-                    AppColors.negro.withOpacity(0.8)
-                  ])
-                : AppColors.gradienteGranate,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                  color: _colorRol(rol).withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3))
-            ],
-          ),
-          child: Row(
+          const SizedBox(height: 16),
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(_iconoRol(rol),
-                  color: AppColors.dorado, size: 16),
-              const SizedBox(width: 6),
-              Text(u?.rolNombre ?? 'PÚBLICO',
-                  style: const TextStyle(
-                      color: AppColors.dorado,
+              Text(u?.nombre ?? widget.nombreUsuario,
+                  style: TextStyle(
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                      letterSpacing: 1.5)),
+                      color: onSurface,
+                      letterSpacing: 0.3)),
+              if (u != null) ...[
+                const SizedBox(width: 4),
+                IconButton(
+                    icon: const Icon(Icons.edit,
+                        size: 16, color: AppColors.granate),
+                    onPressed: () => _cambiarNombre(u)),
+              ],
             ],
           ),
-        ),
-      ],
-    ),
-  );
-}
+          Text(u?.email ?? '',
+              style: TextStyle(
+                  color: onSurface.withOpacity(0.55), fontSize: 13)),
+          const SizedBox(height: 14),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+            decoration: BoxDecoration(
+              gradient: _colorRol(rol) == AppColors.negro
+                  ? LinearGradient(colors: [
+                      AppColors.negro,
+                      AppColors.negro.withOpacity(0.8)
+                    ])
+                  : AppColors.gradienteGranate,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                    color: _colorRol(rol).withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3))
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(_iconoRol(rol),
+                    color: AppColors.dorado, size: 16),
+                const SizedBox(width: 6),
+                Text(u?.rolNombre ?? 'PÚBLICO',
+                    style: const TextStyle(
+                        color: AppColors.dorado,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        letterSpacing: 1.5)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-Widget _seccionAdmin(Color onSurface) {
-  return Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
-        child: Row(
-          children: [
-            Container(
-                width: 4,
-                height: 14,
-                decoration: BoxDecoration(
-                    color: AppColors.granate,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(width: 8),
-            const Text('ADMINISTRACIÓN',
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.granate,
-                    letterSpacing: 2)),
-          ],
-        ),
-      ),
-      _itemMenu(
-        Icons.insights,
-        'Estadísticas del grupo',
-        'Totales, top canciones y usuarios',
-        onSurface,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => const EstadisticasAdminScreen()),
-        ),
-      ),
-      _itemMenu(
-        Icons.history,
-        'Historial de actividad',
-        'Quién subió, editó o eliminó qué',
-        onSurface,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ActividadScreen()),
-        ),
-      ),
-      _itemMenu(
-        Icons.campaign,
-        'Notificaciones',
-        'Canciones nuevas y mensajes al grupo',
-        onSurface,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => const NotificacionesAdminScreen()),
-        ),
-      ),
-      _itemMenu(
-        Icons.system_update,
-        'Actualizaciones',
-        'Aprobar y publicar versiones nuevas',
-        onSurface,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) =>
-                  const GestionActualizacionesScreen()),
-        ),
-      ),
-      _itemMenu(
-        Icons.category,
-        'Categorías',
-        'Carnaval, Religioso, etc.',
-        onSurface,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => const GestionCategoriasScreen()),
-        ),
-      ),
-      _itemMenu(
-        Icons.backup,
-        'Exportar respaldo',
-        'Descarga todos los datos',
-        onSurface,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => const ExportarRespaldoScreen()),
-        ),
-      ),
-      _itemMenu(
-        Icons.people,
-        'Gestión de usuarios',
-        'Roles y suspensiones',
-        onSurface,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => const GestionUsuariosScreen()),
-        ),
-      ),
-      const SizedBox(height: 12),
-    ],
-  );
-}
-
-Widget _itemMenu(IconData icono, String titulo, String subtitulo,
-    Color onSurface, {required VoidCallback onTap}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+  Widget _seccionAdmin(Color onSurface) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
           child: Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                    color: AppColors.granate.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12)),
-                child: Icon(icono,
-                    color: AppColors.granate, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(titulo,
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: onSurface,
-                            fontSize: 14,
-                            letterSpacing: 0.2)),
-                    const SizedBox(height: 2),
-                    Text(subtitulo,
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: onSurface.withOpacity(0.55))),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  color: AppColors.dorado.withOpacity(0.7),
-                  size: 20),
+                  width: 4,
+                  height: 14,
+                  decoration: BoxDecoration(
+                      color: AppColors.granate,
+                      borderRadius: BorderRadius.circular(2))),
+              const SizedBox(width: 8),
+              const Text('ADMINISTRACIÓN',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.granate,
+                      letterSpacing: 2)),
             ],
           ),
         ),
+        _itemMenu(
+          Icons.insights,
+          'Estadísticas del grupo',
+          'Totales, top canciones y usuarios',
+          onSurface,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const EstadisticasAdminScreen()),
+          ),
+        ),
+        _itemMenu(
+          Icons.history,
+          'Historial de actividad',
+          'Quién subió, editó o eliminó qué',
+          onSurface,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ActividadScreen()),
+          ),
+        ),
+        _itemMenu(
+          Icons.campaign,
+          'Notificaciones',
+          'Canciones nuevas y mensajes al grupo',
+          onSurface,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const NotificacionesAdminScreen()),
+          ),
+        ),
+        _itemMenu(
+          Icons.system_update,
+          'Actualizaciones',
+          'Aprobar y publicar versiones nuevas',
+          onSurface,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) =>
+                    const GestionActualizacionesScreen()),
+          ),
+        ),
+        _itemMenu(
+          Icons.category,
+          'Categorías',
+          'Carnaval, Religioso, etc.',
+          onSurface,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const GestionCategoriasScreen()),
+          ),
+        ),
+        _itemMenu(
+          Icons.backup,
+          'Exportar respaldo',
+          'Descarga todos los datos',
+          onSurface,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const ExportarRespaldoScreen()),
+          ),
+        ),
+        _itemMenu(
+          Icons.people,
+          'Gestión de usuarios',
+          'Roles y suspensiones',
+          onSurface,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const GestionUsuariosScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _itemMenu(IconData icono, String titulo, String subtitulo,
+      Color onSurface, {required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                      color: AppColors.granate.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Icon(icono,
+                      color: AppColors.granate, size: 20),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(titulo,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: onSurface,
+                              fontSize: 14,
+                              letterSpacing: 0.2)),
+                      const SizedBox(height: 2),
+                      Text(subtitulo,
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: onSurface.withOpacity(0.55))),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right,
+                    color: AppColors.dorado.withOpacity(0.7),
+                    size: 20),
+              ],
+            ),
+          ),
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _estadisticasPersonales(Usuario u) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
