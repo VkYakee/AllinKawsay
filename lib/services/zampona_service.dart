@@ -56,6 +56,9 @@ class ZamponaService {
     debugPrint('✅ ZamponaService inicializado: ${_players.length} notas');
   }
 
+  /// Reproduce una nota. FIX del pop:
+  /// - El setVolume(1.0) va DESPUÉS del stop(), así el volumen se ajusta
+  ///   mientras el player está detenido y no en pleno sonido.
   Future<void> tocar(String notaId) async {
     final player = _players[notaId];
     if (player == null) return;
@@ -64,12 +67,52 @@ class ZamponaService {
       _fadeTimers[notaId]?.cancel();
       _fadeTimers[notaId] = null;
 
-      await player.setVolume(1.0);
       await player.stop();
+      await player.setVolume(1.0);
       await player.resume();
     } catch (e) {
       debugPrint('⚠️ Error al tocar $notaId: $e');
     }
+  }
+
+  /// Fade-out corto (45ms). Se usa al final de una estrofa para no
+  /// dejar la última nota sonando largo.
+  Future<void> fadeOutNota(String notaId) async {
+    final player = _players[notaId];
+    if (player == null) return;
+
+    _fadeTimers[notaId]?.cancel();
+    _fadeTimers[notaId] = null;
+
+    const pasos = 3;
+    const intervaloMs = 15;
+
+    for (int i = 1; i <= pasos; i++) {
+      final vol = (1.0 - i / pasos).clamp(0.0, 1.0);
+      try {
+        await player.setVolume(vol);
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: intervaloMs));
+    }
+    try {
+      await player.stop();
+      await player.setVolume(1.0);
+    } catch (_) {}
+  }
+
+  /// Stop instantáneo SIN resume. Se usa entre notas consecutivas
+  /// en el ensayo para cortar la anterior antes de la siguiente.
+  Future<void> detenerNota(String notaId) async {
+    final player = _players[notaId];
+    if (player == null) return;
+
+    _fadeTimers[notaId]?.cancel();
+    _fadeTimers[notaId] = null;
+
+    try {
+      await player.stop();
+      await player.setVolume(1.0);
+    } catch (_) {}
   }
 
   Future<void> soltar(String notaId) async {
@@ -102,32 +145,6 @@ class ZamponaService {
         }
       },
     );
-  }
-
-  /// Aplica un fade-out corto (~120ms) a la nota y la detiene.
-  /// NO depende del modo activo (a diferencia de `soltar`).
-  /// Se usa en el Modo Ensayo para que el corte entre notas no sea seco.
-  Future<void> fadeOutNota(String notaId) async {
-    final player = _players[notaId];
-    if (player == null) return;
-
-    _fadeTimers[notaId]?.cancel();
-    _fadeTimers[notaId] = null;
-
-    const pasos = 6;
-    const intervaloMs = 20;
-
-    for (int i = 1; i <= pasos; i++) {
-      final vol = (1.0 - i / pasos).clamp(0.0, 1.0);
-      try {
-        await player.setVolume(vol);
-      } catch (_) {}
-      await Future.delayed(const Duration(milliseconds: intervaloMs));
-    }
-    try {
-      await player.stop();
-      await player.setVolume(1.0);
-    } catch (_) {}
   }
 
   Future<void> tocarNota(ZamponaNota nota) => tocar(nota.id);
