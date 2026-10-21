@@ -2,15 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
 import '../models/bloque_audio.dart';
 import '../models/cancion.dart';
 import '../theme/colors.dart';
 
 /// Pantalla para MARCAR EL SETLIST del audio de una canción.
-///
-/// Divide el audio en bloques (engache, estrofa, BIS, etc.)
-/// marcando el instante exacto donde empieza cada uno.
 class GrabarSetlistScreen extends StatefulWidget {
   final Cancion cancion;
   final List<BloqueAudio> setlistInicial;
@@ -33,6 +31,7 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
   Duration? _duracion;
   bool _cargando = true;
   bool _error = false;
+  String _errorMsg = '';
 
   late List<BloqueAudio> _bloques;
 
@@ -65,11 +64,26 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
       if (widget.cancion.audioUrl.isEmpty) {
         setState(() {
           _error = true;
+          _errorMsg = 'La canción no tiene un audio cargado.';
           _cargando = false;
         });
         return;
       }
-      await _player.setUrl(widget.cancion.audioUrl);
+
+      // ⚠️ FIX: just_audio_background exige MediaItem obligatoriamente.
+      final tag = MediaItem(
+        id: 'setlist_${widget.cancion.id}',
+        title: 'Setlist: ${widget.cancion.titulo}',
+        artist: 'Allin Kawsay',
+      );
+
+      await _player.setAudioSource(
+        AudioSource.uri(
+          Uri.parse(widget.cancion.audioUrl),
+          tag: tag,
+        ),
+      );
+
       _subPos = _player.positionStream.listen((p) {
         if (mounted) setState(() => _posicion = p);
       });
@@ -85,6 +99,7 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
       if (mounted) {
         setState(() {
           _error = true;
+          _errorMsg = e.toString();
           _cargando = false;
         });
       }
@@ -120,13 +135,11 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
   // MARCAR BLOQUE
   // ═══════════════════════════════════════════════════════════
   Future<void> _marcarBloque() async {
-    // Pausamos para que el admin configure sin apuro
     final estabaReproduciendo = _reproduciendo;
     if (estabaReproduciendo) {
       await _player.pause();
     }
 
-    // Capturamos el ms JUSTO donde se tocó el botón
     final ms = _posicion.inMilliseconds;
 
     if (!mounted) return;
@@ -260,7 +273,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
       );
       return;
     }
-    // Ordenar por inicioMs por las dudas
     final ordenados = List<BloqueAudio>.from(_bloques)
       ..sort((a, b) => a.inicioMs.compareTo(b.inicioMs));
     Navigator.pop(context, ordenados);
@@ -354,10 +366,10 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
                   fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Verificá que la canción tenga un audio URL válido.',
+            Text(
+              'Detalle del error:\n$_errorMsg',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
@@ -576,7 +588,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
                 ),
                 child: Row(
                   children: [
-                    // Número
                     Container(
                       width: 36,
                       height: 36,
@@ -595,7 +606,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Info
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -684,7 +694,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
                         ],
                       ),
                     ),
-                    // Delete
                     IconButton(
                       icon: Icon(Icons.delete_outline,
                           size: 20,
@@ -790,7 +799,6 @@ class _ConfigurarBloqueState extends State<_ConfigurarBloque> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Handle
               Center(
                 child: Container(
                   width: 40,
@@ -803,7 +811,6 @@ class _ConfigurarBloqueState extends State<_ConfigurarBloque> {
               ),
               const SizedBox(height: 16),
 
-              // Título + marca de inicio
               Row(
                 children: [
                   const Icon(Icons.fiber_manual_record,
@@ -841,7 +848,6 @@ class _ConfigurarBloqueState extends State<_ConfigurarBloque> {
               ),
               const SizedBox(height: 20),
 
-              // Tipo de bloque
               Text(
                 'TIPO DE BLOQUE',
                 style: TextStyle(
@@ -860,7 +866,6 @@ class _ConfigurarBloqueState extends State<_ConfigurarBloque> {
                     .toList(),
               ),
 
-              // Estrofa (si aplica)
               if (_requiereEstrofa) ...[
                 const SizedBox(height: 20),
                 Text(
@@ -883,7 +888,6 @@ class _ConfigurarBloqueState extends State<_ConfigurarBloque> {
                 ),
               ],
 
-              // Con letra (si es estrofa)
               if (_tipo == TipoBloque.estrofa) ...[
                 const SizedBox(height: 20),
                 SwitchListTile(
@@ -908,7 +912,6 @@ class _ConfigurarBloqueState extends State<_ConfigurarBloque> {
                 ),
               ],
 
-              // Velocidad (si es ligero)
               if (_tipo == TipoBloque.ligero) ...[
                 const SizedBox(height: 16),
                 Text(
@@ -942,7 +945,6 @@ class _ConfigurarBloqueState extends State<_ConfigurarBloque> {
 
               const SizedBox(height: 24),
 
-              // Botón confirmar
               SizedBox(
                 height: 54,
                 child: FilledButton.icon(
