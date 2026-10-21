@@ -1,18 +1,17 @@
 /// Tipos de bloque que puede tener un audio de sikuri.
 enum TipoBloque {
-  enganche,   // solo audio, sin visual (silencio visual)
-  intro,      // apertura especial
-  diana,      // apertura especial
-  chacota,    // apertura especial
-  estrofa,    // estrofa de la tabla (instrumental o lírico)
-  bis,        // estrofa repetida completa
-  ligero,     // estrofa acelerada
+  enganche,
+  intro,
+  diana,
+  chacota,
+  estrofa,
+  bis,
+  ligero,
 }
 
 /// Un bloque dentro del audio de la canción.
 ///
 /// Divide el audio en secciones: enganches, estrofas, BIS, etc.
-/// Cada uno apunta a una estrofa de la tabla (o a ninguna).
 class BloqueAudio {
   /// Milisegundo donde arranca este bloque dentro del audio.
   final int inicioMs;
@@ -31,16 +30,26 @@ class BloqueAudio {
   /// 1.0 para todo menos "ligero", donde puede ser 1.15-1.30.
   final double velocidad;
 
+  /// TIMING A: posiciones absolutas (en ms del audio) de cada toque
+  /// grabado para este bloque. Cada elemento corresponde a una nota
+  /// en el orden en que aparecen las notas de la estrofa.
+  /// Si está vacío, el ensayo usa fallback (timings7/6 de la estrofa
+  /// dividido por velocidad).
+  final List<int> timingsMs;
+
   BloqueAudio({
     required this.inicioMs,
     this.estrofaRef = -1,
     this.conLetra = false,
     required this.tipo,
     this.velocidad = 1.0,
-  });
+    List<int>? timingsMs,
+  }) : timingsMs = timingsMs ?? <int>[];
 
-  /// ¿Este bloque tiene columnas visuales para iluminar?
   bool get tieneVisual => estrofaRef >= 0;
+
+  /// ¿Tiene timing A grabado?
+  bool get tieneTimingA => timingsMs.isNotEmpty;
 
   /// Texto legible para mostrar en UI.
   String get label {
@@ -78,6 +87,16 @@ class BloqueAudio {
         conLetra: conLetra,
         tipo: tipo,
         velocidad: velocidad,
+        timingsMs: List<int>.from(timingsMs),
+      );
+
+  BloqueAudio copyConTimings(List<int> nuevosTimings) => BloqueAudio(
+        inicioMs: inicioMs,
+        estrofaRef: estrofaRef,
+        conLetra: conLetra,
+        tipo: tipo,
+        velocidad: velocidad,
+        timingsMs: nuevosTimings,
       );
 
   Map<String, dynamic> toMap() => {
@@ -86,6 +105,7 @@ class BloqueAudio {
         'conLetra': conLetra,
         'tipo': tipo.name,
         'velocidad': velocidad,
+        if (timingsMs.isNotEmpty) 'timingsMs': timingsMs,
       };
 
   factory BloqueAudio.fromMap(Map<String, dynamic> m) {
@@ -97,6 +117,13 @@ class BloqueAudio {
         break;
       }
     }
+
+    final rawTimings = m['timingsMs'] as List?;
+    final timings = rawTimings
+            ?.map((x) => (x as num).toInt())
+            .toList() ??
+        <int>[];
+
     return BloqueAudio(
       inicioMs: (m['inicioMs'] is int) ? m['inicioMs'] as int : 0,
       estrofaRef: (m['estrofaRef'] is int) ? m['estrofaRef'] as int : -1,
@@ -105,6 +132,7 @@ class BloqueAudio {
       velocidad: (m['velocidad'] is num)
           ? (m['velocidad'] as num).toDouble()
           : 1.0,
+      timingsMs: timings,
     );
   }
 }
