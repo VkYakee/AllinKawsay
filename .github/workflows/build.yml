@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, experimental/zampona ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       motivo:
@@ -152,21 +152,21 @@ jobs:
           cat lib/version_build.dart
 
       - name: Leer versión de version.dart
-  id: version
-  run: |
-    MAJOR=$(awk -F"'" '/static const String major/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
-    MINOR=$(awk -F"'" '/static const String minor/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
-    PATCH=$(awk -F"'" '/static const String patch/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
-    RELEASE=$(awk -F"'" '/static const String release/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+        id: version
+        run: |
+          MAJOR=$(awk -F"'" '/static const String major/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+          MINOR=$(awk -F"'" '/static const String minor/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+          PATCH=$(awk -F"'" '/static const String patch/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+          RELEASE=$(awk -F"'" '/static const String release/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
 
-    if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ] || [ -z "$RELEASE" ]; then
-      echo "❌ No se pudieron leer las versiones. Revisá lib/version.dart"
-      exit 1
-    fi
+          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ] || [ -z "$RELEASE" ]; then
+            echo "❌ No se pudieron leer las versiones. Revisá lib/version.dart"
+            exit 1
+          fi
 
-    VERSION="${MAJOR}.${MINOR}.${PATCH}.${RELEASE}"
-    echo "📦 Versión base detectada: $VERSION"
-    echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION="${MAJOR}.${MINOR}.${PATCH}.${RELEASE}"
+          echo "📦 Versión base detectada: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Determinar tipo de release
         id: tipo
@@ -255,4 +255,6 @@ jobs:
               --title "v${VERSION}.${RUN}" \
               --notes-file /tmp/notas.md
             echo "✅ Release ESTABLE creado: $TAG"
+            echo "📥 Link de descarga directa:"
+            echo "https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk"
           fi
