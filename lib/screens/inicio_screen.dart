@@ -15,6 +15,7 @@ import 'busqueda_global_screen.dart';
 import 'cancion_detalle_screen.dart';
 import 'historia_screen.dart';
 import 'recuerdo_detalle_screen.dart';
+import 'zampona_screen.dart';
 
 class InicioScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -64,7 +65,6 @@ class _InicioScreenState extends State<InicioScreen> {
               children: [
                 _header(context),
 
-                // Banner de evento nuevo
                 if (_eventoNuevo != null && !_bannerCerrado)
                   BannerNovedades(
                     icono: Icons.celebration,
@@ -109,117 +109,142 @@ class _InicioScreenState extends State<InicioScreen> {
   }
 
   Widget _header(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 40),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0A0A0A),
-                AppColors.granateOscuro,
-                AppColors.granate
-              ],
-              stops: [0.0, 0.6, 1.0],
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(32),
-              bottomRight: Radius.circular(32),
-            ),
-            boxShadow: [
-              BoxShadow(
-                  color: Color(0x40000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 8)),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0A0A0A),
+            AppColors.granateOscuro,
+            AppColors.granate
+          ],
+          stops: [0.0, 0.6, 1.0],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x40000000),
+              blurRadius: 20,
+              offset: Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Fila superior: 2 botones a la derecha
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _botonHeader(
+                icono: Icons.search,
+                tooltip: 'Buscar',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const BusquedaGlobalScreen()),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _botonHeader(
+                icono: Icons.piano,
+                tooltip: 'Zampoña',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ZamponaScreen()),
+                ),
+              ),
             ],
           ),
-          child: Column(
-            children: [
-              Container(
+          const SizedBox(height: 4),
+
+          // Logo
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.dorado.withOpacity(0.3),
+                  blurRadius: 24,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/logo.png',
                 width: 90,
                 height: 90,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.dorado.withOpacity(0.3),
-                      blurRadius: 24,
-                      spreadRadius: 2,
-                    ),
-                  ],
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: AppColors.granate,
+                  child: const Icon(Icons.music_note,
+                      color: AppColors.dorado, size: 45),
                 ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/logo.png',
-                    width: 90,
-                    height: 90,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.granate,
-                      child: const Icon(Icons.music_note,
-                          color: AppColors.dorado, size: 45),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'ALLIN KAWSAY',
-                style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.dorado,
-                    letterSpacing: 5),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Hola, ${widget.nombreUsuario}',
-                  style: TextStyle(
-                      color: AppColors.dorado.withOpacity(0.9),
-                      fontSize: 12,
-                      letterSpacing: 0.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          top: 8,
-          right: 8,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(30),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const BusquedaGlobalScreen()),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: AppColors.dorado.withOpacity(0.3)),
-                ),
-                child: const Icon(Icons.search,
-                    color: AppColors.dorado, size: 22),
               ),
             ),
           ),
+          const SizedBox(height: 18),
+          const Text(
+            'ALLIN KAWSAY',
+            style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.dorado,
+                letterSpacing: 5),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Hola, ${widget.nombreUsuario}',
+              style: TextStyle(
+                  color: AppColors.dorado.withOpacity(0.9),
+                  fontSize: 12,
+                  letterSpacing: 0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _botonHeader({
+    required IconData icono,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(30),
+        onTap: onTap,
+        child: Tooltip(
+          message: tooltip,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: AppColors.dorado.withOpacity(0.3)),
+            ),
+            child: Icon(icono, color: AppColors.dorado, size: 22),
+          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -711,6 +736,7 @@ Widget _ultimasCanciones(BuildContext context) {
     return '$h:$m';
   }
 }
+
 class _SkeletonEvento extends StatelessWidget {
   const _SkeletonEvento();
   @override

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/info_version.dart';
-import '../services/descarga_service.dart';
 import '../services/github_service.dart';
 import '../services/update_service.dart';
+import '../services/usuario_service.dart';
 import '../theme/colors.dart';
 import '../widgets/comunes/seccion_card.dart';
+import '../widgets/dialogo_descarga_apk.dart';
 
 class GestionActualizacionesScreen extends StatefulWidget {
   const GestionActualizacionesScreen({super.key});
@@ -20,6 +20,7 @@ class _GestionActualizacionesScreenState
   InfoVersion? _actual;
   List<ReleaseInfo> _releases = [];
   bool _cargando = true;
+  bool _esDev = false;
   String? _error;
 
   @override
@@ -34,12 +35,17 @@ class _GestionActualizacionesScreenState
       _error = null;
     });
     try {
+      final usuario = await UsuarioService().miUsuarioActual();
+      final esDev = usuario?.esDev ?? false;
       final actual = await UpdateService.actual();
-      final releases = await GithubService.listarEstables(limite: 30);
+      final releases = esDev
+          ? await GithubService.listarTodas(limite: 30)
+          : await GithubService.listarEstables(limite: 30);
       if (!mounted) return;
       setState(() {
         _actual = actual;
         _releases = releases;
+        _esDev = esDev;
         _cargando = false;
       });
     } catch (e) {
@@ -95,269 +101,199 @@ class _GestionActualizacionesScreenState
   }
 
   Future<void> _descargarRelease(ReleaseInfo r) async {
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
-        title: const Text('Descargar APK',
-            style: TextStyle(
-                color: AppColors.granate,
-                fontWeight: FontWeight.bold)),
-        content: Text(
-            'Se descargará el APK de ${r.tag} (${r.tamanoMb} MB) en la '
-            'carpeta Descargas. Después podrás instalarlo manualmente '
-            'para probarlo.\n\n'
-            '¿Continuar?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Descargar'),
-          ),
-        ],
-      ),
+    await DialogoDescargaApk.mostrar(
+      context,
+      url: r.urlApk,
+      nombre: 'AllinKawsay_${r.versionLegible}.apk',
+      versionLegible: r.versionLegible,
     );
-    if (confirmar != true) return;
+  }
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                  color: AppColors.dorado, strokeWidth: 2.5),
+  Future<void> _aprobarRelease(ReleaseInfo r) async {
+    final notasCtrl = TextEditingController(text: r.notas);
+    bool critica = false;
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.dorado,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'APROBAR ${r.tag}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.seccionTitulo(context),
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      '${r.tamanoMb} MB'
+                      '${r.prerelease ? " · PRERELEASE" : ""}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(ctx)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.6),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: notasCtrl,
+                    maxLines: 4,
+                    minLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Notas / novedades (opcional)',
+                      hintText:
+                          'Ej: Correcciones en numerofonía, mejoras...',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    value: critica,
+                    activeColor: AppColors.granate,
+                    title: const Text('Actualización CRÍTICA',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text(
+                        'Los usuarios NO podrán posponerla',
+                        style: TextStyle(fontSize: 11)),
+                    onChanged: (v) => setSheet(() => critica = v),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 50,
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.check_circle, size: 18),
+                      label: const Text('APROBAR Y PUBLICAR',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          )),
+                      onPressed: () => Navigator.pop(ctx, true),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 12),
-            Expanded(child: Text('Descargando ${r.tamanoMb} MB...')),
-          ],
+          ),
         ),
-        duration: const Duration(minutes: 5),
       ),
     );
+
+    if (ok != true) return;
 
     try {
-      final nombre = 'AllinKawsay_${r.versionLegible}.apk';
-      final resultado = await DescargaService.descargar(
-        r.urlApk,
-        nombre,
-        'application/vnd.android.package-archive',
-      );
-
+      await UpdateService.aprobar(InfoVersion(
+        build: r.build,
+        version: r.versionLegible,
+        url: r.urlApk,
+        critica: critica,
+        notas: notasCtrl.text.trim(),
+        aprobadaPor: 'admin',
+      ));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-      if (resultado != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppColors.dorado),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'APK guardado en Descargas: $resultado',
-                  ),
-                ),
-              ],
-            ),
-            duration: const Duration(seconds: 6),
-          ),
-        );
-      } else {
-        final uri = Uri.parse(r.urlApk);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No se pudo descargar ni abrir el enlace'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${r.tag} aprobada')),
+      );
+      await _cargar();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al descargar: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
-Future<void> _aprobarRelease(ReleaseInfo r) async {
-  final notasCtrl = TextEditingController(text: r.notas);
-  bool critica = false;
 
-  final ok = await showModalBottomSheet<bool>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Theme.of(context).cardColor,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setSheet) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.dorado,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ACTUALIZACIONES'),
+        actions: [
+          if (_esDev)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A2540),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  'APROBAR ${r.tag}',
-                  textAlign: TextAlign.center,
+                child: const Text(
+                  'DEV MODE',
                   style: TextStyle(
-                    fontSize: 16,
+                    color: Colors.cyanAccent,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.seccionTitulo(context),
-                    letterSpacing: 2,
+                    fontSize: 9,
+                    letterSpacing: 1.5,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    'Build ${r.build} · ${r.tamanoMb} MB',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(ctx)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.6),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: notasCtrl,
-                  maxLines: 4,
-                  minLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Notas / novedades (opcional)',
-                    hintText:
-                        'Ej: Correcciones en numerofonía, mejoras...',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  value: critica,
-                  activeColor: AppColors.granate,
-                  title: const Text('Actualización CRÍTICA',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text(
-                      'Los usuarios NO podrán posponerla',
-                      style: TextStyle(fontSize: 11)),
-                  onChanged: (v) => setSheet(() => critica = v),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 50,
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.check_circle, size: 18),
-                    label: const Text('APROBAR Y PUBLICAR',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                        )),
-                    onPressed: () => Navigator.pop(ctx, true),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-
-  if (ok != true) return;
-
-  try {
-    await UpdateService.aprobar(InfoVersion(
-      build: r.build,
-      version: r.versionLegible,
-      url: r.urlApk,
-      critica: critica,
-      notas: notasCtrl.text.trim(),
-      aprobadaPor: 'admin',
-    ));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${r.tag} aprobada')),
-    );
-    await _cargar();
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $e')),
-    );
-  }
-}
-
-@override
-Widget build(BuildContext context) {
-  final onSurface = Theme.of(context).colorScheme.onSurface;
-
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text('ACTUALIZACIONES'),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          tooltip: 'Recargar',
-          onPressed: _cargando ? null : _cargar,
-        ),
-      ],
-    ),
-    body: _cargando
-        ? const Center(
-            child: CircularProgressIndicator(color: AppColors.granate))
-        : _error != null
-            ? _buildError(onSurface)
-            : RefreshIndicator(
-                onRefresh: _cargar,
-                color: AppColors.dorado,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _buildInfoFlujo(onSurface),
-                    const SizedBox(height: 16),
-                    _buildSeccionActual(onSurface),
-                    const SizedBox(height: 20),
-                    _buildSeccionReleases(onSurface),
-                    const SizedBox(height: 32),
-                  ],
                 ),
               ),
-  );
-}
-
+            ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Recargar',
+            onPressed: _cargando ? null : _cargar,
+          ),
+        ],
+      ),
+      body: _cargando
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.granate))
+          : _error != null
+              ? _buildError(onSurface)
+              : RefreshIndicator(
+                  onRefresh: _cargar,
+                  color: AppColors.dorado,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _buildInfoFlujo(onSurface),
+                      const SizedBox(height: 16),
+                      _buildSeccionActual(onSurface),
+                      const SizedBox(height: 20),
+                      _buildSeccionReleases(onSurface),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+    );
+  }
 Widget _buildInfoFlujo(Color onSurface) {
   return Container(
     padding: const EdgeInsets.all(14),
@@ -374,10 +310,13 @@ Widget _buildInfoFlujo(Color onSurface) {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Acá aparecen solo los LANZAMIENTOS OFICIALES preparados '
-            'por el equipo técnico. Los cambios internos de desarrollo '
-            'no se muestran para evitar instalar versiones a medio '
-            'terminar.',
+            _esDev
+                ? 'Modo DEV: ves TODOS los lanzamientos (incluidos los '
+                    'prereleases de prueba). Los admins normales solo '
+                    'ven los estables.'
+                : 'Acá aparecen solo los LANZAMIENTOS OFICIALES. Los '
+                    'cambios internos de desarrollo no se muestran para '
+                    'evitar instalar versiones a medio terminar.',
             style: TextStyle(
               fontSize: 12,
               color: onSurface.withOpacity(0.75),
@@ -445,7 +384,7 @@ Widget _buildSeccionActual(Color onSurface) {
           )
         else ...[
           Text(
-            'v${_actual!.version}.${_actual!.build}',
+            'v${_actual!.displayVersion}', // ⬅️ SIN build
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -517,57 +456,62 @@ Widget _buildSeccionActual(Color onSurface) {
     ),
   );
 }
-  Widget _buildSeccionReleases(Color onSurface) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.granate.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.cloud_download,
-                    size: 14, color: AppColors.seccionTitulo(context)),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'LANZAMIENTOS DISPONIBLES',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.seccionTitulo(context),
-                  fontSize: 13,
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (_releases.isEmpty)
-          SeccionCard(
-            icono: Icons.inbox,
-            titulo: 'SIN LANZAMIENTOS',
-            child: Text(
-              'Todavía no hay versiones oficiales lanzadas. '
-              'Cuando el equipo técnico publique una, aparecerá acá.',
-              style: TextStyle(
-                  color: onSurface.withOpacity(0.6),
-                  fontStyle: FontStyle.italic,
-                  fontSize: 13,
-                  height: 1.4),
-            ),
-          )
-        else
-          ..._releases.map((r) => _buildTarjetaRelease(r, onSurface)),
-      ],
-    );
-  }
 
+Widget _buildSeccionReleases(Color onSurface) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.granate.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.cloud_download,
+                  size: 14, color: AppColors.seccionTitulo(context)),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              _esDev
+                  ? 'TODOS LOS LANZAMIENTOS'
+                  : 'LANZAMIENTOS DISPONIBLES',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.seccionTitulo(context),
+                fontSize: 13,
+                letterSpacing: 2,
+              ),
+            ),
+          ],
+        ),
+      ),
+      if (_releases.isEmpty)
+        SeccionCard(
+          icono: Icons.inbox,
+          titulo: 'SIN LANZAMIENTOS',
+          child: Text(
+            'Todavía no hay versiones oficiales lanzadas. '
+            'Cuando el equipo técnico publique una, aparecerá acá.',
+            style: TextStyle(
+                color: onSurface.withOpacity(0.6),
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+                height: 1.4),
+          ),
+        )
+      else
+        ..._releases.map((r) => _buildTarjetaRelease(r, onSurface)),
+    ],
+  );
+}
   Widget _buildTarjetaRelease(ReleaseInfo r, Color onSurface) {
+    final esPre = r.prerelease;
+    final colorBadge = esPre ? Colors.orange : Colors.green;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
@@ -575,7 +519,12 @@ Widget _buildSeccionActual(Color onSurface) {
         decoration: BoxDecoration(
           color: AppColors.cardColor(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
+          border: Border.all(
+            color: esPre
+                ? Colors.orange.withOpacity(0.4)
+                : AppColors.dorado.withOpacity(0.2),
+            width: esPre ? 1.5 : 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,29 +534,65 @@ Widget _buildSeccionActual(Color onSurface) {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    gradient: AppColors.gradienteGranate,
+                    gradient: esPre
+                        ? const LinearGradient(
+                            colors: [Color(0xFFB45309), Color(0xFF78350F)],
+                          )
+                        : AppColors.gradienteGranate,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.android,
-                      color: AppColors.dorado, size: 18),
+                  child: Icon(
+                    esPre ? Icons.science : Icons.android,
+                    color: AppColors.dorado,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        r.tag,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: onSurface,
-                          fontSize: 14,
-                          letterSpacing: 0.3,
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              r.tag,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: onSurface,
+                                fontSize: 14,
+                                letterSpacing: 0.3,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (esPre) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: colorBadge.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color: colorBadge.withOpacity(0.6)),
+                              ),
+                              child: Text(
+                                'BETA',
+                                style: TextStyle(
+                                  color: colorBadge,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 9,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Build ${r.build} · ${r.tamanoMb} MB',
+                        '${r.tamanoMb} MB', // ⬅️ SIN build
                         style: TextStyle(
                           fontSize: 11,
                           color: onSurface.withOpacity(0.55),

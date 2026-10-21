@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-/// Representa un release público del repo de GitHub.
 class ReleaseInfo {
   final String tag;
   final String nombre;
@@ -10,9 +9,6 @@ class ReleaseInfo {
   final bool prerelease;
   final String urlApk;
   final int tamanoBytes;
-
-  /// Build number extraído del tag, ej: "v1.1.2.520" → 520.
-  /// Si no se puede, queda en 0.
   final int build;
 
   ReleaseInfo({
@@ -71,8 +67,6 @@ class ReleaseInfo {
 class GithubService {
   static const _repo = 'yeo-drake/AllinKawsay';
 
-  /// Lista releases públicos del repo (más reciente primero).
-  /// No requiere auth (repo público, rate limit 60/hora).
   static Future<List<ReleaseInfo>> listarReleases({int limite = 20}) async {
     final url =
         'https://api.github.com/repos/$_repo/releases?per_page=$limite';
@@ -96,13 +90,17 @@ class GithubService {
         .toList();
   }
 
-  /// Devuelve SOLO releases estables (NO prereleases) que tengan APK.
-  /// Estos son los que un admin puede aprobar desde el panel.
-  /// Las prereleases (pushes automáticos) quedan ocultas.
+  /// Solo releases ESTABLES (NO prereleases) con APK.
+  /// Es lo que ve un admin normal.
   static Future<List<ReleaseInfo>> listarEstables({int limite = 20}) async {
     final todas = await listarReleases(limite: limite);
-    return todas
-        .where((r) => r.tieneApk && !r.prerelease)
-        .toList();
+    return todas.where((r) => r.tieneApk && !r.prerelease).toList();
+  }
+
+  /// TODAS las releases (estables + prereleases) con APK.
+  /// Es lo que ve un DEV.
+  static Future<List<ReleaseInfo>> listarTodas({int limite = 30}) async {
+    final todas = await listarReleases(limite: limite);
+    return todas.where((r) => r.tieneApk).toList();
   }
 }

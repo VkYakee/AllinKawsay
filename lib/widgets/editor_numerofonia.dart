@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/numerofonia.dart';
+import '../screens/grabar_partitura_screen.dart';
+import '../screens/grabar_timing_screen.dart';
 import '../theme/colors.dart';
 
 class EditorNumerofonia extends StatefulWidget {
@@ -37,6 +39,79 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
 
   void _notify() => widget.onChanged?.call(_estrofas);
 
+  Future<void> _abrirGrabador(int i) async {
+    final resultado = await Navigator.push<EstrofaNumerofonia>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GrabarPartituraScreen(
+          estrofaInicial: _estrofas[i].copy(),
+        ),
+      ),
+    );
+    if (resultado == null) return;
+
+    var estrofa = resultado;
+    if (estrofa.columnas.isEmpty) {
+      estrofa = EstrofaNumerofonia.nueva();
+    }
+
+    setState(() {
+      _estrofas[i] = estrofa;
+      _notify();
+    });
+  }
+
+  /// Abre el grabador de TIMING (NO toca los números).
+  /// Solo captura los ms entre toques y los guarda en timings7/timings6.
+  Future<void> _abrirGrabarTiming(int i) async {
+    // Si ya hay timings grabados, avisar.
+    final tieneTimings = _estrofas[i].columnas.any(
+          (c) => c.timings7.isNotEmpty || c.timings6.isNotEmpty,
+        );
+
+    if (tieneTimings) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
+          title: const Text('Sobrescribir timing',
+              style: TextStyle(
+                  color: AppColors.granate,
+                  fontWeight: FontWeight.bold)),
+          content: const Text(
+              'Esta estrofa ya tiene un timing grabado. Al grabar '
+              'de nuevo, se reemplazará por completo.\n\n'
+              '¿Continuar?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Continuar')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+
+    final resultado = await Navigator.push<EstrofaNumerofonia>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GrabarTimingScreen(
+          estrofa: _estrofas[i].copy(),
+        ),
+      ),
+    );
+    if (resultado == null) return;
+
+    setState(() {
+      _estrofas[i] = resultado;
+      _notify();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -45,7 +120,6 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
             ? cons.maxWidth
             : MediaQuery.of(context).size.width - 64;
 
-        // ESCALA ÚNICA para todas las estrofas del editor
         double maxBase = 0;
         for (final e in _estrofas) {
           final b = _EditorEstrofa.baseDe(e);
@@ -74,10 +148,18 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
                   _estrofas[i].columnas.add(ColumnaNumerofonia());
                   _notify();
                 }),
+                onQuitarColumna: () => setState(() {
+                  if (_estrofas[i].columnas.isNotEmpty) {
+                    _estrofas[i].columnas.removeLast();
+                    _notify();
+                  }
+                }),
                 onEliminar: () => setState(() {
                   _estrofas.removeAt(i);
                   _notify();
                 }),
+                onGrabar: () => _abrirGrabador(i),
+                onGrabarTiming: () => _abrirGrabarTiming(i),
               ),
               const SizedBox(height: 16),
             ],
@@ -113,7 +195,6 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
     );
   }
 }
-
 class _EditorEstrofa extends StatelessWidget {
   final EstrofaNumerofonia estrofa;
   final int indice;
@@ -121,7 +202,10 @@ class _EditorEstrofa extends StatelessWidget {
   final VoidCallback onCelda;
   final VoidCallback onToggleBis;
   final VoidCallback onAgregarColumna;
+  final VoidCallback onQuitarColumna;
   final VoidCallback onEliminar;
+  final VoidCallback onGrabar;
+  final VoidCallback onGrabarTiming;
 
   const _EditorEstrofa({
     super.key,
@@ -131,7 +215,10 @@ class _EditorEstrofa extends StatelessWidget {
     required this.onCelda,
     required this.onToggleBis,
     required this.onAgregarColumna,
+    required this.onQuitarColumna,
     required this.onEliminar,
+    required this.onGrabar,
+    required this.onGrabarTiming,
   });
 
   static const double charW = 7.5;
@@ -143,6 +230,9 @@ class _EditorEstrofa extends StatelessWidget {
 
   static double baseDe(EstrofaNumerofonia e) =>
       18 + e.columnas.fold<double>(0, (s, c) => s + anchoCol(c, 1.0));
+
+  bool get _tieneTimings =>
+      estrofa.columnas.any((c) => c.timings7.isNotEmpty || c.timings6.isNotEmpty);
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +280,40 @@ class _EditorEstrofa extends StatelessWidget {
                 letterSpacing: 1.5,
               ),
             ),
+            if (_tieneTimings) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: Colors.green.withOpacity(0.5)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.timer, size: 9, color: Colors.green),
+                    SizedBox(width: 3),
+                    Text(
+                      'TIMING',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 8,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const Spacer(),
+            _botonGrabar(),
+            const SizedBox(width: 6),
+            _botonTiming(),
+            const SizedBox(width: 6),
             _chipBis(),
             const SizedBox(width: 6),
             InkWell(
@@ -210,13 +333,48 @@ class _EditorEstrofa extends StatelessWidget {
         const SizedBox(height: 4),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: tabla),
         const SizedBox(height: 2),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: onAgregarColumna,
-            icon: const Icon(Icons.add, size: 14, color: AppColors.granate),
-            label: const Text(
-              'COLUMNA',
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            _botonColumna(
+              icono: Icons.remove,
+              onTap: estrofa.columnas.isEmpty ? null : onQuitarColumna,
+            ),
+            const SizedBox(width: 6),
+            _botonColumna(
+              icono: Icons.add,
+              onTap: onAgregarColumna,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _botonGrabar() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onGrabar,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          gradient: AppColors.gradienteDorado,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.dorado.withOpacity(0.4),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.piano, size: 11, color: AppColors.granate),
+            SizedBox(width: 4),
+            Text(
+              'GRABAR',
               style: TextStyle(
                 color: AppColors.granate,
                 fontWeight: FontWeight.bold,
@@ -224,18 +382,90 @@ class _EditorEstrofa extends StatelessWidget {
                 letterSpacing: 1,
               ),
             ),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              side: BorderSide(color: AppColors.granate.withOpacity(0.4)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Botón "TIMING": abre el grabador de timing sin tocar los números.
+  Widget _botonTiming() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onGrabarTiming,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.green.shade700,
+              Colors.green.shade900,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withOpacity(0.4),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.timer, size: 11, color: Colors.white),
+            SizedBox(width: 4),
+            Text(
+              'TIMING',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 9,
+                letterSpacing: 1,
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _botonColumna({
+    required IconData icono,
+    required VoidCallback? onTap,
+  }) {
+    final habilitado = onTap != null;
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(
+        icono,
+        size: 14,
+        color: habilitado
+            ? AppColors.granate
+            : AppColors.granate.withOpacity(0.3),
+      ),
+      label: const Text(
+        'COLUMNA',
+        style: TextStyle(
+          color: AppColors.granate,
+          fontWeight: FontWeight.bold,
+          fontSize: 9,
+          letterSpacing: 1,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        side: BorderSide(
+          color: AppColors.granate
+              .withOpacity(habilitado ? 0.4 : 0.15),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
     );
   }
 

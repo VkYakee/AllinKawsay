@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/novedades_service.dart';
 import '../theme/colors.dart';
-import 'inicio_screen.dart';
 import 'cancionero_screen.dart';
 import 'eventos_screen.dart';
-import 'recuerdos_screen.dart';
+import 'inicio_screen.dart';
 import 'perfil_screen.dart';
+import 'recuerdos_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -21,7 +21,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar el contador de eventos nuevos al abrir la app
     NovedadesService.refrescar();
   }
 

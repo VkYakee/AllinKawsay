@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, experimental/zampona ]
   workflow_dispatch:
     inputs:
       motivo:
@@ -53,7 +53,6 @@ jobs:
           mkdir -p android/app/src/main/res/xml
           cp android_config/file_paths.xml android/app/src/main/res/xml/file_paths.xml
 
-          # Copiar íconos de notificación al proyecto Android
           mkdir -p android/app/src/main/res/drawable-mdpi
           mkdir -p android/app/src/main/res/drawable-hdpi
           mkdir -p android/app/src/main/res/drawable-xhdpi
@@ -158,13 +157,14 @@ jobs:
           MAJOR=$(awk -F"'" '/static const String major/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
           MINOR=$(awk -F"'" '/static const String minor/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
           PATCH=$(awk -F"'" '/static const String patch/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+          RELEASE=$(awk -F"'" '/static const String release/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
 
-          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ]; then
+          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ] || [ -z "$RELEASE" ]; then
             echo "❌ No se pudieron leer las versiones. Revisá lib/version.dart"
             exit 1
           fi
 
-          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          VERSION="${MAJOR}.${MINOR}.${PATCH}.${RELEASE}"
           echo "📦 Versión base detectada: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 

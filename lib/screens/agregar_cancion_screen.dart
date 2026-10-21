@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 
+import '../models/bloque_audio.dart';
 import '../models/cancion.dart';
 import '../models/categoria.dart';
 import '../models/numerofonia.dart';
@@ -15,6 +16,7 @@ import '../services/storage_service.dart';
 import '../theme/colors.dart';
 import '../widgets/editor_letras.dart';
 import '../widgets/editor_numerofonia.dart';
+import 'grabar_setlist_screen.dart';
 
 class AgregarCancionScreen extends StatefulWidget {
   final Cancion? cancion;
@@ -38,6 +40,7 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   String _categoriaId = '';
   List<EstrofaNumerofonia> _numerofoniaEstrofas = [];
   List<Letra> _letras = [];
+  List<BloqueAudio> _setlist = [];
   String? _imagenUrl;
   String? _audioUrl;
   String? _audioNombre;
@@ -69,6 +72,7 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
       _audioUrl = c.audioUrl.isNotEmpty ? c.audioUrl : null;
       _numerofoniaEstrofas = c.estrofas.map((e) => e.copy()).toList();
       _letras = c.letras.map((l) => l.copy()).toList();
+      _setlist = c.setlist.map((b) => b.copy()).toList();
     }
     if (_letras.isEmpty) _letras.add(Letra());
   }
@@ -104,7 +108,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   }
 
   Future<void> _seleccionarImagen() async {
-    // Pedir permiso de galería primero
     final ok = await PermisosService.pedirGaleria(context);
     if (!ok || !mounted) return;
 
@@ -126,7 +129,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
   }
 
   Future<void> _seleccionarAudio() async {
-    // Pedir permiso de audio primero
     final ok = await PermisosService.pedirAudio(context);
     if (!ok || !mounted) return;
 
@@ -160,6 +162,59 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: Colors.red),
     );
+  }
+
+  /// Abre la pantalla del setlist. Solo si hay audio cargado.
+  Future<void> _abrirSetlist() async {
+    if (_audioUrl == null || _audioUrl!.isEmpty) {
+      _error('Primero subí un audio para marcar el setlist');
+      return;
+    }
+
+    final cancionTemp = Cancion(
+      id: widget.cancion?.id ?? '',
+      titulo: _tituloCtrl.text.trim().isEmpty
+          ? 'Sin título'
+          : _tituloCtrl.text.trim(),
+      autor: _autorCtrl.text.trim(),
+      tipo: _tipo,
+      ritmo: _ritmoCtrl.text.trim(),
+      region: _regionCtrl.text.trim(),
+      numerofonia: '',
+      estrofas: _numerofoniaEstrofas,
+      letra: '',
+      letras: _letras,
+      setlist: _setlist,
+      imagenUrl: _imagenUrl ?? '',
+      audioUrl: _audioUrl!,
+      videoUrl: _videoCtrl.text.trim(),
+      descripcion: _descripcionCtrl.text.trim(),
+      tags: [],
+      categoriaId: _categoriaId,
+      creadoPor: '',
+      creadorNombre: '',
+    );
+
+    final resultado = await Navigator.push<List<BloqueAudio>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GrabarSetlistScreen(
+          cancion: cancionTemp,
+          setlistInicial: _setlist,
+        ),
+      ),
+    );
+
+    if (resultado != null && mounted) {
+      setState(() => _setlist = resultado);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Setlist guardado: ${resultado.length} bloques'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Future<void> _guardar() async {
@@ -198,6 +253,7 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
         estrofas: _numerofoniaEstrofas,
         letra: letraPlana,
         letras: _letras,
+        setlist: _setlist,
         imagenUrl: _imagenUrl ?? '',
         audioUrl: _audioUrl ?? '',
         videoUrl: _videoCtrl.text.trim(),
@@ -322,6 +378,10 @@ Widget build(BuildContext context) {
           _seccion('AUDIO', Icons.music_note, [_bloqueAudio(onSurface)]),
           const SizedBox(height: 20),
 
+          _seccion('SETLIST DEL AUDIO', Icons.queue_music,
+              [_bloqueSetlist(onSurface)]),
+          const SizedBox(height: 20),
+
           _seccion('IMAGEN (opcional)', Icons.image,
               [_bloqueImagen(onSurface)]),
           const SizedBox(height: 20),
@@ -417,7 +477,8 @@ Widget _campo(TextEditingController ctrl, String label,
     decoration: InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: const TextStyle(color: AppColors.granate, fontSize: 13),
+      labelStyle:
+          const TextStyle(color: AppColors.granate, fontSize: 13),
       hintStyle:
           TextStyle(color: onSurface.withOpacity(0.4), fontSize: 13),
       filled: true,
@@ -430,106 +491,194 @@ Widget _campo(TextEditingController ctrl, String label,
     ),
   );
 }
-
-Widget _selectorTipo() {
-  return Container(
-    padding: const EdgeInsets.all(4),
-    decoration: BoxDecoration(
-      color: AppColors.granate.withOpacity(0.04),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _tipo = 'original'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: _tipo == 'original'
-                    ? AppColors.granate
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'ORIGINAL',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: _tipo == 'original'
-                        ? AppColors.dorado
-                        : AppColors.granate,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                    letterSpacing: 1),
+  Widget _selectorTipo() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.granate.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _tipo = 'original'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _tipo == 'original'
+                      ? AppColors.granate
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'ORIGINAL',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: _tipo == 'original'
+                          ? AppColors.dorado
+                          : AppColors.granate,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      letterSpacing: 1),
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _tipo = 'adaptacion'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _tipo == 'adaptacion'
+                      ? AppColors.granate
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'ADAPTACIÓN',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: _tipo == 'adaptacion'
+                          ? AppColors.dorado
+                          : AppColors.granate,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      letterSpacing: 1),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _selectorCategoria() {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return DropdownButtonFormField<String>(
+      value: _categorias.any((c) => c.id == _categoriaId)
+          ? _categoriaId
+          : null,
+      isExpanded: true,
+      dropdownColor: AppColors.cardColor(context),
+      style: TextStyle(color: onSurface, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: 'Categoría',
+        labelStyle:
+            const TextStyle(color: AppColors.granate, fontSize: 13),
+        filled: true,
+        fillColor: AppColors.granate.withOpacity(0.04),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+      items: [
+        const DropdownMenuItem<String>(
+          value: '',
+          child: Text('Sin categoría',
+              style: TextStyle(fontStyle: FontStyle.italic)),
         ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _tipo = 'adaptacion'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: _tipo == 'adaptacion'
-                    ? AppColors.granate
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
+        ..._categorias.map((c) => DropdownMenuItem<String>(
+              value: c.id,
+              child: Text('${c.emoji} ${c.nombre}'),
+            )),
+      ],
+      onChanged: (v) => setState(() => _categoriaId = v ?? ''),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // BLOQUE SETLIST
+  // ═══════════════════════════════════════════════════════════
+  Widget _bloqueSetlist(Color onSurface) {
+    final tieneAudio = _audioUrl != null && _audioUrl!.isNotEmpty;
+    final tieneSetlist = _setlist.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: tieneSetlist
+                ? Colors.green.withOpacity(0.08)
+                : AppColors.granate.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: tieneSetlist
+                  ? Colors.green.withOpacity(0.5)
+                  : AppColors.granate.withOpacity(0.15),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                tieneSetlist ? Icons.check_circle : Icons.info_outline,
+                color: tieneSetlist ? Colors.green : AppColors.granate,
+                size: 18,
               ),
-              child: Text(
-                'ADAPTACIÓN',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: _tipo == 'adaptacion'
-                        ? AppColors.dorado
-                        : AppColors.granate,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                    letterSpacing: 1),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  tieneSetlist
+                      ? '${_setlist.length} bloques marcados'
+                      : 'Sin setlist. Marcá los bloques del audio '
+                          'para habilitar el modo ensayo con Audio URL.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: tieneSetlist
+                        ? Colors.green.shade900
+                        : onSurface.withOpacity(0.7),
+                    fontWeight: tieneSetlist
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                ),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: tieneAudio ? _abrirSetlist : null,
+            icon: const Icon(Icons.queue_music,
+                color: AppColors.granate, size: 18),
+            label: Text(
+              tieneSetlist
+                  ? 'EDITAR SETLIST'
+                  : tieneAudio
+                      ? '🎬 MARCAR SETLIST'
+                      : 'Subí un audio primero',
+              style: const TextStyle(
+                  color: AppColors.granate,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  fontSize: 11),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(
+                  color: AppColors.granate.withOpacity(0.5)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
           ),
         ),
       ],
-    ),
-  );
-}
+    );
+  }
 
-Widget _selectorCategoria() {
-  final onSurface = Theme.of(context).colorScheme.onSurface;
-  return DropdownButtonFormField<String>(
-    value: _categorias.any((c) => c.id == _categoriaId)
-        ? _categoriaId
-        : null,
-    isExpanded: true,
-    dropdownColor: AppColors.cardColor(context),
-    style: TextStyle(color: onSurface, fontSize: 14),
-    decoration: InputDecoration(
-      labelText: 'Categoría',
-      labelStyle: const TextStyle(color: AppColors.granate, fontSize: 13),
-      filled: true,
-      fillColor: AppColors.granate.withOpacity(0.04),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    ),
-    items: [
-      const DropdownMenuItem<String>(
-        value: '',
-        child: Text('Sin categoría',
-            style: TextStyle(fontStyle: FontStyle.italic)),
-      ),
-      ..._categorias.map((c) => DropdownMenuItem<String>(
-            value: c.id,
-            child: Text('${c.emoji} ${c.nombre}'),
-          )),
-    ],
-    onChanged: (v) => setState(() => _categoriaId = v ?? ''),
-  );
-}
+  // ═══════════════════════════════════════════════════════════
+  // BLOQUE AUDIO (ya existía)
+  // ═══════════════════════════════════════════════════════════
   Widget _bloqueAudio(Color onSurface) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -580,6 +729,7 @@ Widget _selectorCategoria() {
                   onPressed: () => setState(() {
                     _audioUrl = null;
                     _audioNombre = null;
+                    _setlist = [];
                   }),
                 ),
               ],

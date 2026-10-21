@@ -13,6 +13,7 @@ import '../widgets/comunes/error_state.dart';
 import '../widgets/watermark_overlay.dart';
 import 'agregar_cancion_screen.dart';
 import 'cancion_detalle_screen.dart';
+import 'modo_ensayo_screen.dart';
 
 enum _OrdenCancion { fecha, titulo, autor, reproducciones }
 
@@ -84,214 +85,378 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
           : _ModoVista.tarjetas;
     });
   }
-void _eliminar(Cancion c) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text('Eliminar canción',
-          style: TextStyle(
-              color: AppColors.granate, fontWeight: FontWeight.bold)),
-      content: Text(
-          '¿Eliminar "${c.titulo}"? Esta acción no se puede deshacer.'),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar')),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: FilledButton.styleFrom(backgroundColor: Colors.red),
-          child: const Text('Eliminar'),
-        ),
-      ],
-    ),
-  );
-  if (ok == true) {
-    await _service.eliminar(c.id);
-    if (mounted) {
+
+  /// Abre un selector para elegir qué canción practicar.
+  /// Solo muestra canciones que tienen numerofonía cargada.
+  Future<void> _abrirSelectorEnsayo() async {
+    final canciones = await _service.listar().first;
+    final conNumerofonia =
+        canciones.where((c) => c.tieneNumerofonia).toList();
+
+    if (!mounted) return;
+
+    if (conNumerofonia.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Canción "${c.titulo}" eliminada')),
+        const SnackBar(
+          content: Text(
+              'No hay canciones con numerofonía para practicar todavía'),
+        ),
       );
+      return;
     }
-  }
-}
 
-void _editar(Cancion c) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => AgregarCancionScreen(cancion: c)),
-  );
-}
-
-void _abrirMenuOrden() {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Theme.of(context).cardColor,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (_) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.dorado,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('Ordenar por',
-              style: TextStyle(
-                  fontSize: 17,
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.35,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollCtrl) {
+          final onSurface = Theme.of(context).colorScheme.onSurface;
+          return Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.dorado,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '¿QUÉ QUERÉS PRACTICAR?',
+                style: TextStyle(
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5)),
-          const SizedBox(height: 12),
-          _itemOrden('Título (A-Z)', _OrdenCancion.titulo),
-          _itemOrden('Autor (A-Z)', _OrdenCancion.autor),
-          _itemOrden('Más reproducidas', _OrdenCancion.reproducciones),
-          _itemOrden('Fecha de subida', _OrdenCancion.fecha),
-          const SizedBox(height: 12),
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${conNumerofonia.length} canciones disponibles',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: onSurface.withOpacity(0.5),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  itemCount: conNumerofonia.length,
+                  itemBuilder: (context, i) {
+                    final c = conNumerofonia[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ModoEnsayoScreen(cancion: c),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardColor(context),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: AppColors.dorado
+                                      .withOpacity(0.25)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient:
+                                        AppColors.gradienteGranate,
+                                    borderRadius:
+                                        BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.school,
+                                    color: AppColors.dorado,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        c.titulo,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: onSurface,
+                                        ),
+                                        maxLines: 1,
+                                        overflow:
+                                            TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${c.estrofas.where((e) => !e.vacia).length} estrofa(s)',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: onSurface
+                                              .withOpacity(0.55),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.play_circle_outline,
+                                  color: AppColors.dorado
+                                      .withOpacity(0.7),
+                                  size: 22,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _eliminar(Cancion c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text('Eliminar canción',
+            style: TextStyle(
+                color: AppColors.granate, fontWeight: FontWeight.bold)),
+        content: Text(
+            '¿Eliminar "${c.titulo}"? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
         ],
       ),
-    ),
-  );
-}
+    );
+    if (ok == true) {
+      await _service.eliminar(c.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Canción "${c.titulo}" eliminada')),
+        );
+      }
+    }
+  }
 
-Widget _itemOrden(String label, _OrdenCancion valor) {
-  final selected = _orden == valor;
-  return ListTile(
-    leading: Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: selected
-            ? AppColors.granate
-            : AppColors.granate.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
+  void _editar(Cancion c) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => AgregarCancionScreen(cancion: c)),
+    );
+  }
+
+  void _abrirMenuOrden() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      child: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        color: selected ? AppColors.dorado : AppColors.granate,
-        size: 20,
-      ),
-    ),
-    title: Text(label,
-        style: TextStyle(
-            fontWeight:
-                selected ? FontWeight.bold : FontWeight.normal)),
-    trailing: selected
-        ? IconButton(
-            icon: Icon(
-              _ascendente
-                  ? Icons.arrow_upward_rounded
-                  : Icons.arrow_downward_rounded,
-              color: AppColors.granate,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.dorado,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            onPressed: () {
-              setState(() => _ascendente = !_ascendente);
-              Navigator.pop(context);
-            },
-          )
-        : null,
-    onTap: () {
-      setState(() {
-        _orden = valor;
-        if (valor == _OrdenCancion.fecha ||
-            valor == _OrdenCancion.reproducciones) {
-          _ascendente = false;
-        } else {
-          _ascendente = true;
-        }
-      });
-      Navigator.pop(context);
-    },
-  );
-}
-List<Cancion> _filtrar(List<Cancion> lista, List<String> favoritos) {
-  var r = lista;
-
-  if (_soloFavoritos) {
-    r = r.where((c) => favoritos.contains(c.id)).toList();
+            const SizedBox(height: 16),
+            const Text('Ordenar por',
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5)),
+            const SizedBox(height: 12),
+            _itemOrden('Título (A-Z)', _OrdenCancion.titulo),
+            _itemOrden('Autor (A-Z)', _OrdenCancion.autor),
+            _itemOrden('Más reproducidas', _OrdenCancion.reproducciones),
+            _itemOrden('Fecha de subida', _OrdenCancion.fecha),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
   }
 
-  if (_categoriaFiltro != null && _categoriaFiltro!.isNotEmpty) {
-    r = r.where((c) => c.categoriaId == _categoriaFiltro).toList();
+  Widget _itemOrden(String label, _OrdenCancion valor) {
+    final selected = _orden == valor;
+    return ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.granate
+              : AppColors.granate.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          selected ? Icons.radio_button_checked : Icons.radio_button_off,
+          color: selected ? AppColors.dorado : AppColors.granate,
+          size: 20,
+        ),
+      ),
+      title: Text(label,
+          style: TextStyle(
+              fontWeight:
+                  selected ? FontWeight.bold : FontWeight.normal)),
+      trailing: selected
+          ? IconButton(
+              icon: Icon(
+                _ascendente
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                color: AppColors.granate,
+              ),
+              onPressed: () {
+                setState(() => _ascendente = !_ascendente);
+                Navigator.pop(context);
+              },
+            )
+          : null,
+      onTap: () {
+        setState(() {
+          _orden = valor;
+          if (valor == _OrdenCancion.fecha ||
+              valor == _OrdenCancion.reproducciones) {
+            _ascendente = false;
+          } else {
+            _ascendente = true;
+          }
+        });
+        Navigator.pop(context);
+      },
+    );
   }
 
-  if (_query.isNotEmpty) {
-    final q = _query.toLowerCase();
-    r = r.where((c) =>
-        c.titulo.toLowerCase().contains(q) ||
-        c.autor.toLowerCase().contains(q) ||
-        c.ritmo.toLowerCase().contains(q) ||
-        c.tags.any((t) => t.toLowerCase().contains(q))).toList();
+  List<Cancion> _filtrar(List<Cancion> lista, List<String> favoritos) {
+    var r = lista;
+
+    if (_soloFavoritos) {
+      r = r.where((c) => favoritos.contains(c.id)).toList();
+    }
+
+    if (_categoriaFiltro != null && _categoriaFiltro!.isNotEmpty) {
+      r = r.where((c) => c.categoriaId == _categoriaFiltro).toList();
+    }
+
+    if (_query.isNotEmpty) {
+      final q = _query.toLowerCase();
+      r = r.where((c) =>
+          c.titulo.toLowerCase().contains(q) ||
+          c.autor.toLowerCase().contains(q) ||
+          c.ritmo.toLowerCase().contains(q) ||
+          c.tags.any((t) => t.toLowerCase().contains(q))).toList();
+    }
+
+    if (_tagFiltro != null) {
+      r = r.where((c) => c.tags.contains(_tagFiltro)).toList();
+    }
+
+    r.sort((a, b) {
+      int cmp;
+      switch (_orden) {
+        case _OrdenCancion.titulo:
+          cmp =
+              a.titulo.toLowerCase().compareTo(b.titulo.toLowerCase());
+          break;
+        case _OrdenCancion.autor:
+          cmp = a.autor.toLowerCase().compareTo(b.autor.toLowerCase());
+          break;
+        case _OrdenCancion.reproducciones:
+          cmp = a.reproducciones.compareTo(b.reproducciones);
+          break;
+        case _OrdenCancion.fecha:
+        default:
+          final fa = a.fechaCreacion ?? DateTime(2000);
+          final fb = b.fechaCreacion ?? DateTime(2000);
+          cmp = fa.compareTo(fb);
+          break;
+      }
+      return _ascendente ? cmp : -cmp;
+    });
+
+    return r;
   }
 
-  if (_tagFiltro != null) {
-    r = r.where((c) => c.tags.contains(_tagFiltro)).toList();
+  List<Cancion> _ordenarAlfabetico(List<Cancion> lista) {
+    final copia = List<Cancion>.from(lista);
+    copia.sort((a, b) =>
+        a.titulo.toLowerCase().compareTo(b.titulo.toLowerCase()));
+    return copia;
   }
 
-  r.sort((a, b) {
-    int cmp;
+  List<String> _todosLosTags(List<Cancion> lista) {
+    final set = <String>{};
+    for (final c in lista) {
+      set.addAll(c.tags);
+    }
+    final l = set.toList()..sort();
+    return l;
+  }
+
+  String _nombreOrden() {
     switch (_orden) {
       case _OrdenCancion.titulo:
-        cmp =
-            a.titulo.toLowerCase().compareTo(b.titulo.toLowerCase());
-        break;
+        return 'Título';
       case _OrdenCancion.autor:
-        cmp = a.autor.toLowerCase().compareTo(b.autor.toLowerCase());
-        break;
+        return 'Autor';
       case _OrdenCancion.reproducciones:
-        cmp = a.reproducciones.compareTo(b.reproducciones);
-        break;
+        return 'Reproducciones';
       case _OrdenCancion.fecha:
       default:
-        final fa = a.fechaCreacion ?? DateTime(2000);
-        final fb = b.fechaCreacion ?? DateTime(2000);
-        cmp = fa.compareTo(fb);
-        break;
+        return 'Fecha';
     }
-    return _ascendente ? cmp : -cmp;
-  });
-
-  return r;
-}
-
-/// Ordena SIEMPRE alfabéticamente por título. Se usa en la
-/// vista índice (ignora el orden elegido en el menú).
-List<Cancion> _ordenarAlfabetico(List<Cancion> lista) {
-  final copia = List<Cancion>.from(lista);
-  copia.sort((a, b) =>
-      a.titulo.toLowerCase().compareTo(b.titulo.toLowerCase()));
-  return copia;
-}
-
-List<String> _todosLosTags(List<Cancion> lista) {
-  final set = <String>{};
-  for (final c in lista) {
-    set.addAll(c.tags);
   }
-  final l = set.toList()..sort();
-  return l;
-}
-
-String _nombreOrden() {
-  switch (_orden) {
-    case _OrdenCancion.titulo:
-      return 'Título';
-    case _OrdenCancion.autor:
-      return 'Autor';
-    case _OrdenCancion.reproducciones:
-      return 'Reproducciones';
-    case _OrdenCancion.fecha:
-    default:
-      return 'Fecha';
-  }
-}
 @override
 Widget build(BuildContext context) {
   return Scaffold(
@@ -397,6 +562,12 @@ PreferredSizeWidget _buildAppBar() {
       ],
     ),
     actions: [
+      // 🏋️ Modo ensayo
+      IconButton(
+        icon: const Icon(Icons.school),
+        tooltip: 'Practicar',
+        onPressed: _abrirSelectorEnsayo,
+      ),
       // Toggle entre vistas
       IconButton(
         icon: Icon(
@@ -447,7 +618,6 @@ Widget _buildBarraBusqueda() {
 
 Widget _buildInfoOrden() {
   final onSurface = Theme.of(context).colorScheme.onSurface;
-  // En modo índice siempre mostramos "A-Z" porque forzamos ese orden.
   final texto = _modoVista == _ModoVista.indice
       ? 'Ordenado alfabéticamente (A-Z)'
       : 'Ordenado por ${_nombreOrden()} ${_ascendente ? '↑' : '↓'}';
@@ -853,7 +1023,6 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
     );
   }
 
-  /// Vista índice: solo título, ordenado A-Z, formato compacto.
   Widget _buildListaIndice(List<Cancion> filtradas, Color onSurface) {
     final ordenadas = _ordenarAlfabetico(filtradas);
 
@@ -901,7 +1070,6 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
           ),
           child: Row(
             children: [
-              // Puntito decorativo
               Container(
                 width: 6,
                 height: 6,
@@ -911,7 +1079,6 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
                 ),
               ),
               const SizedBox(width: 14),
-              // Título
               Expanded(
                 child: Text(
                   c.titulo,
@@ -926,7 +1093,6 @@ Widget _buildChipsTags(List<String> tags, Color onSurface) {
                 ),
               ),
               const SizedBox(width: 8),
-              // Chevron
               Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.dorado.withOpacity(0.6),

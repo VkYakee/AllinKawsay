@@ -78,12 +78,32 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen>
   }
 }
 
-class _ListaUsuarios extends StatelessWidget {
+class _ListaUsuarios extends StatefulWidget {
   final bool baneados;
   const _ListaUsuarios({required this.baneados});
 
+  @override
+  State<_ListaUsuarios> createState() => _ListaUsuariosState();
+}
+
+class _ListaUsuariosState extends State<_ListaUsuarios> {
+  bool _soyDev = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _chequear();
+  }
+
+  Future<void> _chequear() async {
+    final d = await UsuarioService().soyDev();
+    if (mounted) setState(() => _soyDev = d);
+  }
+
   Color _colorRol(String rol) {
     switch (rol) {
+      case 'dev':
+        return const Color(0xFF0A2540);
       case 'admin':
         return AppColors.granate;
       case 'miembro':
@@ -206,7 +226,7 @@ class _ListaUsuarios extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    final stream = baneados
+    final stream = widget.baneados
         ? UsuarioService().listarBaneados()
         : UsuarioService().listar();
 
@@ -242,7 +262,7 @@ class _ListaUsuarios extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      baneados
+                      widget.baneados
                           ? Icons.check_circle_outline
                           : Icons.people_outline,
                       size: 48,
@@ -251,7 +271,7 @@ class _ListaUsuarios extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    baneados
+                    widget.baneados
                         ? 'No hay usuarios suspendidos'
                         : 'No hay usuarios activos',
                     style: const TextStyle(
@@ -278,7 +298,7 @@ class _ListaUsuarios extends StatelessWidget {
                   color: AppColors.cardColor(context),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: baneados
+                    color: widget.baneados
                         ? Colors.red.withOpacity(0.3)
                         : AppColors.dorado.withOpacity(0.2),
                   ),
@@ -289,7 +309,7 @@ class _ListaUsuarios extends StatelessWidget {
                       padding: const EdgeInsets.all(2.5),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: baneados
+                        gradient: widget.baneados
                             ? LinearGradient(colors: [
                                 Colors.grey,
                                 Colors.grey.shade700,
@@ -326,10 +346,10 @@ class _ListaUsuarios extends StatelessWidget {
                             u.nombre,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: baneados
+                              color: widget.baneados
                                   ? onSurface.withOpacity(0.5)
                                   : onSurface,
-                              decoration: baneados
+                              decoration: widget.baneados
                                   ? TextDecoration.lineThrough
                                   : null,
                               fontSize: 14,
@@ -350,7 +370,7 @@ class _ListaUsuarios extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: baneados
+                              color: widget.baneados
                                   ? Colors.red
                                   : _colorRol(u.rol),
                               borderRadius: BorderRadius.circular(10),
@@ -368,7 +388,7 @@ class _ListaUsuarios extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (baneados)
+                    if (widget.baneados)
                       IconButton(
                         icon: Container(
                           padding: const EdgeInsets.all(8),
@@ -394,14 +414,15 @@ class _ListaUsuarios extends StatelessWidget {
                         onSelected: (v) {
                           if (v == 'publico' ||
                               v == 'miembro' ||
-                              v == 'admin') {
+                              v == 'admin' ||
+                              v == 'dev') {
                             _cambiarRol(context, u, v);
                           } else if (v == 'banear') {
                             _banear(context, u);
                           }
                         },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
                             value: 'publico',
                             child: Row(
                               children: [
@@ -411,7 +432,7 @@ class _ListaUsuarios extends StatelessWidget {
                               ],
                             ),
                           ),
-                          PopupMenuItem(
+                          const PopupMenuItem(
                             value: 'miembro',
                             child: Row(
                               children: [
@@ -421,7 +442,7 @@ class _ListaUsuarios extends StatelessWidget {
                               ],
                             ),
                           ),
-                          PopupMenuItem(
+                          const PopupMenuItem(
                             value: 'admin',
                             child: Row(
                               children: [
@@ -432,8 +453,24 @@ class _ListaUsuarios extends StatelessWidget {
                               ],
                             ),
                           ),
-                          PopupMenuDivider(),
-                          PopupMenuItem(
+                          // Solo un DEV puede promover a DEV
+                          if (_soyDev)
+                            const PopupMenuItem(
+                              value: 'dev',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.code,
+                                      size: 20,
+                                      color: Color(0xFF0A2540)),
+                                  SizedBox(width: 10),
+                                  Text('Desarrollador',
+                                      style: TextStyle(
+                                          color: Color(0xFF0A2540))),
+                                ],
+                              ),
+                            ),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem(
                             value: 'banear',
                             child: Row(
                               children: [

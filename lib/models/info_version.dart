@@ -1,8 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Representa la versión aprobada por el admin, guardada en
-/// `config/ultimaAprobada` en Firestore. La app la lee al abrir
-/// para decidir si mostrar el diálogo de actualización.
+/// `config/ultimaAprobada` en Firestore.
 class InfoVersion {
   final int build;
   final String version;
@@ -22,8 +21,17 @@ class InfoVersion {
     this.fecha,
   });
 
-  /// ¿Esta versión es más nueva que [buildActual]?
   bool esMasNueva(int buildActual) => build > buildActual;
+
+  /// Devuelve la versión sin el build interno.
+  /// Ej: "1.2.0.1.826" -> "1.2.0.1"
+  String get displayVersion {
+    final partes = version.split('.');
+    if (partes.length >= 4) {
+      return partes.sublist(0, 4).join('.');
+    }
+    return version;
+  }
 
   factory InfoVersion.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>?;

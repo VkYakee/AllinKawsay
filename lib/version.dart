@@ -3,21 +3,24 @@ import 'version_build.dart';
 class AppVersion {
   // ⚠️ EDITAR MANUALMENTE cuando haya actualizaciones importantes
   //
-  // MAJOR: cambios mega grandes. Es raro cambiarlo.
-  // MINOR: nuevas funcionalidades grandes (ej: agregar un módulo nuevo)
-  // PATCH: correcciones o cambios chicos
-  //
-  // El cuarto número (build) se genera automático desde GitHub Actions.
+  // MAJOR: cambios mega grandes (raro).
+  // MINOR: nuevas funcionalidades grandes.
+  // PATCH: correcciones o cambios chicos.
+  // RELEASE: contador de lanzamientos del mismo patch.
 
   static const String major = '1';
-  static const String minor = '1';
-  static const String patch = '2';
+  static const String minor = '2'; // Subido por el setlist/timing
+  static const String patch = '0';
+  static const String release = '1';
 
   static const int build = VersionBuild.build;
 
-  /// Versión completa: 1.0.0.463
-  static String get full => '$major.$minor.$patch.$build';
+  /// Lo que ve el usuario: 1.2.0.1
+  static String get display => '$major.$minor.$patch.$release';
 
-  /// Versión corta sin build: 1.0.0
+  /// Uso interno: 1.2.0.1.826
+  static String get full => '$major.$minor.$patch.$release.$build';
+
+  /// Versión corta sin build ni release: 1.2.0
   static String get short => '$major.$minor.$patch';
 }

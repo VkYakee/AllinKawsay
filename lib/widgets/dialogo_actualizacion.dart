@@ -8,8 +8,6 @@ class DialogoActualizacion extends StatelessWidget {
 
   const DialogoActualizacion({super.key, required this.info});
 
-  /// Muestra el diálogo. Devuelve `true` si el usuario tocó ACTUALIZAR
-  /// (o era crítica), `false`/null si tocó MÁS TARDE o cerró.
   static Future<bool?> mostrar(BuildContext context, InfoVersion info) {
     return showDialog<bool>(
       context: context,
@@ -25,8 +23,7 @@ class DialogoActualizacion extends StatelessWidget {
     return PopScope(
       canPop: !info.critica,
       child: Dialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -34,7 +31,6 @@ class DialogoActualizacion extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Ícono circular
               Center(
                 child: Container(
                   padding: const EdgeInsets.all(16),
@@ -58,7 +54,6 @@ class DialogoActualizacion extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Título
               Text(
                 info.critica
                     ? 'ACTUALIZACIÓN OBLIGATORIA'
@@ -73,19 +68,16 @@ class DialogoActualizacion extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Versión
               Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: AppColors.granate.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: AppColors.granate.withOpacity(0.2)),
+                    border: Border.all(color: AppColors.granate.withOpacity(0.2)),
                   ),
                   child: Text(
-                    'v${info.version}.${info.build}',
+                    'v${info.displayVersion}', // ⬅️ Usa la versión limpia
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -97,14 +89,10 @@ class DialogoActualizacion extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Mensaje
               Text(
                 info.critica
-                    ? 'Necesitás actualizar para seguir usando la app. '
-                        'Esta versión corrige problemas importantes.'
-                    : 'Hay una nueva versión de Allin Kawsay disponible. '
-                        'Se recomienda actualizar para aprovechar las '
-                        'mejoras y correcciones.',
+                    ? 'Necesitás actualizar para seguir usando la app. Esta versión corrige problemas importantes.'
+                    : 'Hay una nueva versión de Allin Kawsay disponible. Se recomienda actualizar para aprovechar las mejoras y correcciones.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -113,7 +101,6 @@ class DialogoActualizacion extends StatelessWidget {
                 ),
               ),
 
-              // Notas del admin
               if (info.notas.trim().isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -121,16 +108,14 @@ class DialogoActualizacion extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.dorado.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: AppColors.dorado.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.info_outline,
-                              size: 14, color: AppColors.granate),
+                          const Icon(Icons.info_outline, size: 14, color: AppColors.granate),
                           const SizedBox(width: 6),
                           Text(
                             'NOVEDADES',
@@ -159,7 +144,6 @@ class DialogoActualizacion extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Botón ACTUALIZAR
               SizedBox(
                 height: 50,
                 child: FilledButton.icon(
@@ -175,16 +159,11 @@ class DialogoActualizacion extends StatelessWidget {
                   icon: const Icon(Icons.download, size: 18),
                   label: const Text(
                     'ACTUALIZAR',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 2),
                   ),
                 ),
               ),
 
-              // Botón MÁS TARDE (solo si NO es crítica)
               if (!info.critica) ...[
                 const SizedBox(height: 8),
                 TextButton(

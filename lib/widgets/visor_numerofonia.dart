@@ -3,14 +3,33 @@ import 'package:flutter/material.dart';
 import '../models/numerofonia.dart';
 import '../theme/colors.dart';
 
+/// Marca qué carácter de la tabla debe brillar (para el Modo Ensayo).
+class CeldaActiva {
+  final int estrofa;   // índice entre las estrofas NO vacías
+  final int columna;
+  final bool esFila7;
+  final int notaIndex; // índice del carácter dentro de la celda
+
+  const CeldaActiva({
+    required this.estrofa,
+    required this.columna,
+    required this.esFila7,
+    required this.notaIndex,
+  });
+}
+
 class VisorNumerofonia extends StatelessWidget {
   final List<EstrofaNumerofonia> estrofas;
   final double escala;
+
+  /// Si no es null, se ilumina un carácter específico de la tabla.
+  final CeldaActiva? celdaActiva;
 
   const VisorNumerofonia({
     super.key,
     required this.estrofas,
     this.escala = 1.0,
+    this.celdaActiva,
   });
 
   static const double charW = 7.5;
@@ -54,6 +73,11 @@ class VisorNumerofonia extends StatelessWidget {
                 escala: e,
                 titulo: romanoNumerofonia(i + 1),
                 conCabecera: validas.length > 1 || validas[i].bis,
+                // Solo pasamos la celda activa si pertenece a ESTA estrofa
+                celdaActiva: (celdaActiva != null &&
+                        celdaActiva!.estrofa == i)
+                    ? celdaActiva
+                    : null,
               ),
               if (i < validas.length - 1) SizedBox(height: 12 * e),
             ],
@@ -69,14 +93,15 @@ class _TablaEstrofa extends StatelessWidget {
   final double escala;
   final String titulo;
   final bool conCabecera;
+  final CeldaActiva? celdaActiva;
 
   const _TablaEstrofa({
     required this.estrofa,
     required this.escala,
     required this.titulo,
     required this.conCabecera,
+    this.celdaActiva,
   });
-
   @override
   Widget build(BuildContext context) {
     final e = escala;
@@ -99,11 +124,25 @@ class _TablaEstrofa extends StatelessWidget {
       children: [
         TableRow(children: [
           _etiqueta('7', e),
-          for (final c in estrofa.columnas) _nota(c.nota7, e, colorNota),
+          for (int j = 0; j < n; j++)
+            _nota(
+              columna: j,
+              esFila7: true,
+              valor: estrofa.columnas[j].nota7,
+              e: e,
+              color: colorNota,
+            ),
         ]),
         TableRow(children: [
           _etiqueta('6', e),
-          for (final c in estrofa.columnas) _nota(c.nota6, e, colorNota),
+          for (int j = 0; j < n; j++)
+            _nota(
+              columna: j,
+              esFila7: false,
+              valor: estrofa.columnas[j].nota6,
+              e: e,
+              color: colorNota,
+            ),
         ]),
       ],
     );
@@ -151,7 +190,69 @@ class _TablaEstrofa extends StatelessWidget {
         ),
       );
 
-  Widget _nota(String valor, double e, Color color) => Container(
+  Widget _nota({
+    required int columna,
+    required bool esFila7,
+    required String valor,
+    required double e,
+    required Color color,
+  }) {
+    // Si esta celda es la activa, iluminamos el carácter específico.
+    final activa = celdaActiva != null &&
+        celdaActiva!.columna == columna &&
+        celdaActiva!.esFila7 == esFila7;
+
+    if (!activa || valor.trim().isEmpty) {
+      return _notaSimple(valor, e, color);
+    }
+
+    // Construimos el texto con el carácter activo destacado.
+    final textoLimpio = valor.trim();
+    final idx = celdaActiva!.notaIndex;
+    if (idx < 0 || idx >= textoLimpio.length) {
+      return _notaSimple(valor, e, color);
+    }
+
+    final antes = textoLimpio.substring(0, idx);
+    final letra = textoLimpio.substring(idx, idx + 1);
+    final despues = textoLimpio.substring(idx + 1);
+
+    return Container(
+      height: 24 * e,
+      alignment: Alignment.center,
+      padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e),
+      child: RichText(
+        text: TextSpan(
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+            fontSize: 12 * e,
+            height: 1.0,
+          ),
+          children: [
+            if (antes.isNotEmpty)
+              TextSpan(text: antes, style: TextStyle(color: color)),
+            TextSpan(
+              text: letra,
+              style: TextStyle(
+                color: AppColors.dorado,
+                shadows: [
+                  Shadow(
+                    color: AppColors.dorado.withOpacity(0.9),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+            ),
+            if (despues.isNotEmpty)
+              TextSpan(text: despues, style: TextStyle(color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _notaSimple(String valor, double e, Color color) => Container(
         height: 24 * e,
         alignment: Alignment.center,
         padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e),

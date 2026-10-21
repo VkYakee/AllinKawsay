@@ -5,12 +5,29 @@
 ///   - Hilera 6 (abajo): cañas graves
 /// Cada celda contiene una nota o un grupo ("4", "56665", "44.6").
 /// Compatible con todos los formatos históricos guardados en Firestore.
+///
+/// NUEVO: cada celda puede guardar "timings" (ms entre notas consecutivas)
+/// para el modo ensayo. Opcional: si falta, se usa BPM fijo.
 
 class ColumnaNumerofonia {
   String nota7;
   String nota6;
 
-  ColumnaNumerofonia({this.nota7 = '', this.nota6 = ''});
+  /// Timings en milisegundos de cada nota de `nota7`.
+  /// Ej: nota7="43335" → timings7=[0, 420, 380, 550, 400]
+  /// El primer elemento es siempre 0 (inicio de la columna).
+  List<int> timings7;
+
+  /// Igual que timings7, pero para la fila 6.
+  List<int> timings6;
+
+  ColumnaNumerofonia({
+    this.nota7 = '',
+    this.nota6 = '',
+    List<int>? timings7,
+    List<int>? timings6,
+  })  : timings7 = timings7 ?? <int>[],
+        timings6 = timings6 ?? <int>[];
 
   bool get vacia => nota7.trim().isEmpty && nota6.trim().isEmpty;
 
@@ -21,15 +38,34 @@ class ColumnaNumerofonia {
     return a > b ? a : b;
   }
 
-  ColumnaNumerofonia copy() => ColumnaNumerofonia(nota7: nota7, nota6: nota6);
-
-  Map<String, dynamic> toMap() => {'nota7': nota7, 'nota6': nota6};
-
-  factory ColumnaNumerofonia.fromMap(Map<String, dynamic> m) =>
-      ColumnaNumerofonia(
-        nota7: (m['nota7'] ?? '') as String,
-        nota6: (m['nota6'] ?? '') as String,
+  ColumnaNumerofonia copy() => ColumnaNumerofonia(
+        nota7: nota7,
+        nota6: nota6,
+        timings7: List<int>.from(timings7),
+        timings6: List<int>.from(timings6),
       );
+
+  Map<String, dynamic> toMap() => {
+        'nota7': nota7,
+        'nota6': nota6,
+        if (timings7.isNotEmpty) 'timings7': timings7,
+        if (timings6.isNotEmpty) 'timings6': timings6,
+      };
+
+  factory ColumnaNumerofonia.fromMap(Map<String, dynamic> m) {
+    return ColumnaNumerofonia(
+      nota7: (m['nota7'] ?? '') as String,
+      nota6: (m['nota6'] ?? '') as String,
+      timings7: (m['timings7'] as List?)
+              ?.map((x) => (x as num).toInt())
+              .toList() ??
+          <int>[],
+      timings6: (m['timings6'] as List?)
+              ?.map((x) => (x as num).toInt())
+              .toList() ??
+          <int>[],
+    );
+  }
 }
 
 class EstrofaNumerofonia {
