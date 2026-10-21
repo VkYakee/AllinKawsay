@@ -2,18 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
 import '../data/zampona_catalogo.dart';
 import '../models/bloque_audio.dart';
 import '../models/cancion.dart';
-import '../models/numerofonia.dart';
 import '../models/zampona_nota.dart';
 import '../services/zampona_service.dart';
 import '../theme/colors.dart';
 import '../widgets/visor_numerofonia.dart';
 
-/// Modos de reproducción del ensayo.
-enum ModoEnsayo { audioUrl, silencio, ambas, solo7, solo6 }
+/// Modos de reproducción del ensayo (solo 3 ahora).
+enum ModoEnsayo { audioUrl, solo7, solo6 }
 
 class ModoEnsayoScreen extends StatefulWidget {
   final Cancion cancion;
@@ -23,7 +23,6 @@ class ModoEnsayoScreen extends StatefulWidget {
   State<ModoEnsayoScreen> createState() => _ModoEnsayoScreenState();
 }
 
-/// Representa una nota concreta del recorrido (timing B).
 class _NotaEnsayable {
   final int estrofa;
   final int columna;
@@ -51,23 +50,19 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
   double _velocidad = 1.0;
   late ModoEnsayo _modo;
 
-  // Estado visual
   int _estrofaActual = 0;
   _NotaEnsayable? _notaActiva;
   String? _notaSonando;
 
-  // Estado de audio URL
   Duration _posAudio = Duration.zero;
   Duration? _duracionAudio;
   int _bloqueActual = -1;
 
-  // Fades
   String? _ultimaNotaSonada;
 
   int _runId = 0;
   StreamSubscription<Duration>? _subPos;
 
-  /// ¿Puede usar modo Audio URL?
   bool get _puedeAudioUrl => widget.cancion.puedeAudioUrl;
 
   @override
@@ -79,8 +74,8 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    // Modo default: Audio URL si se puede, sino Ambas.
-    _modo = _puedeAudioUrl ? ModoEnsayo.audioUrl : ModoEnsayo.ambas;
+    // Default: Audio URL si se puede, sino Solo 7.
+    _modo = _puedeAudioUrl ? ModoEnsayo.audioUrl : ModoEnsayo.solo7;
 
     _inicializar();
   }
@@ -99,7 +94,19 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     await _service.init();
     if (_puedeAudioUrl) {
       try {
-        await _player.setUrl(widget.cancion.audioUrl);
+        final tag = MediaItem(
+          id: 'ensayo_${widget.cancion.id}',
+          title: widget.cancion.titulo,
+          artist: 'Allin Kawsay · Ensayo',
+        );
+
+        await _player.setAudioSource(
+          AudioSource.uri(
+            Uri.parse(widget.cancion.audioUrl),
+            tag: tag,
+          ),
+        );
+
         _subPos = _player.positionStream.listen((p) {
           if (mounted) {
             _posAudio = p;
@@ -120,7 +127,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // MODO AUDIO URL: calcular bloque y columna activos
+  // MODO AUDIO URL
   // ═══════════════════════════════════════════════════════════
   void _actualizarBloqueDesdePosicion() {
     if (_modo != ModoEnsayo.audioUrl) return;
@@ -129,7 +136,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
     final posMs = _posAudio.inMilliseconds;
 
-    // Bloque activo = el último cuyo inicioMs <= posMs
     int nuevo = -1;
     for (int i = 0; i < bloques.length; i++) {
       if (bloques[i].inicioMs <= posMs) {
@@ -165,7 +171,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     final estrofa = estrofas[bloque.estrofaRef];
     final elapsedMs = posMs - bloque.inicioMs;
 
-    // Recorrer columnas sumando deltas (con velocidad del bloque)
     int acumulado = 0;
     int colActiva = -1;
     bool esFila7 = true;
@@ -174,7 +179,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     for (int c = 0; c < estrofa.columnas.length; c++) {
       final col = estrofa.columnas[c];
 
-      // Recorrer fila 7
       final n7 = col.nota7.trim();
       for (int i = 0; i < n7.length; i++) {
         final rawDelta = i < col.timings7.length
@@ -191,7 +195,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       }
       if (colActiva >= 0) break;
 
-      // Recorrer fila 6
       final n6 = col.nota6.trim();
       for (int i = 0; i < n6.length; i++) {
         final rawDelta = i < col.timings6.length
@@ -219,7 +222,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       delayMs: 0,
     );
 
-    // Solo actualizar si cambió
     if (_notaActiva == null ||
         _notaActiva!.columna != nueva.columna ||
         _notaActiva!.esFila7 != nueva.esFila7 ||
@@ -232,7 +234,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     }
   }
 // ═══════════════════════════════════════════════════════════
-// TIMING B (mini app) — para modos Silencio / Ambas / Solo X
+// TIMING B
 // ═══════════════════════════════════════════════════════════
 List<_NotaEnsayable> _extraerNotas() {
   final estrofas =
@@ -304,13 +306,11 @@ ZamponaNota? _zamponaDe(String caracter, bool esFila7) {
   return null;
 }
 
+// ⚠️ SIMPLIFICADO: solo 3 modos.
 bool _debeSonar(bool esFila7) {
   switch (_modo) {
     case ModoEnsayo.audioUrl:
-    case ModoEnsayo.silencio:
       return false;
-    case ModoEnsayo.ambas:
-      return true;
     case ModoEnsayo.solo7:
       return esFila7;
     case ModoEnsayo.solo6:
@@ -318,11 +318,8 @@ bool _debeSonar(bool esFila7) {
   }
 }
 
-bool get _esModoSolo =>
-    _modo == ModoEnsayo.solo7 || _modo == ModoEnsayo.solo6;
-
 // ═══════════════════════════════════════════════════════════
-// LOOP DE REPRODUCCIÓN (timing B)
+// LOOP TIMING B (para Solo 7 y Solo 6)
 // ═══════════════════════════════════════════════════════════
 Future<void> _reproducir() async {
   final id = ++_runId;
@@ -366,7 +363,7 @@ Future<void> _reproducir() async {
       final nota = _zamponaDe(caracter, n.esFila7);
 
       if (nota == null) {
-        if (_esModoSolo && _ultimaNotaSonada != null) {
+        if (_ultimaNotaSonada != null) {
           final anterior = _ultimaNotaSonada!;
           _ultimaNotaSonada = null;
           _service.fadeOutNota(anterior);
@@ -378,25 +375,17 @@ Future<void> _reproducir() async {
 
       final debeSonar = _debeSonar(n.esFila7);
 
-      if (_esModoSolo) {
-        if (_ultimaNotaSonada != null &&
-            _ultimaNotaSonada != nota.id) {
-          final anterior = _ultimaNotaSonada!;
-          _ultimaNotaSonada = null;
-          _service.fadeOutNota(anterior);
-        }
-        if (debeSonar) {
-          try {
-            await _service.tocar(nota.id);
-            _ultimaNotaSonada = nota.id;
-          } catch (_) {}
-        }
-      } else {
-        if (debeSonar) {
-          try {
-            await _service.tocar(nota.id);
-          } catch (_) {}
-        }
+      if (_ultimaNotaSonada != null &&
+          _ultimaNotaSonada != nota.id) {
+        final anterior = _ultimaNotaSonada!;
+        _ultimaNotaSonada = null;
+        _service.fadeOutNota(anterior);
+      }
+      if (debeSonar) {
+        try {
+          await _service.tocar(nota.id);
+          _ultimaNotaSonada = nota.id;
+        } catch (_) {}
       }
 
       final brilloMs = (260 / _velocidad).round().clamp(80, 800);
@@ -456,7 +445,7 @@ void _reiniciar() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// AUDIO URL — controles propios
+// CONTROLES AUDIO URL
 // ═══════════════════════════════════════════════════════════
 bool get _audioReproduciendo =>
     _modo == ModoEnsayo.audioUrl &&
@@ -478,7 +467,6 @@ Future<void> _toggleAudioPlay() async {
 Future<void> _seekAudio(Duration d) async {
   if (_modo != ModoEnsayo.audioUrl) return;
   await _player.seek(d);
-  // Forzar recálculo inmediato
   _posAudio = d;
   _actualizarBloqueDesdePosicion();
 }
@@ -518,7 +506,6 @@ Widget build(BuildContext context) {
           Expanded(
             child: Row(
               children: [
-                // Panel izquierdo: tabla
                 Expanded(
                   flex: 6,
                   child: Container(
@@ -536,7 +523,6 @@ Widget build(BuildContext context) {
                     ),
                   ),
                 ),
-                // Panel derecho: zampoña
                 Expanded(
                   flex: 4,
                   child: Padding(
@@ -561,6 +547,10 @@ Widget build(BuildContext context) {
 }
 
 Widget _barraSuperior() {
+  final ensayando = _modo == ModoEnsayo.audioUrl
+      ? _audioReproduciendo
+      : _reproduciendo;
+
   return Padding(
     padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
     child: Row(
@@ -587,26 +577,7 @@ Widget _barraSuperior() {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (_modo == ModoEnsayo.audioUrl && _audioReproduciendo)
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.25),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.redAccent),
-            ),
-            child: const Text(
-              '● ENSAYANDO',
-              style: TextStyle(
-                color: Colors.redAccent,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
-            ),
-          )
-        else if (_modo != ModoEnsayo.audioUrl && _reproduciendo)
+        if (ensayando)
           Container(
             padding: const EdgeInsets.symmetric(
                 horizontal: 10, vertical: 4),
@@ -631,15 +602,13 @@ Widget _barraSuperior() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// CHIPS DE MODO
+// CHIPS DE MODO (solo 3)
 // ═══════════════════════════════════════════════════════════
 Widget _filaModos() {
-  // Construir lista según disponibilidad
   final modos = <(ModoEnsayo, String, IconData, Color)>[
     if (_puedeAudioUrl)
-      (ModoEnsayo.audioUrl, 'Audio', Icons.headphones, Colors.purpleAccent),
-    (ModoEnsayo.silencio, 'Silencio', Icons.volume_off, Colors.grey),
-    (ModoEnsayo.ambas, 'Ambas', Icons.music_note, AppColors.dorado),
+      (ModoEnsayo.audioUrl, 'Audio', Icons.headphones,
+          Colors.purpleAccent),
     (ModoEnsayo.solo7, 'Solo 7', Icons.arrow_upward, Colors.green),
     (ModoEnsayo.solo6, 'Solo 6', Icons.arrow_downward, Colors.blueAccent),
   ];
@@ -667,7 +636,6 @@ Widget _filaModos() {
 }
 
 Future<void> _cambiarModo(ModoEnsayo nuevo) async {
-  // Detener lo que esté sonando antes de cambiar
   if (_reproduciendo) _detener();
   if (_modo == ModoEnsayo.audioUrl && nuevo != ModoEnsayo.audioUrl) {
     await _player.pause();
@@ -740,254 +708,235 @@ Widget _chipModo({
     ),
   );
 }
-Widget _filaVelocidad() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12),
-    child: Row(
-      children: [
-        const Icon(Icons.speed, color: AppColors.dorado, size: 14),
-        const SizedBox(width: 6),
-        Text(
-          '${_velocidad.toStringAsFixed(2)}x',
-          style: const TextStyle(
-            color: AppColors.dorado,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-            fontFamily: 'monospace',
-          ),
-        ),
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppColors.dorado,
-              thumbColor: AppColors.dorado,
-              inactiveTrackColor: AppColors.dorado.withOpacity(0.2),
-              trackHeight: 3,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 6),
-              overlayShape:
-                  const RoundSliderOverlayShape(overlayRadius: 14),
-            ),
-            child: Slider(
-              min: 0.25,
-              max: 2.0,
-              divisions: 35,
-              value: _velocidad,
-              onChanged: (v) => setState(() => _velocidad = v),
+  Widget _filaVelocidad() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.speed, color: AppColors.dorado, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            '${_velocidad.toStringAsFixed(2)}x',
+            style: const TextStyle(
+              color: AppColors.dorado,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              fontFamily: 'monospace',
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// TABLA COMPLETA (todas las estrofas apiladas)
-// ═══════════════════════════════════════════════════════════
-Widget _tablaCompleta() {
-  final estrofas =
-      widget.cancion.estrofas.where((e) => !e.vacia).toList();
-  if (estrofas.isEmpty) return const SizedBox.shrink();
-
-  // Si estamos en modo Audio URL, usamos estrofa activa del bloque.
-  // Si no, usamos la estrofa del recorrido (n.estrofa).
-  CeldaActiva? activa;
-
-  if (_notaActiva != null) {
-    // En modo Audio URL el estrofaRef del bloque puede no coincidir
-    // con el índice visual (porque filtramos estrofas vacías).
-    int idxVisual;
-    if (_modo == ModoEnsayo.audioUrl) {
-      idxVisual = _notaActiva!.estrofa;
-    } else {
-      idxVisual = _notaActiva!.estrofa;
-    }
-    activa = CeldaActiva(
-      estrofa: idxVisual,
-      columna: _notaActiva!.columna,
-      esFila7: _notaActiva!.esFila7,
-      notaIndex: _notaActiva!.notaIndex,
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: AppColors.dorado,
+                thumbColor: AppColors.dorado,
+                inactiveTrackColor: AppColors.dorado.withOpacity(0.2),
+                trackHeight: 3,
+                thumbShape:
+                    const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape:
+                    const RoundSliderOverlayShape(overlayRadius: 14),
+              ),
+              child: Slider(
+                min: 0.25,
+                max: 2.0,
+                divisions: 35,
+                value: _velocidad,
+                onChanged: (v) => setState(() => _velocidad = v),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  return VisorNumerofonia(
-    estrofas: estrofas,
-    escala: 0.85,
-    celdaActiva: activa,
-  );
-}
+  Widget _tablaCompleta() {
+    final estrofas =
+        widget.cancion.estrofas.where((e) => !e.vacia).toList();
+    if (estrofas.isEmpty) return const SizedBox.shrink();
 
-// ═══════════════════════════════════════════════════════════
-// CONTROLES (timing B)
-// ═══════════════════════════════════════════════════════════
-Widget _controles() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (!_reproduciendo)
-          _botonControl(
-            icono: Icons.play_arrow,
-            label: 'REPRODUCIR',
-            color: Colors.green,
-            filled: true,
-            onTap: _reproducir,
-          )
-        else if (_pausa)
-          _botonControl(
-            icono: Icons.play_arrow,
-            label: 'REANUDAR',
-            color: Colors.green,
-            filled: true,
-            onTap: _reanudar,
-          )
-        else
-          _botonControl(
-            icono: Icons.pause,
-            label: 'PAUSA',
-            color: Colors.orange,
-            filled: true,
-            onTap: _pausar,
-          ),
-        const SizedBox(width: 6),
-        _botonControl(
-          icono: Icons.restart_alt,
-          label: 'REINICIAR',
-          color: AppColors.dorado,
-          onTap: _reiniciar,
-        ),
-        const SizedBox(width: 6),
-        _botonControl(
-          icono: _bucle ? Icons.repeat_one : Icons.repeat,
-          label: 'BUCLE',
-          color: AppColors.dorado,
-          activo: _bucle,
-          onTap: () => setState(() => _bucle = !_bucle),
-        ),
-        const SizedBox(width: 6),
-        _botonControl(
-          icono: Icons.stop,
-          label: 'DETENER',
-          color: Colors.redAccent,
-          onTap: _detener,
-        ),
-      ],
-    ),
-  );
-}
+    CeldaActiva? activa;
+    if (_notaActiva != null) {
+      activa = CeldaActiva(
+        estrofa: _notaActiva!.estrofa,
+        columna: _notaActiva!.columna,
+        esFila7: _notaActiva!.esFila7,
+        notaIndex: _notaActiva!.notaIndex,
+      );
+    }
 
-// ═══════════════════════════════════════════════════════════
-// CONTROLES AUDIO URL
-// ═══════════════════════════════════════════════════════════
-Widget _controlesAudio() {
-  final total = _duracionAudio ?? Duration.zero;
-  final posSec = _posAudio.inMilliseconds.toDouble();
-  final totalSec =
-      total.inMilliseconds.toDouble().clamp(1.0, 999999999.0);
+    return VisorNumerofonia(
+      estrofas: estrofas,
+      escala: 0.85,
+      celdaActiva: activa,
+    );
+  }
 
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12),
-    child: Row(
-      children: [
-        IconButton(
-          icon: Icon(
-            _audioReproduciendo
-                ? Icons.pause_rounded
-                : Icons.play_arrow_rounded,
+  Widget _controles() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (!_reproduciendo)
+            _botonControl(
+              icono: Icons.play_arrow,
+              label: 'REPRODUCIR',
+              color: Colors.green,
+              filled: true,
+              onTap: _reproducir,
+            )
+          else if (_pausa)
+            _botonControl(
+              icono: Icons.play_arrow,
+              label: 'REANUDAR',
+              color: Colors.green,
+              filled: true,
+              onTap: _reanudar,
+            )
+          else
+            _botonControl(
+              icono: Icons.pause,
+              label: 'PAUSA',
+              color: Colors.orange,
+              filled: true,
+              onTap: _pausar,
+            ),
+          const SizedBox(width: 6),
+          _botonControl(
+            icono: Icons.restart_alt,
+            label: 'REINICIAR',
             color: AppColors.dorado,
-            size: 32,
+            onTap: _reiniciar,
           ),
-          onPressed: _toggleAudioPlay,
-        ),
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppColors.dorado,
-              thumbColor: AppColors.dorado,
-              inactiveTrackColor: AppColors.dorado.withOpacity(0.2),
-              trackHeight: 4,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 7),
-              overlayShape:
-                  const RoundSliderOverlayShape(overlayRadius: 15),
-            ),
-            child: Slider(
-              value: posSec.clamp(0.0, totalSec),
-              max: totalSec,
-              onChanged: (v) => _seekAudio(
-                  Duration(milliseconds: v.toInt())),
-            ),
+          const SizedBox(width: 6),
+          _botonControl(
+            icono: _bucle ? Icons.repeat_one : Icons.repeat,
+            label: 'BUCLE',
+            color: AppColors.dorado,
+            activo: _bucle,
+            onTap: () => setState(() => _bucle = !_bucle),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 6, right: 4),
-          child: Text(
-            '${_fmtDur(_posAudio)} / '
-            '${total == Duration.zero ? '--:--' : _fmtDur(total)}',
-            style: TextStyle(
-              color: AppColors.dorado.withOpacity(0.85),
-              fontSize: 11,
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.bold,
-            ),
+          const SizedBox(width: 6),
+          _botonControl(
+            icono: Icons.stop,
+            label: 'DETENER',
+            color: Colors.redAccent,
+            onTap: _detener,
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-Widget _botonControl({
-  required IconData icono,
-  required String label,
-  required Color color,
-  required VoidCallback onTap,
-  bool filled = false,
-  bool activo = false,
-}) {
-  return Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: filled
-              ? color.withOpacity(0.22)
-              : (activo
-                  ? color.withOpacity(0.28)
-                  : Colors.white.withOpacity(0.05)),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: color
-                .withOpacity(filled || activo ? 0.8 : 0.35),
-            width: 1.2,
+  Widget _controlesAudio() {
+    final total = _duracionAudio ?? Duration.zero;
+    final posSec = _posAudio.inMilliseconds.toDouble();
+    final totalSec =
+        total.inMilliseconds.toDouble().clamp(1.0, 999999999.0);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(
+              _audioReproduciendo
+                  ? Icons.pause_rounded
+                  : Icons.play_arrow_rounded,
+              color: AppColors.dorado,
+              size: 32,
+            ),
+            onPressed: _toggleAudioPlay,
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icono, color: color, size: 14),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 9.5,
-                letterSpacing: 1,
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: AppColors.dorado,
+                thumbColor: AppColors.dorado,
+                inactiveTrackColor: AppColors.dorado.withOpacity(0.2),
+                trackHeight: 4,
+                thumbShape:
+                    const RoundSliderThumbShape(enabledThumbRadius: 7),
+                overlayShape:
+                    const RoundSliderOverlayShape(overlayRadius: 15),
+              ),
+              child: Slider(
+                value: posSec.clamp(0.0, totalSec),
+                max: totalSec,
+                onChanged: (v) =>
+                    _seekAudio(Duration(milliseconds: v.toInt())),
               ),
             ),
-          ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 6, right: 4),
+            child: Text(
+              '${_fmtDur(_posAudio)} / '
+              '${total == Duration.zero ? '--:--' : _fmtDur(total)}',
+              style: TextStyle(
+                color: AppColors.dorado.withOpacity(0.85),
+                fontSize: 11,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _botonControl({
+    required IconData icono,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool filled = false,
+    bool activo = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: filled
+                ? color.withOpacity(0.22)
+                : (activo
+                    ? color.withOpacity(0.28)
+                    : Colors.white.withOpacity(0.05)),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: color
+                  .withOpacity(filled || activo ? 0.8 : 0.35),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icono, color: color, size: 14),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 9.5,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════
   // ZAMPOÑA
   // ═══════════════════════════════════════════════════════════
@@ -1056,9 +1005,6 @@ Widget _botonControl({
     );
   }
 
-  /// Determina qué caña debe brillar según el estado actual.
-  /// En Audio URL: la caña/fila de la nota activa.
-  /// En otros modos: la caña que está sonando (_notaSonando).
   String? _idCaniaBrillando() {
     if (_modo == ModoEnsayo.audioUrl) {
       if (_notaActiva == null) return null;
