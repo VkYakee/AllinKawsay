@@ -6,6 +6,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 
 import '../models/bloque_audio.dart';
 import '../models/cancion.dart';
+import '../services/player_service.dart';
 import '../theme/colors.dart';
 import 'grabar_timing_bloque_screen.dart';
 
@@ -24,7 +25,9 @@ class GrabarSetlistScreen extends StatefulWidget {
 }
 
 class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
-  final _player = AudioPlayer();
+  // ⚠️ Usamos el player GLOBAL en vez de uno nuevo.
+  // Eso evita conflictos con just_audio_background.
+  final _player = PlayerService().player;
   final _scrollCtrl = ScrollController();
 
   Duration _posicion = Duration.zero;
@@ -51,10 +54,11 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
 
   @override
   void dispose() {
+    // NO dispose del player global.
     _subPos?.cancel();
     _subDur?.cancel();
     _subState?.cancel();
-    _player.dispose();
+    _player.pause();
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -69,6 +73,9 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
         });
         return;
       }
+
+      // Detener cualquier audio que estuviera sonando antes.
+      await _player.stop();
 
       final tag = MediaItem(
         id: 'setlist_${widget.cancion.id}',
@@ -130,8 +137,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
     await _player.seek(d);
   }
 
-  /// Pregunta al usuario si quiere grabar el timing A de un bloque.
-  /// Devuelve la lista de timings o null si no quiere grabar.
   Future<List<int>?> _preguntarGrabarTiming(BloqueAudio bloque) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -159,7 +164,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
       ),
     );
     if (ok != true) return null;
-
     if (!mounted) return null;
 
     final resultado = await Navigator.push<List<int>>(
@@ -181,7 +185,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
     }
 
     final ms = _posicion.inMilliseconds;
-
     if (!mounted) return;
 
     final resultado = await showModalBottomSheet<BloqueAudio>(
@@ -203,12 +206,10 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
     if (!mounted) return;
 
     if (resultado != null) {
-      // Si es un bloque con visual (estrofa/bis/ligero), preguntar timing.
       List<int>? timings;
       if (resultado.tieneVisual) {
         timings = await _preguntarGrabarTiming(resultado);
       }
-
       if (!mounted) return;
 
       final bloqueFinal = timings != null
@@ -259,7 +260,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
 
     if (resultado == null || !mounted) return;
 
-    // Preservar timings si sigue siendo el mismo tipo/estrofa.
     List<int> timings = [];
     if (resultado.tieneVisual) {
       final mismoDestino =
@@ -405,9 +405,6 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
     );
     if (ok == true && mounted) Navigator.pop(context);
   }
-  // ═══════════════════════════════════════════════════════════
-  // BUILD
-  // ═══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -464,9 +461,9 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Detalle del error:\n$_errorMsg',
+              _errorMsg, // ⬅️ muestra el error exacto
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
