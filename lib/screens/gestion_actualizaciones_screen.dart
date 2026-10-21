@@ -100,7 +100,6 @@ class _GestionActualizacionesScreenState
     }
   }
 
-  /// Descarga + instala usando el diálogo flotante compacto.
   Future<void> _descargarRelease(ReleaseInfo r) async {
     await DialogoDescargaApk.mostrar(
       context,
@@ -384,7 +383,7 @@ Widget _buildError(Color onSurface) {
             )
           else ...[
             Text(
-              'v${_actual!.version}.${_actual!.build}',
+              'v${_actual!.displayVersion} (build ${_actual!.build})', // ⬅️ Usa displayVersion
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
