@@ -12,7 +12,6 @@ import '../services/zampona_service.dart';
 import '../theme/colors.dart';
 import '../widgets/visor_numerofonia.dart';
 
-/// Modos de reproducción del ensayo (solo 3 ahora).
 enum ModoEnsayo { audioUrl, solo7, solo6 }
 
 class ModoEnsayoScreen extends StatefulWidget {
@@ -74,7 +73,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    // Default: Audio URL si se puede, sino Solo 7.
     _modo = _puedeAudioUrl ? ModoEnsayo.audioUrl : ModoEnsayo.solo7;
 
     _inicializar();
@@ -234,7 +232,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     }
   }
 // ═══════════════════════════════════════════════════════════
-// TIMING B
+// TIMING B — extracción con GAP entre columnas
 // ═══════════════════════════════════════════════════════════
 List<_NotaEnsayable> _extraerNotas() {
   final estrofas =
@@ -242,6 +240,7 @@ List<_NotaEnsayable> _extraerNotas() {
   if (estrofas.isEmpty) return [];
 
   final lista = <_NotaEnsayable>[];
+  bool esPrimeraNotaGlobal = true;
 
   for (int e = 0; e < estrofas.length; e++) {
     final cols = estrofas[e].columnas;
@@ -251,9 +250,22 @@ List<_NotaEnsayable> _extraerNotas() {
 
       final n7 = col.nota7.trim();
       for (int i = 0; i < n7.length; i++) {
-        final delay = i < col.timings7.length
-            ? col.timings7[i]
-            : (i == 0 ? 0 : 400);
+        int delay;
+        if (i == 0) {
+          // Primera nota de la columna.
+          final stored = col.timings7.isNotEmpty
+              ? col.timings7[0]
+              : 0;
+          if (esPrimeraNotaGlobal) {
+            delay = 0;
+          } else {
+            // Gap por defecto entre columnas: 400ms si el stored es 0.
+            delay = stored > 0 ? stored : 400;
+          }
+          esPrimeraNotaGlobal = false;
+        } else {
+          delay = i < col.timings7.length ? col.timings7[i] : 400;
+        }
         lista.add(_NotaEnsayable(
           estrofa: e,
           columna: c,
@@ -265,9 +277,20 @@ List<_NotaEnsayable> _extraerNotas() {
 
       final n6 = col.nota6.trim();
       for (int i = 0; i < n6.length; i++) {
-        final delay = i < col.timings6.length
-            ? col.timings6[i]
-            : 400;
+        int delay;
+        if (i == 0) {
+          final stored = col.timings6.isNotEmpty
+              ? col.timings6[0]
+              : 0;
+          if (esPrimeraNotaGlobal) {
+            delay = 0;
+          } else {
+            delay = stored > 0 ? stored : 400;
+          }
+          esPrimeraNotaGlobal = false;
+        } else {
+          delay = i < col.timings6.length ? col.timings6[i] : 400;
+        }
         lista.add(_NotaEnsayable(
           estrofa: e,
           columna: c,
@@ -306,7 +329,6 @@ ZamponaNota? _zamponaDe(String caracter, bool esFila7) {
   return null;
 }
 
-// ⚠️ SIMPLIFICADO: solo 3 modos.
 bool _debeSonar(bool esFila7) {
   switch (_modo) {
     case ModoEnsayo.audioUrl:
@@ -319,7 +341,7 @@ bool _debeSonar(bool esFila7) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// LOOP TIMING B (para Solo 7 y Solo 6)
+// LOOP DE REPRODUCCIÓN — FIX de desync y pop
 // ═══════════════════════════════════════════════════════════
 Future<void> _reproducir() async {
   final id = ++_runId;
@@ -346,46 +368,59 @@ Future<void> _reproducir() async {
       }
       if (id != _runId) return;
 
+      // Delay ANTES de tocar (así el próximo toque cae en el momento justo).
       final delay = (n.delayMs / _velocidad).round();
       if (delay > 0) {
         await Future.delayed(Duration(milliseconds: delay));
         if (id != _runId) return;
       }
 
-      if (mounted) {
-        setState(() {
-          _estrofaActual = n.estrofa;
-          _notaActiva = n;
-        });
-      }
-
       final caracter = _caracterDe(n);
       final nota = _zamponaDe(caracter, n.esFila7);
 
+      // Caso: nota no tocable (punto, fuera de rango)
       if (nota == null) {
         if (_ultimaNotaSonada != null) {
           final anterior = _ultimaNotaSonada!;
           _ultimaNotaSonada = null;
-          _service.fadeOutNota(anterior);
+          // FIX: stop instantáneo, no fade.
+          unawaited(_service.detenerNota(anterior));
+        }
+        if (mounted) {
+          setState(() {
+            _estrofaActual = n.estrofa;
+            _notaActiva = n;
+            _notaSonando = null;
+          });
         }
         continue;
       }
 
-      if (mounted) setState(() => _notaSonando = nota.id);
-
       final debeSonar = _debeSonar(n.esFila7);
 
+      // FIX: parar la nota anterior ANTES de arrancar la nueva,
+      // y hacerlo sin await (fire-and-forget). Así no hay overlap
+      // de audio y no hay pop.
       if (_ultimaNotaSonada != null &&
           _ultimaNotaSonada != nota.id) {
-        final anterior = _ultimaNotaSonada!;
+        unawaited(_service.detenerNota(_ultimaNotaSonada!));
         _ultimaNotaSonada = null;
-        _service.fadeOutNota(anterior);
       }
+
+      // FIX: NO await en tocar(). Fire-and-forget.
+      // Así el loop no acumula 50ms de latencia por nota.
       if (debeSonar) {
-        try {
-          await _service.tocar(nota.id);
-          _ultimaNotaSonada = nota.id;
-        } catch (_) {}
+        unawaited(_service.tocar(nota.id));
+        _ultimaNotaSonada = nota.id;
+      }
+
+      // Actualizar visual combinado en 1 solo setState.
+      if (mounted) {
+        setState(() {
+          _estrofaActual = n.estrofa;
+          _notaActiva = n;
+          _notaSonando = nota.id;
+        });
       }
 
       final brilloMs = (260 / _velocidad).round().clamp(80, 800);
@@ -394,6 +429,14 @@ Future<void> _reproducir() async {
           setState(() => _notaSonando = null);
         }
       });
+    }
+
+    // ═══ FIN DE UNA VUELTA ═══
+    // FIX: fade-out de la última nota para que no suene larga
+    // mientras el bucle arranca de nuevo (o mientras se detiene).
+    if (_ultimaNotaSonada != null) {
+      unawaited(_service.fadeOutNota(_ultimaNotaSonada!));
+      _ultimaNotaSonada = null;
     }
 
     if (!_bucle) break;
@@ -408,11 +451,6 @@ Future<void> _reproducir() async {
       _notaActiva = null;
       _notaSonando = null;
     });
-    final ultima = _ultimaNotaSonada;
-    _ultimaNotaSonada = null;
-    if (ultima != null) {
-      _service.fadeOutNota(ultima);
-    }
   }
 }
 
@@ -430,9 +468,9 @@ void _detener() {
     _notaSonando = null;
   });
   if (ultima != null) {
-    _service.fadeOutNota(ultima);
+    unawaited(_service.fadeOutNota(ultima));
   }
-  Future.delayed(const Duration(milliseconds: 200), () {
+  Future.delayed(const Duration(milliseconds: 250), () {
     _service.detener();
   });
 }
@@ -445,7 +483,7 @@ void _reiniciar() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// CONTROLES AUDIO URL
+// AUDIO URL CONTROLES
 // ═══════════════════════════════════════════════════════════
 bool get _audioReproduciendo =>
     _modo == ModoEnsayo.audioUrl &&
@@ -601,9 +639,6 @@ Widget _barraSuperior() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// CHIPS DE MODO (solo 3)
-// ═══════════════════════════════════════════════════════════
 Widget _filaModos() {
   final modos = <(ModoEnsayo, String, IconData, Color)>[
     if (_puedeAudioUrl)
