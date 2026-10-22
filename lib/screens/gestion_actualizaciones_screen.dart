@@ -33,9 +33,10 @@ class _GestionActualizacionesScreenState extends State<GestionActualizacionesScr
       final usuario = await UsuarioService().miUsuarioActual();
       final esDev = usuario?.esDev ?? false;
       final actual = await UpdateService.actual();
+      // listarTodas ya trae estables y prereleases
       final releases = esDev ? await GithubService.listarTodas(limite: 30) : await GithubService.listarEstables(limite: 30);
       if (mounted) setState(() { _actual = actual; _releases = releases; _esDev = esDev; _cargando = false; });
-    } catch (_) {
+    } catch (e) {
       if (mounted) setState(() => _cargando = false);
     }
   }
@@ -62,6 +63,10 @@ class _GestionActualizacionesScreenState extends State<GestionActualizacionesScr
   }
 
   Future<void> _aprobarRelease(ReleaseInfo r) async {
+    if (r.urlApk.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este release aún no tiene un APK adjunto.')));
+      return;
+    }
     try {
       await UpdateService.aprobar(InfoVersion(
         build: r.build, version: r.versionLegible, url: r.urlApk, critica: false, notas: r.notas, aprobadaPor: 'admin',
@@ -102,34 +107,37 @@ class _GestionActualizacionesScreenState extends State<GestionActualizacionesScr
                 const SizedBox(height: Sp.lg),
                 const SeccionHeader(title: 'Lanzamientos', icon: Icons.cloud_download, padding: EdgeInsets.zero),
                 const SizedBox(height: Sp.md),
-                ..._releases.map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: Sp.sm),
-                      child: AppCard(
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Icon(r.prerelease ? Icons.science : Icons.android, color: r.prerelease ? Colors.orange : AppColors.granate),
-                                const SizedBox(width: Sp.sm),
-                                Expanded(child: Text(r.tag, style: AppType.subtitle)),
-                                if (r.prerelease) AppBadge(label: 'BETA', variant: AppBadgeVariant.warning),
-                              ],
-                            ),
-                            const SizedBox(height: Sp.md),
-                            Row(
-                              children: [
-                                Expanded(child: AppButton(label: 'DESCARGAR', variant: AppButtonVariant.secondary, onPressed: () => DialogoDescargaApk.mostrar(context, url: r.urlApk, nombre: 'app.apk', versionLegible: r.versionLegible))),
-                                const SizedBox(width: Sp.sm),
-                                if (r.prerelease && _esDev)
-                                  Expanded(child: AppButton(label: 'PROMOVER', icon: Icons.upgrade, variant: AppButtonVariant.secondary, onPressed: () => _promoverRelease(r)))
-                                else if (!r.prerelease)
-                                  Expanded(child: AppButton(label: 'APROBAR', icon: Icons.check, onPressed: () => _aprobarRelease(r))),
-                              ],
-                            ),
-                          ],
+                if (_releases.isEmpty)
+                  const AppEmptyState(icon: Icons.inbox, title: 'Sin lanzamientos', subtitle: 'No hay versiones disponibles en GitHub.')
+                else
+                  ..._releases.map((r) => Padding(
+                        padding: const EdgeInsets.only(bottom: Sp.sm),
+                        child: AppCard(
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(r.prerelease ? Icons.science : Icons.android, color: r.prerelease ? Colors.orange : AppColors.granate),
+                                  const SizedBox(width: Sp.sm),
+                                  Expanded(child: Text(r.tag, style: AppType.subtitle)),
+                                  if (r.prerelease) const AppBadge(label: 'BETA', variant: AppBadgeVariant.warning),
+                                ],
+                              ),
+                              const SizedBox(height: Sp.md),
+                              Row(
+                                children: [
+                                  Expanded(child: AppButton(label: 'DESCARGAR', variant: AppButtonVariant.secondary, onPressed: r.urlApk.isEmpty ? null : () => DialogoDescargaApk.mostrar(context, url: r.urlApk, nombre: 'app.apk', versionLegible: r.versionLegible))),
+                                  const SizedBox(width: Sp.sm),
+                                  if (r.prerelease && _esDev)
+                                    Expanded(child: AppButton(label: 'PROMOVER', icon: Icons.upgrade, variant: AppButtonVariant.secondary, onPressed: () => _promoverRelease(r)))
+                                  else if (!r.prerelease)
+                                    Expanded(child: AppButton(label: 'APROBAR', icon: Icons.check, onPressed: () => _aprobarRelease(r))),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    )),
+                      )),
               ],
             ),
     );
