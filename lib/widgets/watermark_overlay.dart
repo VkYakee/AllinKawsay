@@ -49,11 +49,11 @@ class WatermarkOverlay extends StatelessWidget {
                 const SizedBox(height: 12),
                 // Texto dinámico con el correo del usuario
                 Opacity(
-                  opacity: ajustada * 1.5, // Un poco más visible que el logo
+                  opacity: ajustada * 1.5,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.black45 : Colors.white45,
+                      color: isDark ? Colors.black45 : Colors.white.withOpacity(0.45), // <-- CORREGIDO
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
