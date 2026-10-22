@@ -5,6 +5,7 @@ import '../design/design.dart';
 import '../models/cancion.dart';
 import '../models/usuario.dart';
 import '../services/audio_cache_service.dart';
+import '../services/cancion_service.dart';
 import '../services/player_service.dart';
 import '../services/reproduccion_service.dart';
 import '../services/usuario_service.dart';
@@ -14,6 +15,7 @@ import '../widgets/cancion_detalle/cancion_partitura_fija.dart';
 import '../widgets/cancion_detalle/cancion_tab_comentarios.dart';
 import '../widgets/cancion_detalle/cancion_tab_info.dart';
 import '../widgets/cancion_detalle/cancion_tab_letra.dart';
+import 'agregar_cancion_screen.dart';
 import 'compartir_imagen_screen.dart';
 import 'modo_ensayo_screen.dart';
 import 'presentacion_screen.dart';
@@ -66,9 +68,34 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
   Future<void> _borrarCache() async {
     await AudioCacheService().borrar(widget.cancion.id);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Caché borrado')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Caché borrado')));
+    }
+  }
+
+  void _editar() async {
+    final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AgregarCancionScreen(cancion: widget.cancion)));
+    if (res == true && mounted) Navigator.pop(context); // Si se editó, cerramos el detalle para actualizar
+  }
+
+  void _eliminar() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Eliminar canción'),
+        content: Text('¿Eliminar "${widget.cancion.titulo}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await CancionService().eliminar(widget.cancion.id);
+      if (mounted) Navigator.pop(context); // Volvemos a la lista
     }
   }
 
@@ -76,8 +103,8 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
   Widget build(BuildContext context) {
     final c = widget.cancion;
     final esFavorito = _usuario?.esFavorito(c.id) ?? false;
+    final esAdmin = _usuario?.esAdmin ?? false;
     final puedeComentar = _usuario?.puedeComentar ?? false;
-    final puedeDescargar = _usuario?.puedeDescargar ?? false;
 
     return DefaultTabController(
       length: 3,
@@ -97,10 +124,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                     elevation: 0,
                     pinned: true,
                     actions: [
-                      IconButton(
-                        icon: const Icon(Icons.share),
-                        onPressed: _compartir,
-                      ),
+                      IconButton(icon: const Icon(Icons.share), onPressed: _compartir),
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert),
                         onSelected: (v) {
@@ -110,12 +134,21 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => CompartirImagenScreen(cancion: c)));
                           } else if (v == 'cache') {
                             _borrarCache();
+                          } else if (v == 'editar') {
+                            _editar();
+                          } else if (v == 'eliminar') {
+                            _eliminar();
                           }
                         },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'presentacion', child: Text('Modo Presentación')),
-                          PopupMenuItem(value: 'imagen', child: Text('Compartir Imagen')),
-                          PopupMenuItem(value: 'cache', child: Text('Borrar caché')),
+                        itemBuilder: (_) => [
+                          if (esAdmin) ...[
+                            const PopupMenuItem(value: 'editar', child: Text('Editar Canción')),
+                            const PopupMenuItem(value: 'eliminar', child: Text('Eliminar Canción', style: TextStyle(color: Colors.red))),
+                            const PopupMenuDivider(),
+                          ],
+                          const PopupMenuItem(value: 'presentacion', child: Text('Modo Presentación')),
+                          const PopupMenuItem(value: 'imagen', child: Text('Compartir Imagen')),
+                          const PopupMenuItem(value: 'cache', child: Text('Borrar caché')),
                         ],
                       ),
                     ],
@@ -136,9 +169,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                       },
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: CancionPartituraFija(cancion: c),
-                  ),
+                  SliverToBoxAdapter(child: CancionPartituraFija(cancion: c)),
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: _TabBarDelegate(
@@ -186,10 +217,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: backgroundColor,
-      child: tabBar,
-    );
+    return Container(color: backgroundColor, child: tabBar);
   }
 
   @override
