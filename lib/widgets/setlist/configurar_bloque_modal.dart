@@ -34,7 +34,6 @@ class _ModalContentState extends State<_ModalContent> {
   late TipoBloque _tipo;
   late int _estrofaRef;
   late bool _conLetra;
-  late double _velocidad;
 
   @override
   void initState() {
@@ -43,7 +42,6 @@ class _ModalContentState extends State<_ModalContent> {
     _tipo = b?.tipo ?? TipoBloque.enganche;
     _estrofaRef = b?.estrofaRef ?? 0;
     _conLetra = b?.conLetra ?? false;
-    _velocidad = b?.velocidad ?? 1.2;
   }
 
   bool get _requiereEstrofa => _tipo == TipoBloque.estrofa || _tipo == TipoBloque.bis || _tipo == TipoBloque.ligero;
@@ -63,8 +61,8 @@ class _ModalContentState extends State<_ModalContent> {
           const SizedBox(height: Sp.lg),
           Wrap(
             spacing: Sp.sm, runSpacing: Sp.sm,
-            children: TipoBloque.values.map((t) => ChoiceChip(
-              label: Text(t.name),
+            children: TipoBloque.values.map((t) => AppChoiceChip(
+              label: t.name,
               selected: _tipo == t,
               onSelected: (_) => setState(() { _tipo = t; if (_requiereEstrofa && _estrofaRef < 0) _estrofaRef = 0; }),
             )).toList(),
@@ -77,7 +75,7 @@ class _ModalContentState extends State<_ModalContent> {
               spacing: Sp.sm,
               children: [
                 for (int i = 0; i < widget.estrofasDisponibles; i++)
-                  ChoiceChip(label: Text('E${i + 1}'), selected: _estrofaRef == i, onSelected: (_) => setState(() => _estrofaRef = i)),
+                  AppChoiceChip(label: 'E${i + 1}', selected: _estrofaRef == i, onSelected: (_) => setState(() => _estrofaRef = i)),
               ],
             ),
           ],
@@ -90,7 +88,7 @@ class _ModalContentState extends State<_ModalContent> {
                 estrofaRef: _requiereEstrofa ? _estrofaRef : -1,
                 conLetra: _tipo == TipoBloque.estrofa && _conLetra,
                 tipo: _tipo,
-                velocidad: _velocidad,
+                velocidad: 1.0,
               ));
             },
           ),
