@@ -1,12 +1,15 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/novedades_service.dart';
 import '../widgets/comunes/main_nav_bar.dart';
+import '../widgets/onboarding/permisos_dialog.dart';
 import 'cancionero_screen.dart';
 import 'eventos_screen.dart';
 import 'inicio_screen.dart';
 import 'perfil_screen.dart';
 import 'recuerdos_screen.dart';
+import 'tutorial_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -23,6 +26,27 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     NovedadesService.refrescar();
+    _verificarOnboarding();
+  }
+
+  Future<void> _verificarOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Verificamos si es la primera vez
+    final tutorialVisto = prefs.getBool('tutorial_visto') ?? false;
+    final permisosVistos = prefs.getBool('permisos_vistos') ?? false;
+
+    if (!tutorialVisto && mounted) {
+      // 1. Primero mostramos el tutorial
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorialScreen()));
+      await prefs.setBool('tutorial_visto', true);
+    }
+
+    if (!permisosVistos && mounted) {
+      // 2. Luego los permisos
+      await PermisosDialog.mostrar(context);
+      await prefs.setBool('permisos_vistos', true);
+    }
   }
 
   @override
@@ -36,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      extendBody: true, // <-- Magia: permite que el scroll pase por detrás de la barra
+      extendBody: true,
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: ValueListenableBuilder<int>(
         valueListenable: NovedadesService.eventosNuevos,
