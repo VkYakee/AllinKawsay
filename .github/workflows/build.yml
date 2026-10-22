@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, experimental/zampona ]
+    branches: [ main, redesign/v2 ]   # ← agregá redesign/v2
   workflow_dispatch:
     inputs:
       motivo:

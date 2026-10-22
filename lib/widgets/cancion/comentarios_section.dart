@@ -1,5 +1,7 @@
+// lib/widgets/cancion/comentarios_section.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../design/design.dart';
 import '../../models/comentario.dart';
 import '../../services/comentario_service.dart';
 import '../../theme/colors.dart';
@@ -27,11 +29,11 @@ class _ComentariosSectionState extends State<ComentariosSection> {
     super.dispose();
   }
 
-  void _enviarComentario() async {
+  void _enviar() async {
     final texto = _comentarioCtrl.text.trim();
     if (texto.isEmpty) return;
-
     final user = FirebaseAuth.instance.currentUser!;
+    
     await ComentarioService().agregar(
       widget.cancionId,
       Comentario(
@@ -48,126 +50,131 @@ class _ComentariosSectionState extends State<ComentariosSection> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
-
+    
     return Column(
       children: [
-        SizedBox(height: 300, child: _comentariosBody(onSurface)),
+        // Lista de comentarios
+        Expanded(
+          child: StreamBuilder<List<Comentario>>(
+            stream: ComentarioService().listar(widget.cancionId),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: AppColors.granate));
+              }
+              final lista = snap.data ?? [];
+              if (lista.isEmpty) {
+                return const AppEmptyState(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'Sin comentarios',
+                  subtitle: 'Sé el primero en comentar esta canción.',
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(Sp.md),
+                itemCount: lista.length,
+                itemBuilder: (context, i) {
+                  final c = lista[i];
+                  final esMio = c.autorUid == FirebaseAuth.instance.currentUser?.uid;
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: Sp.sm),
+                    child: Container(
+                      padding: const EdgeInsets.all(Sp.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardColor(context),
+                        borderRadius: Rad.rMd,
+                        border: Border.all(color: AppColors.granate.withOpacity(0.1)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AppColors.granate.withOpacity(0.1),
+                            child: Text(
+                              c.autorNombre.isNotEmpty ? c.autorNombre[0].toUpperCase() : '?',
+                              style: AppType.caption.copyWith(color: AppColors.granate, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(width: Sp.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(c.autorNombre, style: AppType.caption.copyWith(fontWeight: FontWeight.bold, color: onSurface)),
+                                    const SizedBox(width: Sp.sm),
+                                    Text(_fecha(c.fecha), style: AppType.captionXs.copyWith(color: onSurface.withOpacity(0.4))),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(c.texto, style: AppType.bodySm.copyWith(color: onSurface.withOpacity(0.8))),
+                              ],
+                            ),
+                          ),
+                          if (esMio)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => ComentarioService().eliminar(widget.cancionId, c.id),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        
+        // Input para nuevo comentario
         if (widget.puedeComentar)
-          _comentarioInput()
+          Container(
+            padding: const EdgeInsets.all(Sp.md),
+            decoration: BoxDecoration(
+              color: AppColors.cardColor(context),
+              border: Border(top: BorderSide(color: AppColors.granate.withOpacity(0.1))),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AppInput(
+                      controller: _comentarioCtrl,
+                      hint: 'Escribe un comentario...',
+                    ),
+                  ),
+                  const SizedBox(width: Sp.sm),
+                  Container(
+                    decoration: const BoxDecoration(color: AppColors.granate, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: const Icon(Icons.send, color: AppColors.dorado, size: 20),
+                      onPressed: _enviar,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
         else
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(Sp.lg),
             child: Text(
               'Solo los miembros del grupo pueden comentar.',
-              style: TextStyle(color: onSurface.withOpacity(0.5), fontStyle: FontStyle.italic, fontSize: 12),
+              style: AppType.captionXs.copyWith(fontStyle: FontStyle.italic),
             ),
           ),
       ],
     );
   }
 
-  Widget _comentariosBody(Color onSurface) {
-    return StreamBuilder<List<Comentario>>(
-      stream: ComentarioService().listar(widget.cancionId),
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.granate));
-        }
-
-        final lista = snap.data ?? [];
-
-        if (lista.isEmpty) {
-          return Center(
-            child: Text('Sin comentarios aún', style: TextStyle(color: onSurface.withOpacity(0.5), fontStyle: FontStyle.italic)),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: lista.length,
-          itemBuilder: (context, i) {
-            final c = lista[i];
-            final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-            final esMio = c.autorUid == uid;
-
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.gradienteGranate,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    c.autorNombre.isNotEmpty ? c.autorNombre[0].toUpperCase() : '?',
-                    style: const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                title: Text(c.autorNombre, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: onSurface)),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(c.texto, style: TextStyle(color: onSurface.withOpacity(0.8), fontSize: 13)),
-                    const SizedBox(height: 4),
-                    Text(_fmtFecha(c.fecha), style: TextStyle(fontSize: 10, color: onSurface.withOpacity(0.4))),
-                  ],
-                ),
-                trailing: esMio
-                    ? IconButton(
-                        icon: const Icon(Icons.delete_outline, color: AppColors.granate, size: 20),
-                        onPressed: () => ComentarioService().eliminar(widget.cancionId, c.id),
-                      )
-                    : null,
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _comentarioInput() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.dorado.withOpacity(0.3))),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _comentarioCtrl,
-                decoration: const InputDecoration(
-                  hintText: 'Escribe un comentario...',
-                  isDense: true,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                gradient: AppColors.gradienteGranate,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.send, color: AppColors.dorado, size: 20),
-                onPressed: _enviarComentario,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _fmtFecha(DateTime? d) {
+  String _fecha(DateTime? d) {
     if (d == null) return '...';
-    return '${d.day}/${d.month}/${d.year} ${d.hour}:${d.minute.toString().padLeft(2, '0')}';
+    return '${d.day}/${d.month} ${d.hour}:${d.minute.toString().padLeft(2, '0')}';
   }
 }

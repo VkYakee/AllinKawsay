@@ -1,5 +1,7 @@
+// lib/screens/busqueda_global_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../design/design.dart';
 import '../models/cancion.dart';
 import '../models/evento.dart';
 import '../models/recuerdo.dart';
@@ -7,7 +9,7 @@ import '../services/cancion_service.dart';
 import '../services/evento_service.dart';
 import '../services/recuerdo_service.dart';
 import '../theme/colors.dart';
-import '../widgets/watermark_overlay.dart';
+import '../widgets/busqueda/busqueda_resultado_card.dart';
 import 'cancion_detalle_screen.dart';
 import 'recuerdo_detalle_screen.dart';
 
@@ -33,24 +35,15 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
   void initState() {
     super.initState();
     _cargar();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focus.requestFocus();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
   }
 
   Future<void> _cargar() async {
     try {
-      final canciones = await CancionService().listar().first;
-      final eventos = await EventoService().listar().first;
-      final recuerdos = await RecuerdoService().listar().first;
-      if (mounted) {
-        setState(() {
-          _canciones = canciones;
-          _eventos = eventos;
-          _recuerdos = recuerdos;
-          _cargando = false;
-        });
-      }
+      final c = await CancionService().listar().first;
+      final e = await EventoService().listar().first;
+      final r = await RecuerdoService().listar().first;
+      if (mounted) setState(() { _canciones = c; _eventos = e; _recuerdos = r; _cargando = false; });
     } catch (_) {
       if (mounted) setState(() => _cargando = false);
     }
@@ -73,445 +66,111 @@ class _BusquedaGlobalScreenState extends State<BusquedaGlobalScreen> {
 
   List<Cancion> get _cancionesFiltradas {
     if (_query.isEmpty) return [];
-    return _canciones.where((c) {
-      if (c.titulo.toLowerCase().contains(_query)) return true;
-      if (c.autor.toLowerCase().contains(_query)) return true;
-      if (c.ritmo.toLowerCase().contains(_query)) return true;
-      if (c.letra.toLowerCase().contains(_query)) return true;
-      if (c.tags.any((t) => t.toLowerCase().contains(_query))) return true;
-      if (c.letras.any((l) => l.texto.toLowerCase().contains(_query))) {
-        return true;
-      }
-      if (c.letras.any((l) => l.titulo.toLowerCase().contains(_query))) {
-        return true;
-      }
-      return false;
-    }).toList();
+    return _canciones.where((c) =>
+        c.titulo.toLowerCase().contains(_query) ||
+        c.autor.toLowerCase().contains(_query) ||
+        c.ritmo.toLowerCase().contains(_query)).toList();
   }
 
   List<Evento> get _eventosFiltrados {
     if (_query.isEmpty) return [];
-    return _eventos
-        .where((e) =>
-            e.titulo.toLowerCase().contains(_query) ||
-            e.descripcion.toLowerCase().contains(_query) ||
-            e.lugar.toLowerCase().contains(_query))
-        .toList();
+    return _eventos.where((e) =>
+        e.titulo.toLowerCase().contains(_query) ||
+        e.lugar.toLowerCase().contains(_query)).toList();
   }
 
   List<Recuerdo> get _recuerdosFiltrados {
     if (_query.isEmpty) return [];
-    return _recuerdos
-        .where((r) =>
-            r.titulo.toLowerCase().contains(_query) ||
-            r.descripcion.toLowerCase().contains(_query))
-        .toList();
+    return _recuerdos.where((r) => r.titulo.toLowerCase().contains(_query)).toList();
   }
-void _abrirEvento(Evento e) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Theme.of(context).cardColor,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (_) {
-      final onSurface = Theme.of(context).colorScheme.onSurface;
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.dorado,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.granate.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.event,
-                        color: AppColors.granate, size: 18),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      e.titulo,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: onSurface,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _filaDetalle(Icons.calendar_today,
-                  '${e.fecha.day}/${e.fecha.month}/${e.fecha.year}',
-                  onSurface),
-              const SizedBox(height: 8),
-              _filaDetalle(
-                Icons.access_time,
-                '${e.fecha.hour.toString().padLeft(2, '0')}:${e.fecha.minute.toString().padLeft(2, '0')}',
-                onSurface,
-              ),
-              if (e.lugar.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _filaDetalle(Icons.place, e.lugar, onSurface),
-              ],
-              if (e.descripcion.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  e.descripcion,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: onSurface.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
 
-Widget _filaDetalle(IconData icono, String texto, Color onSurface) {
-  return Row(
-    children: [
-      Icon(icono, size: 15, color: AppColors.granate),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text(
-          texto,
-          style: TextStyle(fontSize: 14, color: onSurface),
-        ),
-      ),
-    ],
-  );
-}
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _ctrl,
-          focusNode: _focus,
-          onChanged: _onChanged,
-          style: const TextStyle(
-              color: AppColors.dorado,
-              fontSize: 15,
-              letterSpacing: 0.3),
-          cursorColor: AppColors.dorado,
-          decoration: InputDecoration(
-            filled: false,
-            hintText: 'Canciones, eventos, recuerdos...',
-            hintStyle: TextStyle(
-                color: AppColors.dorado.withOpacity(0.45),
-                fontSize: 13),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            suffixIcon: _query.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear,
-                        color: AppColors.dorado, size: 20),
-                    onPressed: () {
-                      _ctrl.clear();
-                      setState(() => _query = '');
-                    },
-                  )
-                : null,
+    return AppScaffold(
+      title: 'Buscar',
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(Sp.lg),
+            child: AppInput(
+              controller: _ctrl,
+              focusNode: _focus,
+              label: 'Buscar',
+              hint: 'Canciones, eventos, recuerdos...',
+              prefixIcon: Icons.search,
+              onChanged: _onChanged,
+              suffix: _query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () { _ctrl.clear(); setState(() => _query = ''); },
+                    )
+                  : null,
+            ),
           ),
-        ),
+          Expanded(
+            child: _cargando
+                ? const Center(child: CircularProgressIndicator(color: AppColors.granate))
+                : _query.isEmpty
+                    ? const AppEmptyState(icon: Icons.search, title: 'Escribe algo para buscar', subtitle: 'Encuentra tus canciones, eventos y recuerdos favoritos.')
+                    : _resultados(),
+          ),
+        ],
       ),
-      body: _cargando
-          ? const Center(
-              child:
-                  CircularProgressIndicator(color: AppColors.granate))
-          : WatermarkOverlay(
-              opacity: 0.04, child: _resultados(onSurface)),
     );
   }
 
-  Widget _resultados(Color onSurface) {
-    if (_query.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.granate.withOpacity(0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.search,
-                    size: 48,
-                    color: AppColors.granate.withOpacity(0.4)),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Escribe algo para buscar',
-                style: TextStyle(
-                    color: onSurface.withOpacity(0.5),
-                    fontSize: 14,
-                    letterSpacing: 0.3),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Busca en canciones, eventos y recuerdos',
-                style: TextStyle(
-                    color: onSurface.withOpacity(0.35), fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+  Widget _resultados() {
+    final c = _cancionesFiltradas;
+    final e = _eventosFiltrados;
+    final r = _recuerdosFiltrados;
 
-    final canciones = _cancionesFiltradas;
-    final eventos = _eventosFiltrados;
-    final recuerdos = _recuerdosFiltrados;
-    final total = canciones.length + eventos.length + recuerdos.length;
-
-    if (total == 0) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.granate.withOpacity(0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.search_off,
-                    size: 48,
-                    color: AppColors.granate.withOpacity(0.4)),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Sin resultados para "$_query"',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: onSurface.withOpacity(0.5),
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic),
-              ),
-            ],
-          ),
-        ),
+    if (c.isEmpty && e.isEmpty && r.isEmpty) {
+      return AppEmptyState(
+        icon: Icons.search_off,
+        title: 'Sin resultados',
+        subtitle: 'No se encontró nada para "$_query".',
       );
     }
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
       children: [
-        if (canciones.isNotEmpty) ...[
-          _tituloSeccion(context, 'Canciones', canciones.length),
-          ...canciones.map((c) => _itemCancion(c, onSurface)),
-          const SizedBox(height: 12),
+        if (c.isNotEmpty) ...[
+          const SeccionHeader(title: 'Canciones', icon: Icons.library_music, padding: EdgeInsets.zero),
+          const SizedBox(height: Sp.sm),
+          ...c.map((item) => BusquedaResultadoCard(
+                icon: Icons.music_note,
+                title: item.titulo,
+                subtitle: '${item.ritmo} · ${item.autor}',
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CancionDetalleScreen(cancion: item))),
+              )),
+          const SizedBox(height: Sp.lg),
         ],
-        if (eventos.isNotEmpty) ...[
-          _tituloSeccion(context, 'Eventos', eventos.length),
-          ...eventos.map((e) => _itemEvento(e, onSurface)),
-          const SizedBox(height: 12),
+        if (e.isNotEmpty) ...[
+          const SeccionHeader(title: 'Eventos', icon: Icons.event, padding: EdgeInsets.zero),
+          const SizedBox(height: Sp.sm),
+          ...e.map((item) => BusquedaResultadoCard(
+                icon: Icons.event,
+                title: item.titulo,
+                subtitle: '${item.fecha.day}/${item.fecha.month} · ${item.lugar}',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Los eventos se ven desde la pestaña Eventos')));
+                },
+              )),
+          const SizedBox(height: Sp.lg),
         ],
-        if (recuerdos.isNotEmpty) ...[
-          _tituloSeccion(context, 'Recuerdos', recuerdos.length),
-          ...recuerdos.map((r) => _itemRecuerdo(r, onSurface)),
+        if (r.isNotEmpty) ...[
+          const SeccionHeader(title: 'Recuerdos', icon: Icons.photo_library, padding: EdgeInsets.zero),
+          const SizedBox(height: Sp.sm),
+          ...r.map((item) => BusquedaResultadoCard(
+                icon: Icons.photo_library,
+                title: item.titulo,
+                subtitle: '${item.fotos.length} fotos',
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RecuerdoDetalleScreen(recuerdo: item))),
+              )),
         ],
-        const SizedBox(height: 24),
+        const SizedBox(height: Sp.xxxl),
       ],
-    );
-  }
-
-  Widget _tituloSeccion(BuildContext context, String texto, int cantidad) {
-    final color = AppColors.seccionTitulo(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 16,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            texto.toUpperCase(),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: color,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.granate.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text('$cantidad',
-                style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: color)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _itemCancion(Cancion c, Color onSurface) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => CancionDetalleScreen(cancion: c)),
-          ),
-          child: _cardItem(
-            context,
-            Icons.music_note,
-            c.titulo,
-            '${c.ritmo}${c.autor.isNotEmpty ? ' · ${c.autor}' : ''}',
-            onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _itemEvento(Evento e, Color onSurface) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => _abrirEvento(e),
-          child: _cardItem(
-            context,
-            Icons.event,
-            e.titulo,
-            '${e.fecha.day}/${e.fecha.month}/${e.fecha.year} · ${e.lugar}',
-            onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _itemRecuerdo(Recuerdo r, Color onSurface) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => RecuerdoDetalleScreen(recuerdo: r)),
-          ),
-          child: _cardItem(
-            context,
-            Icons.photo_library,
-            r.titulo,
-            '${r.fotos.length} foto(s)${r.videos.isNotEmpty ? ' · ${r.videos.length} video(s)' : ''}',
-            onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _cardItem(
-    BuildContext context,
-    IconData icono,
-    String titulo,
-    String subtitulo,
-    Color onSurface,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              gradient: AppColors.gradienteGranate,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icono, color: AppColors.dorado, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(titulo,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: onSurface,
-                        fontSize: 14),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 3),
-                Text(
-                  subtitulo,
-                  style: TextStyle(
-                      fontSize: 12, color: onSurface.withOpacity(0.55)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right,
-              color: AppColors.dorado.withOpacity(0.6), size: 20),
-        ],
-      ),
     );
   }
 }

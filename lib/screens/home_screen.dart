@@ -1,11 +1,15 @@
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/novedades_service.dart';
-import '../theme/colors.dart';
+import '../widgets/comunes/main_nav_bar.dart';
+import '../widgets/onboarding/permisos_dialog.dart';
 import 'cancionero_screen.dart';
 import 'eventos_screen.dart';
 import 'inicio_screen.dart';
 import 'perfil_screen.dart';
 import 'recuerdos_screen.dart';
+import 'tutorial_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -22,6 +26,27 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     NovedadesService.refrescar();
+    _verificarOnboarding();
+  }
+
+  Future<void> _verificarOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Verificamos si es la primera vez
+    final tutorialVisto = prefs.getBool('tutorial_visto') ?? false;
+    final permisosVistos = prefs.getBool('permisos_vistos') ?? false;
+
+    if (!tutorialVisto && mounted) {
+      // 1. Primero mostramos el tutorial
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorialScreen()));
+      await prefs.setBool('tutorial_visto', true);
+    }
+
+    if (!permisosVistos && mounted) {
+      // 2. Luego los permisos
+      await PermisosDialog.mostrar(context);
+      await prefs.setBool('permisos_vistos', true);
+    }
   }
 
   @override
@@ -35,57 +60,17 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          const NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Inicio'),
-          const NavigationDestination(
-              icon: Icon(Icons.library_music_outlined),
-              selectedIcon: Icon(Icons.library_music),
-              label: 'Cancionero'),
-          NavigationDestination(
-            icon: ValueListenableBuilder<int>(
-              valueListenable: NovedadesService.eventosNuevos,
-              builder: (context, count, child) {
-                return Badge(
-                  isLabelVisible: count > 0,
-                  label: Text('$count'),
-                  backgroundColor: AppColors.granate,
-                  textColor: AppColors.dorado,
-                  child: child,
-                );
-              },
-              child: const Icon(Icons.event_outlined),
-            ),
-            selectedIcon: ValueListenableBuilder<int>(
-              valueListenable: NovedadesService.eventosNuevos,
-              builder: (context, count, child) {
-                return Badge(
-                  isLabelVisible: count > 0,
-                  label: Text('$count'),
-                  backgroundColor: AppColors.granate,
-                  textColor: AppColors.dorado,
-                  child: child,
-                );
-              },
-              child: const Icon(Icons.event),
-            ),
-            label: 'Eventos',
-          ),
-          const NavigationDestination(
-              icon: Icon(Icons.photo_library_outlined),
-              selectedIcon: Icon(Icons.photo_library),
-              label: 'Recuerdos'),
-          const NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Perfil'),
-        ],
+      bottomNavigationBar: ValueListenableBuilder<int>(
+        valueListenable: NovedadesService.eventosNuevos,
+        builder: (context, count, _) {
+          return MainNavBar(
+            selectedIndex: _index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            eventosNuevos: count,
+          );
+        },
       ),
     );
   }

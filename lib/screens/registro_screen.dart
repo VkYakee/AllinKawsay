@@ -1,7 +1,11 @@
+// lib/screens/registro_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../design/design.dart';
 import '../services/auth_service.dart';
 import '../theme/colors.dart';
+import '../widgets/auth/login_hero.dart';
+import '../widgets/auth/registro_form.dart';
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -14,8 +18,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _email = TextEditingController();
   final _pass = TextEditingController();
   final _pass2 = TextEditingController();
-  // 🍯 Honeypot: campo invisible para bots.
-  // Los humanos nunca lo ven ni lo completan.
   final _honeypot = TextEditingController();
 
   bool _loading = false;
@@ -29,60 +31,31 @@ class _RegistroScreenState extends State<RegistroScreen> {
     final pass = _pass.text;
     final pass2 = _pass2.text;
 
-    // 🍯 Anti-bot 1: honeypot
-    if (_honeypot.text.isNotEmpty) {
-      // Es un bot. No le decimos nada, solo fingimos un error genérico.
-      _snack('No se pudo crear la cuenta. Intentá más tarde.');
-      return;
+    // 🍯 Anti-bot
+    if (_honeypot.text.isNotEmpty) return _snack('Error al crear cuenta.');
+    if (DateTime.now().difference(_inicioFormulario).inSeconds < 3) {
+      return _snack('El formulario se envió muy rápido.');
     }
 
-    // 🍯 Anti-bot 2: tiempo mínimo de llenado
-    final segundosTranscurridos =
-        DateTime.now().difference(_inicioFormulario).inSeconds;
-    if (segundosTranscurridos < 3) {
-      _snack('El formulario se envió demasiado rápido. Intentá de nuevo.');
-      return;
-    }
-
-    if (nombre.isEmpty || email.isEmpty || pass.isEmpty) {
-      _snack('Completa todos los campos');
-      return;
-    }
-    if (pass.length < 6) {
-      _snack('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-    if (pass != pass2) {
-      _snack('Las contraseñas no coinciden');
-      return;
-    }
+    if (nombre.isEmpty || email.isEmpty || pass.isEmpty) return _snack('Completa todos los campos');
+    if (pass.length < 6) return _snack('La contraseña debe tener al menos 6 caracteres');
+    if (pass != pass2) return _snack('Las contraseñas no coinciden');
 
     setState(() => _loading = true);
     try {
       final user = await AuthService().registrar(email, pass, nombre);
-      // Enviar email de verificación automáticamente
       try {
         await user?.sendEmailVerification();
-      } catch (_) {
-        // Silencioso: si falla, el AuthGate lo redirige igual
-      }
+      } catch (_) {}
       if (mounted) {
-        _snack('¡Cuenta creada! Revisá tu correo para verificar.');
+        _snack('¡Cuenta creada! Revisa tu correo.');
         Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
       String msg = 'Error al registrarte';
-      switch (e.code) {
-        case 'email-already-in-use':
-          msg = 'Ese email ya está registrado';
-          break;
-        case 'weak-password':
-          msg = 'Contraseña muy débil';
-          break;
-        case 'invalid-email':
-          msg = 'Email inválido';
-          break;
-      }
+      if (e.code == 'email-already-in-use') msg = 'Ese email ya está registrado';
+      if (e.code == 'weak-password') msg = 'Contraseña muy débil';
+      if (e.code == 'invalid-email') msg = 'Email inválido';
       _snack(msg);
     } catch (e) {
       _snack('Error: $e');
@@ -92,37 +65,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
   }
 
   Future<void> _registrarConGoogle() async {
-    // 🍯 Anti-bot: misma validación de tiempo
-    final segundosTranscurridos =
-        DateTime.now().difference(_inicioFormulario).inSeconds;
-    if (segundosTranscurridos < 2) {
-      _snack('Esperá un momento antes de continuar.');
-      return;
+    if (DateTime.now().difference(_inicioFormulario).inSeconds < 2) {
+      return _snack('Espera un momento antes de continuar.');
     }
-
     setState(() => _loadingGoogle = true);
     try {
       final user = await AuthService().loginConGoogle();
-      if (user != null && mounted) {
-        Navigator.pop(context);
-      }
+      if (user != null && mounted) Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
-      String msg = 'No se pudo registrar con Google';
-      if (e.code == 'account-exists-with-different-credential') {
-        msg = 'Ese email ya está registrado con contraseña.';
-      }
-      _snack(msg);
+      _snack(e.code == 'account-exists-with-different-credential' ? 'Ese email ya está registrado.' : 'Error con Google');
     } catch (e) {
-      final s = e.toString();
-      if (s.contains('ApiException: 10')) {
-        _snack('Configuración incompleta: falta registrar el SHA-1 en '
-            'Firebase Console.');
-      } else if (s.contains('sign_in_canceled') ||
-          s.contains('canceled')) {
-        // Silencioso
-      } else {
-        _snack('Error: $e');
-      }
+      _snack('Error: $e');
     } finally {
       if (mounted) setState(() => _loadingGoogle = false);
     }
@@ -130,8 +83,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
@@ -143,6 +95,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _honeypot.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,372 +104,39 @@ class _RegistroScreenState extends State<RegistroScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0F0F0F),
-              AppColors.granateOscuro,
-              AppColors.granate,
-            ],
-            stops: [0.0, 0.55, 1.0],
+            colors: [Color(0xFF0F0F0F), AppColors.granateOscuro, AppColors.granate],
+            stops: [0.0, 0.4, 1.0],
           ),
         ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(Sp.xxl),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.dorado.withOpacity(0.3),
-                          blurRadius: 24,
-                          spreadRadius: 3,
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/logo.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: AppColors.granate,
-                          child: const Icon(Icons.person_add_alt_1,
-                              color: AppColors.dorado, size: 50),
-                        ),
-                      ),
-                    ),
+                  const LoginHero(),
+                  const SizedBox(height: Sp.xxxl),
+                  RegistroForm(
+                    nombreCtrl: _nombre,
+                    emailCtrl: _email,
+                    passCtrl: _pass,
+                    pass2Ctrl: _pass2,
+                    honeypotCtrl: _honeypot,
+                    verPass: _verPass,
+                    loading: _loading,
+                    loadingGoogle: _loadingGoogle,
+                    onVerPass: () => setState(() => _verPass = !_verPass),
+                    onRegistrar: _registrar,
+                    onGoogle: _registrarConGoogle,
+                    onVolver: () => Navigator.pop(context),
                   ),
-                  const SizedBox(height: 24),
-
-                  const Text(
-                    'ÚNETE AL GRUPO',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.dorado,
-                      letterSpacing: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Crea tu cuenta para acceder al cancionero',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.dorado.withOpacity(0.65),
-                      fontSize: 12,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'C.I.A.C. Allin Kawsay · Juliaca - Perú',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.dorado.withOpacity(0.4),
-                      fontSize: 10,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // 🍯 Honeypot invisible
-                  // Es un campo que los bots "ven" pero los humanos no.
-                  // Si tiene texto → es bot.
-                  Offstage(
-                    offstage: true,
-                    child: SizedBox(
-                      height: 0,
-                      child: TextField(
-                        controller: _honeypot,
-                        autofocus: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Website',
-                          hintText: 'http://',
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppColors.blanco,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: AppColors.dorado.withOpacity(0.4),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // Botón Google
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: OutlinedButton(
-                            onPressed: (_loading || _loadingGoogle)
-                                ? null
-                                : _registrarConGoogle,
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                  color:
-                                      AppColors.negro.withOpacity(0.15),
-                                  width: 1.5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              backgroundColor: AppColors.blanco,
-                            ),
-                            child: _loadingGoogle
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.granate,
-                                      strokeWidth: 2.5,
-                                    ),
-                                  )
-                                : const Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    children: [
-                                      _GoogleIcon(),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Registrarme con Google',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.negro,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Divider(
-                                  color: AppColors.granate
-                                      .withOpacity(0.2)),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12),
-                              child: Text(
-                                'o con email',
-                                style: TextStyle(
-                                  color:
-                                      AppColors.negro.withOpacity(0.4),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(
-                                  color: AppColors.granate
-                                      .withOpacity(0.2)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-
-                        TextField(
-                          controller: _nombre,
-                          textCapitalization:
-                              TextCapitalization.words,
-                          style: const TextStyle(
-                              color: AppColors.negro, fontSize: 15),
-                          decoration: _deco(
-                              'Nombre completo', Icons.person),
-                        ),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(
-                              color: AppColors.negro, fontSize: 15),
-                          decoration: _deco('Email', Icons.email),
-                        ),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: _pass,
-                          obscureText: !_verPass,
-                          style: const TextStyle(
-                              color: AppColors.negro, fontSize: 15),
-                          decoration: _deco(
-                              'Contraseña (mín. 6)', Icons.lock)
-                              .copyWith(
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _verPass
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                color:
-                                    AppColors.granate.withOpacity(0.6),
-                              ),
-                              onPressed: () => setState(
-                                  () => _verPass = !_verPass),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: _pass2,
-                          obscureText: !_verPass,
-                          style: const TextStyle(
-                              color: AppColors.negro, fontSize: 15),
-                          decoration: _deco('Repetir contraseña',
-                              Icons.lock_outline),
-                        ),
-                        const SizedBox(height: 28),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: FilledButton(
-                            onPressed: _loading ? null : _registrar,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.granate,
-                              foregroundColor: AppColors.dorado,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: _loading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.dorado,
-                                      strokeWidth: 2.5,
-                                    ),
-                                  )
-                                : const Text(
-                                    'CREAR CUENTA',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 3,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextButton.icon(
-                    onPressed: (_loading || _loadingGoogle)
-                        ? null
-                        : () => Navigator.pop(context),
-                    icon: Icon(Icons.arrow_back,
-                        size: 16,
-                        color: AppColors.dorado.withOpacity(0.7)),
-                    label: Text(
-                      'Ya tengo cuenta',
-                      style: TextStyle(
-                        color: AppColors.dorado.withOpacity(0.7),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: Sp.xxl),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _deco(String label, IconData icono) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(
-        color: AppColors.granate,
-        fontWeight: FontWeight.w600,
-        fontSize: 14,
-      ),
-      floatingLabelStyle: const TextStyle(
-        color: AppColors.granate,
-        fontWeight: FontWeight.bold,
-        fontSize: 13,
-      ),
-      prefixIcon: Icon(icono, color: AppColors.granate, size: 20),
-      filled: true,
-      fillColor: AppColors.grisClaro,
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.dorado, width: 2),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide:
-            BorderSide(color: AppColors.dorado.withOpacity(0.5)),
-      ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-    );
-  }
-}
-
-/// Icono de Google con los 4 colores de la marca.
-class _GoogleIcon extends StatelessWidget {
-  const _GoogleIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 22,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-            ),
-          ),
-          ShaderMask(
-            blendMode: BlendMode.srcIn,
-            shaderCallback: (bounds) => const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF4285F4),
-                Color(0xFFEA4335),
-                Color(0xFFFBBC05),
-                Color(0xFF34A853),
-              ],
-            ).createShader(bounds),
-            child: const Text(
-              'G',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                height: 1.0,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

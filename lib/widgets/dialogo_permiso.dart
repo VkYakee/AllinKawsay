@@ -1,63 +1,26 @@
+// lib/widgets/dialogo_permiso.dart
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../design/design.dart';
 import '../theme/colors.dart';
 
-/// Diálogo que explica por qué se necesita un permiso y ofrece
-/// abrir los ajustes del sistema cuando fue denegado permanentemente.
 class DialogoPermiso {
-  static Future<void> mostrar(
-    BuildContext context, {
-    required String titulo,
-    required String mensaje,
-  }) async {
+  static Future<void> mostrar(BuildContext context, {required String titulo, required String mensaje}) async {
     return showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: Rad.rXl),
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: AppColors.gradienteGranate,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.lock_outline,
-                  color: AppColors.dorado, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                titulo,
-                style: const TextStyle(
-                  color: AppColors.granate,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
+            Container(padding: const EdgeInsets.all(Sp.sm), decoration: const BoxDecoration(gradient: AppColors.gradienteGranate, shape: BoxShape.circle), child: const Icon(Icons.lock, color: AppColors.dorado, size: 18)),
+            const SizedBox(width: Sp.sm),
+            Expanded(child: Text(titulo, style: AppType.h3.copyWith(color: AppColors.granate))),
           ],
         ),
-        content: Text(
-          mensaje,
-          style: const TextStyle(fontSize: 14, height: 1.5),
-        ),
+        content: Text(mensaje, style: AppType.bodySm),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('AHORA NO'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            icon: const Icon(Icons.settings, size: 16),
-            label: const Text('ABRIR AJUSTES'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('AHORA NO')),
+          TextButton(onPressed: () { Navigator.pop(context); openAppSettings(); }, child: const Text('ABRIR AJUSTES')),
         ],
       ),
     );
