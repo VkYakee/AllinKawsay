@@ -11,7 +11,7 @@ class AppVersion {
   static const String major = '2';
   static const String minor = '0'; // Subido por el setlist/timing
   static const String patch = '0';
-  static const String release = '0';
+  static const String release = '1';
 
   static const int build = VersionBuild.build;
 
