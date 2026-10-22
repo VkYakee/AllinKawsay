@@ -8,10 +8,10 @@ class AppVersion {
   // PATCH: correcciones o cambios chicos.
   // RELEASE: contador de lanzamientos del mismo patch.
 
-  static const String major = '1';
-  static const String minor = '2'; // Subido por el setlist/timing
+  static const String major = '2';
+  static const String minor = '0'; // Subido por el setlist/timing
   static const String patch = '0';
-  static const String release = '1';
+  static const String release = '0';
 
   static const int build = VersionBuild.build;
 
