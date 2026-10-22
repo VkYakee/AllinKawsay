@@ -16,89 +16,28 @@ class UltimoRecuerdo extends StatelessWidget {
     return StreamBuilder<List<Recuerdo>>(
       stream: RecuerdoService().listar(),
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const SkeletonCard(height: 200);
-        }
-        if (snap.hasError) return const ErrorMini();
-
+        if (!snap.hasData) return const SkeletonCard(height: 200);
         final lista = snap.data ?? [];
-        if (lista.isEmpty) {
-          return const EmptyMini(
-              icon: Icons.photo_library,
-              text: 'Sin recuerdos aún');
-        }
+        if (lista.isEmpty) return const EmptyMini(icon: Icons.photo_library, text: 'Sin recuerdos');
 
         final r = lista.first;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
           child: AppCard(
             padding: EdgeInsets.zero,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) =>
-                      RecuerdoDetalleScreen(recuerdo: r)),
-            ),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RecuerdoDetalleScreen(recuerdo: r))),
             child: ClipRRect(
               borderRadius: Rad.rLg,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (r.fotos.isNotEmpty)
-                    CachedNetworkImage(
-                      imageUrl: r.fotos.first,
-                      memCacheWidth: 800,
-                      width: double.infinity,
-                      height: 180,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                        height: 180,
-                        color: Colors.grey.withOpacity(0.1),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.granate),
-                        ),
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        height: 180,
-                        color: Colors.grey.withOpacity(0.1),
-                        child: const Icon(Icons.broken_image,
-                            color: AppColors.granate, size: 40),
-                      ),
-                    ),
+                    CachedNetworkImage(imageUrl: r.fotos.first, width: double.infinity, height: 180, fit: BoxFit.cover),
                   Padding(
-                    padding: const EdgeInsets.all(Sp.md + 2),
+                    padding: const EdgeInsets.all(Sp.md),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            r.titulo,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: Sp.sm, vertical: 3),
-                          decoration: BoxDecoration(
-                            color:
-                                AppColors.granate.withOpacity(0.1),
-                            borderRadius: Rad.rSm,
-                          ),
-                          child: Text(
-                            '${r.fotos.length} fotos',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.granate,
-                            ),
-                          ),
-                        ),
+                        Expanded(child: Text(r.titulo, style: AppType.subtitle.copyWith(color: Theme.of(context).colorScheme.onSurface), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        AppBadge(label: '${r.fotos.length} fotos', variant: AppBadgeVariant.granate),
                       ],
                     ),
                   ),
