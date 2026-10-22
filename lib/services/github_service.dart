@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 
 class ReleaseInfo {
-  final int id; // <-- AGREGADO: Necesitamos el ID interno de GitHub
+  final int id;
   final String tag;
   final String nombre;
   final String notas;
@@ -63,42 +63,61 @@ class ReleaseInfo {
 class GithubService {
   static const _repo = 'yeo-drake/AllinKawsay';
 
+  // Lee el token de Firestore para evitar el límite de peticiones de GitHub
+  static Future<Map<String, String>> _getHeaders() async {
+    final headers = {
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'AllinKawsay-App',
+    };
+    try {
+      final doc = await FirebaseFirestore.instance.collection('config').doc('github').get();
+      final token = doc.data()?['token'] as String?;
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+    } catch (_) {}
+    return headers;
+  }
+
   static Future<List<ReleaseInfo>> listarReleases({int limite = 20}) async {
     final url = 'https://api.github.com/repos/$_repo/releases?per_page=$limite';
-    final response = await http.get(Uri.parse(url), headers: {'Accept': 'application/vnd.github+json', 'User-Agent': 'AllinKawsay-App'});
-    if (response.statusCode != 200) throw Exception('GitHub Error: ${response.statusCode}');
+    final response = await http.get(Uri.parse(url), headers: await _getHeaders());
+    
+    if (response.statusCode != 200) {
+      if (response.statusCode == 403) {
+        throw Exception('Límite de peticiones a GitHub alcanzado. Intenta más tarde.');
+      }
+      throw Exception('GitHub Error: ${response.statusCode}');
+    }
+    
     final data = jsonDecode(response.body) as List;
     return data.map((r) => ReleaseInfo.fromJson(r as Map<String, dynamic>)).toList();
   }
 
   static Future<List<ReleaseInfo>> listarEstables({int limite = 20}) async {
     final todas = await listarReleases(limite: limite);
-    return todas.where((r) => r.tieneApk && !r.prerelease).toList();
+    return todas.where((r) => !r.prerelease).toList();
   }
 
   static Future<List<ReleaseInfo>> listarTodas({int limite = 30}) async {
     final todas = await listarReleases(limite: limite);
-    return todas.where((r) => r.tieneApk).toList();
+    return todas; // Devuelve todas, tengan APK o no
   }
 
-  /// Convierte un Prerelease en Release estable usando la API de GitHub
   static Future<bool> promoverAEstable(int releaseId) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('config').doc('github').get();
-      final token = doc.data()?['token'] as String?;
-      if (token == null || token.isEmpty) throw Exception('Falta el token de GitHub en Firestore');
+      final headers = await _getHeaders();
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Falta el token de GitHub en Firestore');
+      }
 
       final url = 'https://api.github.com/repos/$_repo/releases/$releaseId';
       final response = await http.patch(
         Uri.parse(url),
-        headers: {
-          'Accept': 'application/vnd.github+json',
-          'Authorization': 'Bearer $token',
-          'User-Agent': 'AllinKawsay-App',
-        },
+        headers: headers,
         body: jsonEncode({
-          'prerelease': false, // Lo convierte en estable
-          'make_latest': 'true', // Lo marca como la última versión
+          'prerelease': false,
+          'make_latest': 'true',
         }),
       );
       return response.statusCode == 200;
