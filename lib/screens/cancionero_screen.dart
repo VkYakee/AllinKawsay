@@ -134,24 +134,35 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
       valueListenable: PlayerService().estado,
       builder: (context, estado, _) => Column(
         children: [
-          CancioneroHero(
-            totalCanciones: todas.length,
-            filtrosActivos: _filtros.activos,
-            modoIndice: _modoIndice,
-            onFiltros: () => _abrirFiltros(cats, tags),
-            onToggleVista: () =>
-                setState(() => _modoIndice = !_modoIndice),
-            onPracticar: () => SelectorEnsayo.mostrar(context, todas),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CancioneroHero(
+                totalCanciones: todas.length,
+                filtrosActivos: _filtros.activos,
+                modoIndice: _modoIndice,
+                onFiltros: () => _abrirFiltros(cats, tags),
+                onToggleVista: () =>
+                    setState(() => _modoIndice = !_modoIndice),
+                onPracticar: () => SelectorEnsayo.mostrar(context, todas),
+              ),
+              Positioned(
+                bottom: -24,
+                left: 0,
+                right: 0,
+                child: CancioneroBusqueda(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() => _query = v),
+                  onClear: () {
+                    _searchCtrl.clear();
+                    setState(() => _query = '');
+                  },
+                  hasText: _query.isNotEmpty,
+                ),
+              ),
+            ],
           ),
-          CancioneroBusqueda(
-            controller: _searchCtrl,
-            onChanged: (v) => setState(() => _query = v),
-            onClear: () {
-              _searchCtrl.clear();
-              setState(() => _query = '');
-            },
-            hasText: _query.isNotEmpty,
-          ),
+          const SizedBox(height: 32), // Espacio para la barra superpuesta
           Expanded(
             child: CancioneroLista(
               canciones: filtradas,
