@@ -43,11 +43,11 @@ class EnsayoControles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (esModoAudio) return _audioControls();
-    return _zampoControls();
+    if (esModoAudio) return _audioControls(context);
+    return _zampoControls(context);
   }
 
-  Widget _audioControls() {
+  Widget _audioControls(BuildContext context) {
     return Row(
       children: [
         IconButton(
@@ -68,7 +68,7 @@ class EnsayoControles extends StatelessWidget {
     );
   }
 
-  Widget _zampoControls() {
+  Widget _zampoControls(BuildContext context) {
     return Column(
       children: [
         Row(
