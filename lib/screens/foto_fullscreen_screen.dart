@@ -1,6 +1,8 @@
+// lib/screens/foto_fullscreen_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../design/design.dart';
 import '../services/descarga_service.dart';
 import '../theme/colors.dart';
 import '../widgets/dialogo_descarga.dart';
@@ -20,8 +22,7 @@ class FotoFullscreenScreen extends StatefulWidget {
   });
 
   @override
-  State<FotoFullscreenScreen> createState() =>
-      _FotoFullscreenScreenState();
+  State<FotoFullscreenScreen> createState() => _FotoFullscreenScreenState();
 }
 
 class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
@@ -32,18 +33,10 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown, DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
     _transformController.addListener(() {
       final z = _transformController.value.getMaxScaleOnAxis();
-      if ((z > 1.05) != _zoomActivo) {
-        setState(() => _zoomActivo = z > 1.05);
-      }
+      if ((z > 1.05) != _zoomActivo) setState(() => _zoomActivo = z > 1.05);
     });
   }
 
@@ -51,9 +44,7 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
   void dispose() {
     _transformController.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 
@@ -63,70 +54,17 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
     } else {
       final pos = details.localPosition;
       const escala = 2.5;
-      final x = -pos.dx * (escala - 1);
-      final y = -pos.dy * (escala - 1);
-      _transformController.value = Matrix4.identity()
-        ..translate(x, y)
-        ..scale(escala);
+      _transformController.value = Matrix4.identity()..translate(-pos.dx * (escala - 1), -pos.dy * (escala - 1))..scale(escala);
     }
   }
 
   Future<void> _descargar() async {
-    final nombre = DescargaService.nombreConTimestamp(
-        widget.titulo.isEmpty ? 'foto_allin_kawsay' : widget.titulo,
-        'jpg');
-
-    final resultado = await DialogoDescarga.mostrar(
-      context,
-      url: widget.url,
-      nombre: nombre,
-      mime: 'image/jpeg',
-      titulo: 'Descargando foto',
-    );
-
+    final nombre = DescargaService.nombreConTimestamp(widget.titulo.isEmpty ? 'foto_allin_kawsay' : widget.titulo, 'jpg');
+    final resultado = await DialogoDescarga.mostrar(context, url: widget.url, nombre: nombre, mime: 'image/jpeg');
     if (!mounted) return;
     if (resultado != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: AppColors.dorado),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('Guardado en Descargas: $resultado'),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Guardado en Descargas: $resultado')));
     }
-  }
-
-  Widget _imagenConHero() {
-    final imagen = CachedNetworkImage(
-      imageUrl: widget.url,
-      fit: BoxFit.contain,
-      placeholder: (_, __) => const Center(
-        child: CircularProgressIndicator(color: AppColors.dorado),
-      ),
-      errorWidget: (_, __, ___) => const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.broken_image,
-                color: AppColors.dorado, size: 60),
-            SizedBox(height: 12),
-            Text('No se pudo cargar la imagen',
-                style: TextStyle(color: AppColors.dorado)),
-          ],
-        ),
-      ),
-    );
-
-    final tag = widget.heroTag;
-    if (tag == null || tag.isEmpty) return imagen;
-    return Hero(tag: tag, child: imagen);
   }
 
   @override
@@ -141,111 +79,41 @@ class _FotoFullscreenScreenState extends State<FotoFullscreenScreen> {
               onDoubleTap: () {},
               child: InteractiveViewer(
                 transformationController: _transformController,
-                minScale: 1.0,
-                maxScale: 4.0,
-                child: Center(child: _imagenConHero()),
+                minScale: 1.0, maxScale: 4.0,
+                child: Center(
+                  child: Hero(
+                    tag: widget.heroTag ?? 'foto_fullscreen_${widget.url}',
+                    child: CachedNetworkImage(
+                      imageUrl: widget.url,
+                      fit: BoxFit.contain,
+                      placeholder: (_, __) => const Center(child: CircularProgressIndicator(color: AppColors.dorado)),
+                      errorWidget: (_, __, ___) => const Icon(Icons.broken_image, color: AppColors.dorado, size: 60),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
+            top: 0, left: 0, right: 0,
             child: SafeArea(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 4, vertical: 4),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.75),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: Sp.xs),
+                decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(0.8), Colors.transparent])),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.close,
-                          color: AppColors.dorado),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+                    IconButton(icon: const Icon(Icons.close, color: AppColors.dorado), onPressed: () => Navigator.pop(context)),
                     if (widget.titulo.isNotEmpty)
-                      Expanded(
-                        child: Text(
-                          widget.titulo,
-                          style: const TextStyle(
-                            color: AppColors.dorado,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            letterSpacing: 0.5,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      )
+                      Expanded(child: Text(widget.titulo, style: AppType.subtitle.copyWith(color: AppColors.dorado), maxLines: 1, overflow: TextOverflow.ellipsis))
                     else
                       const Spacer(),
                     if (widget.puedeDescargar)
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: AppColors.dorado
-                                  .withOpacity(0.4)),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.download,
-                              color: AppColors.dorado, size: 20),
-                          tooltip: 'Descargar',
-                          onPressed: _descargar,
-                        ),
-                      ),
+                      IconButton(icon: const Icon(Icons.download, color: AppColors.dorado), onPressed: _descargar),
                   ],
                 ),
               ),
             ),
           ),
-
-          if (!_zoomActivo)
-            Positioned(
-              bottom: 24,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: AppColors.dorado.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.touch_app,
-                          size: 13,
-                          color: AppColors.dorado.withOpacity(0.7)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Doble tap o pellizcá para zoom',
-                        style: TextStyle(
-                            color: AppColors.dorado.withOpacity(0.85),
-                            fontSize: 11,
-                            letterSpacing: 0.3),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
