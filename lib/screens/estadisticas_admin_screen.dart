@@ -1,14 +1,15 @@
+// lib/screens/estadisticas_admin_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../design/design.dart';
+import '../widgets/admin/stat_card.dart';
 import '../theme/colors.dart';
-import '../widgets/watermark_overlay.dart';
 
 class EstadisticasAdminScreen extends StatefulWidget {
   const EstadisticasAdminScreen({super.key});
 
   @override
-  State<EstadisticasAdminScreen> createState() =>
-      _EstadisticasAdminScreenState();
+  State<EstadisticasAdminScreen> createState() => _EstadisticasAdminScreenState();
 }
 
 class _Stats {
@@ -44,7 +45,6 @@ class _EstadisticasAdminScreenState extends State<EstadisticasAdminScreen> {
 
   Future<_Stats> _cargar() async {
     final db = FirebaseFirestore.instance;
-
     final cancionesSnap = await db.collection('canciones').get();
     final usuariosSnap = await db.collection('usuarios').get();
     final eventosSnap = await db.collection('eventos').get();
@@ -57,13 +57,9 @@ class _EstadisticasAdminScreenState extends State<EstadisticasAdminScreen> {
 
     for (final doc in cancionesSnap.docs) {
       final d = doc.data();
-      final rep = d['reproducciones'];
-      final r = (rep is int) ? rep : 0;
+      final r = (d['reproducciones'] is int) ? d['reproducciones'] as int : 0;
       totalReproducciones += r;
-
-      final titulo = (d['titulo'] ?? 'Sin título').toString();
-      cancionesPorTitulo[titulo] = r;
-
+      cancionesPorTitulo[(d['titulo'] ?? 'Sin título').toString()] = r;
       final ritmo = (d['ritmo'] ?? '').toString().trim();
       final key = ritmo.isEmpty ? 'Sin ritmo' : ritmo;
       ritmos[key] = (ritmos[key] ?? 0) + 1;
@@ -74,10 +70,8 @@ class _EstadisticasAdminScreenState extends State<EstadisticasAdminScreen> {
       usuariosPorRol[rol] = (usuariosPorRol[rol] ?? 0) + 1;
     }
 
-    final topCancionesList = cancionesPorTitulo.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final ritmosList = ritmos.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final topCancionesList = cancionesPorTitulo.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final ritmosList = ritmos.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 
     return _Stats(
       totalCanciones: cancionesSnap.docs.length,
@@ -93,339 +87,108 @@ class _EstadisticasAdminScreenState extends State<EstadisticasAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('ESTADÍSTICAS DEL GRUPO')),
-      body: WatermarkOverlay(
-        opacity: 0.04,
-        child: FutureBuilder<_Stats>(
-          future: _future,
-          builder: (context, snap) {
-            if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child: CircularProgressIndicator(
-                      color: AppColors.granate));
-            }
-            if (snap.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('Error: ${snap.error}',
-                      textAlign: TextAlign.center),
-                ),
-              );
-            }
-            final s = snap.data!;
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              children: [
-                // === TARJETAS PRINCIPALES ===
-                _seccion(onSurface, Icons.insights, 'RESUMEN'),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                        child: _statCard(
-                            Icons.library_music,
-                            '${s.totalCanciones}',
-                            'Canciones',
-                            onSurface)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: _statCard(Icons.people,
-                            '${s.totalUsuarios}', 'Usuarios', onSurface)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                        child: _statCard(
-                            Icons.play_arrow,
-                            '${s.totalReproducciones}',
-                            'Reproducciones',
-                            onSurface)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: _statCard(Icons.event,
-                            '${s.totalEventos}', 'Eventos', onSurface)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                        child: _statCard(
-                            Icons.photo_library,
-                            '${s.totalRecuerdos}',
-                            'Recuerdos',
-                            onSurface)),
-                    const Expanded(child: SizedBox()),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // === USUARIOS POR ROL ===
-                _seccion(onSurface, Icons.badge_outlined,
-                    'USUARIOS POR ROL'),
-                const SizedBox(height: 10),
-                _card(
-                  context,
-                  onSurface,
-                  s.usuariosPorRol.entries.map((e) {
-                    return _filaTexto(
-                        onSurface, _rolLabel(e.key), '${e.value}');
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 20),
-
-                // === TOP CANCIONES ===
-                _seccion(onSurface, Icons.local_fire_department_outlined,
-                    'TOP 5 MÁS REPRODUCIDAS'),
-                const SizedBox(height: 10),
-                if (s.topCanciones.isEmpty ||
-                    s.topCanciones.every((e) => e.value == 0))
-                  _card(
-                    context,
-                    onSurface,
-                    [
-                      Text('Aún no hay reproducciones',
-                          style: TextStyle(
-                              color: onSurface.withOpacity(0.5),
-                              fontStyle: FontStyle.italic,
-                              fontSize: 13)),
-                    ],
-                  )
-                else
-                  _card(
-                    context,
-                    onSurface,
-                    List.generate(s.topCanciones.length, (i) {
-                      final entry = s.topCanciones[i];
-                      return _filaTop(onSurface, i, entry.key, entry.value);
-                    }),
-                  ),
-
-                const SizedBox(height: 20),
-
-                // === CANCIONES POR RITMO ===
-                _seccion(onSurface, Icons.graphic_eq,
-                    'CANCIONES POR RITMO'),
-                const SizedBox(height: 10),
-                if (s.ritmos.isEmpty)
-                  _card(
-                    context,
-                    onSurface,
-                    [
-                      Text('Sin datos',
-                          style: TextStyle(
-                              color: onSurface.withOpacity(0.5),
-                              fontStyle: FontStyle.italic,
-                              fontSize: 13)),
-                    ],
-                  )
-                else
-                  _card(
-                    context,
-                    onSurface,
-                    s.ritmos.map((e) {
-                      return _filaTexto(onSurface, e.key, '${e.value}');
-                    }).toList(),
-                  ),
-              ],
-            );
-          },
-        ),
+    return AppScaffold(
+      title: 'Estadísticas',
+      body: FutureBuilder<_Stats>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.granate));
+          }
+          if (snap.hasError) {
+            return Center(child: Text('Error: ${snap.error}', style: AppType.body));
+          }
+          final s = snap.data!;
+          return ListView(
+            padding: const EdgeInsets.all(Sp.lg),
+            children: [
+              const SeccionHeader(title: 'Resumen General', icon: Icons.insights, padding: EdgeInsets.zero),
+              const SizedBox(height: Sp.md),
+              Row(children: [
+                Expanded(child: StatCard(icon: Icons.library_music, value: '${s.totalCanciones}', label: 'Canciones')),
+                const SizedBox(width: Sp.md),
+                Expanded(child: StatCard(icon: Icons.people, value: '${s.totalUsuarios}', label: 'Usuarios')),
+              ]),
+              const SizedBox(height: Sp.md),
+              Row(children: [
+                Expanded(child: StatCard(icon: Icons.play_arrow, value: '${s.totalReproducciones}', label: 'Reproducciones')),
+                const SizedBox(width: Sp.md),
+                Expanded(child: StatCard(icon: Icons.event, value: '${s.totalEventos}', label: 'Eventos')),
+              ]),
+              const SizedBox(height: Sp.md),
+              Row(children: [
+                Expanded(child: StatCard(icon: Icons.photo_library, value: '${s.totalRecuerdos}', label: 'Recuerdos')),
+                const Expanded(child: SizedBox()),
+              ]),
+              const SizedBox(height: Sp.xl),
+              
+              const SeccionHeader(title: 'Usuarios por Rol', icon: Icons.badge_outlined, padding: EdgeInsets.zero),
+              const SizedBox(height: Sp.md),
+              AppCard(
+                padding: const EdgeInsets.all(Sp.lg),
+                child: Column(children: s.usuariosPorRol.entries.map((e) => _filaTexto(_labelRol(e.key), '${e.value}')).toList()),
+              ),
+              const SizedBox(height: Sp.xl),
+              
+              const SeccionHeader(title: 'Top 5 Canciones', icon: Icons.local_fire_department, padding: EdgeInsets.zero),
+              const SizedBox(height: Sp.md),
+              AppCard(
+                padding: const EdgeInsets.all(Sp.lg),
+                child: s.topCanciones.isEmpty || s.topCanciones.every((e) => e.value == 0)
+                    ? Text('Aún no hay reproducciones', style: AppType.captionXs.copyWith(fontStyle: FontStyle.italic))
+                    : Column(children: List.generate(s.topCanciones.length, (i) => _filaTop(i, s.topCanciones[i].key, s.topCanciones[i].value))),
+              ),
+              const SizedBox(height: Sp.xl),
+              
+              const SeccionHeader(title: 'Canciones por Ritmo', icon: Icons.graphic_eq, padding: EdgeInsets.zero),
+              const SizedBox(height: Sp.md),
+              AppCard(
+                padding: const EdgeInsets.all(Sp.lg),
+                child: s.ritmos.isEmpty
+                    ? Text('Sin datos', style: AppType.captionXs.copyWith(fontStyle: FontStyle.italic))
+                    : Column(children: s.ritmos.map((e) => _filaTexto(e.key, '${e.value}')).toList()),
+              ),
+              const SizedBox(height: Sp.xxxl),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _seccion(Color onSurface, IconData icono, String titulo) {
+  Widget _filaTexto(String label, String valor) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+      padding: const EdgeInsets.symmetric(vertical: Sp.xs),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: AppColors.granate.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icono, size: 13, color: AppColors.granate),
-          ),
-          const SizedBox(width: 10),
-          Text(titulo,
-              style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.granate,
-                  letterSpacing: 2)),
+          Expanded(child: Text(label, style: AppType.body)),
+          AppBadge(label: valor, variant: AppBadgeVariant.granate),
         ],
       ),
     );
   }
 
-  Widget _card(BuildContext context, Color onSurface, List<Widget> hijos) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: hijos,
-      ),
-    );
-  }
-
-  Widget _filaTexto(Color onSurface, String label, String valor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 13, color: onSurface.withOpacity(0.85))),
-          ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.granate.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(valor,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.granate)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _filaTop(
-      Color onSurface, int index, String titulo, int valor) {
+  Widget _filaTop(int index, String titulo, int valor) {
     final medallas = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: Sp.xs),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.granate.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(medallas[index],
-                style: const TextStyle(fontSize: 16)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(titulo,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: onSurface.withOpacity(0.85),
-                    fontWeight: FontWeight.w500),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.granate.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text('$valor',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.granate)),
-          ),
+          Text(medallas[index], style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: Sp.sm),
+          Expanded(child: Text(titulo, style: AppType.body, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          AppBadge(label: '$valor', variant: AppBadgeVariant.granate),
         ],
       ),
     );
   }
 
-  Widget _statCard(
-      IconData icono, String valor, String label, Color onSurface) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.granate.withOpacity(0.1),
-            AppColors.dorado.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.25)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: AppColors.gradienteGranate,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.granate.withOpacity(0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child:
-                Icon(icono, color: AppColors.dorado, size: 22),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            valor,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.granate,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 10,
-              color: onSurface.withOpacity(0.55),
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _rolLabel(String rol) {
+  String _labelRol(String rol) {
     switch (rol) {
-      case 'admin':
-        return 'Administradores';
-      case 'miembro':
-        return 'Miembros oficiales';
-      case 'publico':
-        return 'Público';
-      default:
-        return rol;
+      case 'dev': return 'Desarrolladores';
+      case 'admin': return 'Administradores';
+      case 'miembro': return 'Miembros oficiales';
+      default: return 'Público';
     }
   }
 }
