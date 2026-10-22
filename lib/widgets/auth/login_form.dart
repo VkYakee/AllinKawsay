@@ -31,7 +31,7 @@ class LoginForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      padding: const EdgeInsets.all(Sp.xxl),
+      padding: const EdgeInsets.all(Sp.xl),
       child: Column(
         children: [
           AppInput(
@@ -76,16 +76,17 @@ class LoginForm extends StatelessWidget {
           const SizedBox(height: Sp.lg),
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 54, // Más alto
             child: OutlinedButton.icon(
               onPressed: loading || loadingGoogle ? null : onGoogle,
               icon: loadingGoogle
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const GoogleIcon(),
-              label: const Text('Continuar con Google'),
+              label: Text('Continuar con Google', style: AppType.subtitle.copyWith(color: AppColors.negro)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.negro,
-                side: BorderSide(color: AppColors.granate.withOpacity(0.2)),
+                backgroundColor: Colors.white,
+                side: BorderSide(color: Colors.grey.shade300, width: 1.5), // Borde gris sutil
                 shape: RoundedRectangleBorder(borderRadius: Rad.rMd),
               ),
             ),
