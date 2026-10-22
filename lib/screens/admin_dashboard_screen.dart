@@ -11,16 +11,62 @@ import '../gestion_usuarios_screen.dart';
 import '../notificaciones_admin_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key});
+  final bool isDev;
+  const AdminDashboardScreen({super.key, this.isDev = false});
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Panel de Control',
+      title: isDev ? 'Panel de Desarrollador' : 'Panel de Control',
       subtitle: 'Gestión del grupo',
       body: ListView(
         padding: const EdgeInsets.all(Sp.lg),
         children: [
+          if (isDev) ...[
+            Container(
+              padding: const EdgeInsets.all(Sp.lg),
+              margin: const EdgeInsets.only(bottom: Sp.lg),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A2540),
+                borderRadius: Rad.rLg,
+                border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.cyanAccent.withOpacity(0.1),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  )
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.code, color: Colors.cyanAccent, size: 28),
+                  const SizedBox(width: Sp.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'DEV MODE ACTIVO',
+                          style: AppType.label.copyWith(
+                            color: Colors.cyanAccent,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Acceso a prereleases y gestión de admins',
+                          style: AppType.captionXs.copyWith(
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           _OpcionLista(
             icon: Icons.insights,
             title: 'Estadísticas del grupo',
@@ -41,10 +87,11 @@ class AdminDashboardScreen extends StatelessWidget {
           ),
           _OpcionLista(
             icon: Icons.system_update,
-            title: 'Actualizaciones',
-            subtitle: 'Aprobar versiones de la app',
-            onTap: () =>
-                _nav(context, const GestionActualizacionesScreen()),
+            title: isDev ? 'Actualizaciones (Todos los builds)' : 'Actualizaciones',
+            subtitle: isDev
+                ? 'Ver releases oficiales y prereleases'
+                : 'Aprobar versiones de la app',
+            onTap: () => _nav(context, const GestionActualizacionesScreen()),
           ),
           const SizedBox(height: Sp.lg),
           const SeccionHeader(
@@ -54,8 +101,8 @@ class AdminDashboardScreen extends StatelessWidget {
           const SizedBox(height: Sp.sm),
           _OpcionLista(
             icon: Icons.people,
-            title: 'Usuarios',
-            subtitle: 'Roles y suspensiones',
+            title: 'Usuarios y Roles',
+            subtitle: 'Gestionar miembros y administradores',
             onTap: () => _nav(context, const GestionUsuariosScreen()),
           ),
           _OpcionLista(
