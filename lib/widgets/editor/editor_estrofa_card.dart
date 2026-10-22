@@ -13,8 +13,7 @@ class EditorEstrofaCard extends StatefulWidget {
   final VoidCallback onAgregarColumna;
   final VoidCallback onQuitarColumna;
   final VoidCallback onEliminar;
-  final VoidCallback onGrabar;
-  final VoidCallback onGrabarTiming;
+  final VoidCallback onVerGlobal;
 
   const EditorEstrofaCard({
     super.key,
@@ -25,8 +24,7 @@ class EditorEstrofaCard extends StatefulWidget {
     required this.onAgregarColumna,
     required this.onQuitarColumna,
     required this.onEliminar,
-    required this.onGrabar,
-    required this.onGrabarTiming,
+    required this.onVerGlobal,
   });
 
   @override
@@ -44,14 +42,9 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
 
   void _agregarColumna() {
     widget.onAgregarColumna();
-    // Scroll automático al final después de agregar la columna
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       }
     });
   }
@@ -65,7 +58,7 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
 
     final tabla = Table(
       columnWidths: {
-        0: const FixedColumnWidth(30),
+        0: const FixedColumnWidth(32),
         for (int j = 0; j < n; j++)
           j + 1: FixedColumnWidth((widget.estrofa.columnas[j].maxLen.clamp(2, 10) * 18.0).clamp(48.0, 160.0)),
       },
@@ -96,17 +89,13 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
                 const AppBadge(label: 'TIMING', icon: Icons.timer, variant: AppBadgeVariant.success),
               ],
               const Spacer(),
-              IconButton(
-                icon: Icon(Icons.repeat, size: 20, color: widget.estrofa.bis ? AppColors.dorado : onSurface.withOpacity(0.3)),
-                onPressed: widget.onToggleBis,
-                tooltip: 'BIS',
-              ),
+              IconButton(icon: const Icon(Icons.zoom_out_map, size: 20, color: AppColors.granate), onPressed: widget.onVerGlobal, tooltip: 'Ver todo'),
+              IconButton(icon: Icon(Icons.repeat, size: 20, color: widget.estrofa.bis ? AppColors.dorado : onSurface.withOpacity(0.3)), onPressed: widget.onToggleBis, tooltip: 'BIS'),
               IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red), onPressed: widget.onEliminar),
             ],
           ),
           const SizedBox(height: Sp.sm),
           
-          // Tabla con scroll horizontal
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.granate.withOpacity(0.2)),
@@ -120,8 +109,6 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
           ),
           
           const SizedBox(height: Sp.sm),
-          
-          // Botones de agregar/quitar columna (integrados)
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -132,37 +119,10 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
                 style: TextButton.styleFrom(foregroundColor: AppColors.granate),
               ),
               TextButton.icon(
-                onPressed: _agregarColumna, // Llama a la función con scroll automático
+                onPressed: _agregarColumna,
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('COLUMNA'),
                 style: TextButton.styleFrom(foregroundColor: AppColors.granate),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: Sp.md),
-          const Divider(),
-          const SizedBox(height: Sp.sm),
-
-          // Botones principales para grabar
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: AppButton(
-                  label: 'GRABAR CON ZAMPOÑA',
-                  icon: Icons.piano,
-                  onPressed: widget.onGrabar,
-                ),
-              ),
-              const SizedBox(width: Sp.sm),
-              Expanded(
-                child: AppButton(
-                  label: 'TIMING',
-                  icon: Icons.timer,
-                  variant: AppButtonVariant.secondary,
-                  onPressed: widget.onGrabarTiming,
-                ),
               ),
             ],
           ),
@@ -172,7 +132,7 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
   }
 
   Widget _etiqueta(String t) => Container(
-        height: 48, // Celdas más altas
+        height: 48,
         color: AppColors.granate,
         alignment: Alignment.center,
         child: Text(t, style: const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.bold, fontSize: 14)),
@@ -196,7 +156,7 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
             border: InputBorder.none,
             contentPadding: EdgeInsets.zero,
             hintText: '0',
-            hintStyle: TextStyle(color: Colors.black12),
+            hintStyle: TextStyle(color: Colors.black12, fontSize: 14),
           ),
         ),
       );
