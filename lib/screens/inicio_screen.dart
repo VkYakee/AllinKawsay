@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../design/design.dart';
 import '../models/evento.dart';
 import '../services/novedades_service.dart';
+import '../theme/colors.dart'; // <-- ¡ESTE ERA EL IMPORT QUE FALTABA!
 import '../widgets/banner_novedades.dart';
 import '../widgets/inicio/hero_inicio.dart';
 import '../widgets/inicio/proximo_evento_card.dart';
