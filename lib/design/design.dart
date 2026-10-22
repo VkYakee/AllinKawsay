@@ -9,3 +9,4 @@ export 'components/seccion_header.dart';
 export 'components/app_skeleton.dart';
 export 'components/app_empty_state.dart';
 export 'components/app_badge.dart';
+export 'components/app_chip.dart';
