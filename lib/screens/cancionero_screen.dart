@@ -55,45 +55,27 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
     }
   }
 
-  void _abrir(Cancion c) => Navigator.push(context,
-      MaterialPageRoute(builder: (_) => CancionDetalleScreen(cancion: c)));
+  void _abrir(Cancion c) => Navigator.push(context, MaterialPageRoute(builder: (_) => CancionDetalleScreen(cancion: c)));
 
-  void _editar(Cancion c) => Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (_) => AgregarCancionScreen(cancion: c)));
-
-  Future<void> _eliminar(Cancion c) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Eliminar canción', style: AppType.h3),
-        content: Text('¿Eliminar "${c.titulo}"?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
-          TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Eliminar')),
-        ],
-      ),
-    );
-    if (ok == true) await _service.eliminar(c.id);
-  }
-
-  Future<void> _abrirFiltros(
-      List<Categoria> cats, List<String> tags) async {
-    final r = await FiltrosSheet.mostrar(
-        context, actual: _filtros, categorias: cats, tags: tags);
+  Future<void> _abrirFiltros(List<Categoria> cats, List<String> tags) async {
+    final r = await FiltrosSheet.mostrar(context, actual: _filtros, categorias: cats, tags: tags);
     if (r != null) setState(() => _filtros = r);
   }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      floatingActionButton: _esAdmin ? _fab() : null,
+      // MAGIA: Subimos el botón con un Padding
+      floatingActionButton: _esAdmin 
+        ? Padding(
+            padding: const EdgeInsets.only(bottom: 90),
+            child: FloatingActionButton.extended(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgregarCancionScreen())),
+              icon: const Icon(Icons.add),
+              label: const Text('Nueva'),
+            ),
+          )
+        : null,
       body: _streams(),
     );
   }
@@ -110,14 +92,11 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
             return StreamBuilder<List<Cancion>>(
               stream: _service.listar(),
               builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting &&
-                    !snap.hasData) {
+                if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
                   return const AppSkeletonList(items: 6);
                 }
                 final todas = snap.data ?? [];
-                final tags = <String>{...todas.expand((c) => c.tags)}
-                    .toList()
-                  ..sort();
+                final tags = <String>{...todas.expand((c) => c.tags)}.toList()..sort();
                 return _cuerpo(todas, favs, cats, tags);
               },
             );
@@ -127,8 +106,7 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
     );
   }
 
-  Widget _cuerpo(List<Cancion> todas, List<String> favs,
-      List<Categoria> cats, List<String> tags) {
+  Widget _cuerpo(List<Cancion> todas, List<String> favs, List<Categoria> cats, List<String> tags) {
     final filtradas = filtrarCanciones(todas, favs, _filtros, _query);
     return ValueListenableBuilder<EstadoPlayer>(
       valueListenable: PlayerService().estado,
@@ -142,54 +120,34 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
                 filtrosActivos: _filtros.activos,
                 modoIndice: _modoIndice,
                 onFiltros: () => _abrirFiltros(cats, tags),
-                onToggleVista: () =>
-                    setState(() => _modoIndice = !_modoIndice),
+                onToggleVista: () => setState(() => _modoIndice = !_modoIndice),
                 onPracticar: () => SelectorEnsayo.mostrar(context, todas),
               ),
               Positioned(
-                bottom: -24,
-                left: 0,
-                right: 0,
+                bottom: -24, left: 0, right: 0,
                 child: CancioneroBusqueda(
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _query = v),
-                  onClear: () {
-                    _searchCtrl.clear();
-                    setState(() => _query = '');
-                  },
+                  onClear: () { _searchCtrl.clear(); setState(() => _query = ''); },
                   hasText: _query.isNotEmpty,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 32), // Espacio para la barra superpuesta
+          const SizedBox(height: 32),
           Expanded(
             child: CancioneroLista(
               canciones: filtradas,
               favoritos: favs,
-              esAdmin: _esAdmin,
               modoIndice: _modoIndice,
               estado: estado,
               onTap: _abrir,
               onTogglePlay: _togglePlay,
-              onToggleFavorito: (c) =>
-                  UsuarioService().toggleFavorito(c.id),
-              onEditar: _editar,
-              onEliminar: _eliminar,
+              onToggleFavorito: (c) => UsuarioService().toggleFavorito(c.id),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _fab() {
-    return FloatingActionButton.extended(
-      onPressed: () => Navigator.push(context,
-          MaterialPageRoute(
-              builder: (_) => const AgregarCancionScreen())),
-      icon: const Icon(Icons.add),
-      label: const Text('Nueva'),
     );
   }
 }
