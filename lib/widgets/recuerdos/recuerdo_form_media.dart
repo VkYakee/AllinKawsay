@@ -11,6 +11,7 @@ class RecuerdoFormMedia extends StatelessWidget {
   final List<File> videosNuevos;
   final VoidCallback onAgregarFoto;
   final VoidCallback onAgregarVideo;
+  final VoidCallback onImportarNube; // <-- NUEVO
   final Function(int, bool) onEliminarFoto;
   final Function(int, bool) onEliminarVideo;
 
@@ -22,6 +23,7 @@ class RecuerdoFormMedia extends StatelessWidget {
     required this.videosNuevos,
     required this.onAgregarFoto,
     required this.onAgregarVideo,
+    required this.onImportarNube, // <-- NUEVO
     required this.onEliminarFoto,
     required this.onEliminarVideo,
   });
@@ -30,6 +32,16 @@ class RecuerdoFormMedia extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Botón de importación desde la nube
+        AppButton(
+          label: 'IMPORTAR DESDE LA NUBE (DRIVE / FOTOS)',
+          icon: Icons.cloud_download,
+          variant: AppButtonVariant.secondary,
+          fullWidth: true,
+          onPressed: onImportarNube,
+        ),
+        const SizedBox(height: Sp.md),
+
         AppCard(
           padding: const EdgeInsets.all(Sp.lg),
           child: Column(
@@ -89,11 +101,7 @@ class RecuerdoFormMedia extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(Sp.lg),
-      decoration: BoxDecoration(
-        color: AppColors.granate.withOpacity(0.04),
-        borderRadius: Rad.rMd,
-        border: Border.all(color: AppColors.granate.withOpacity(0.1)),
-      ),
+      decoration: BoxDecoration(color: AppColors.granate.withOpacity(0.04), borderRadius: Rad.rMd, border: Border.all(color: AppColors.granate.withOpacity(0.1))),
       child: Center(child: Text(text, style: AppType.captionXs.copyWith(color: AppColors.granate.withOpacity(0.5)))),
     );
   }
@@ -117,11 +125,7 @@ class _PreviewItem extends StatelessWidget {
       children: [
         Container(
           width: 80, height: 80,
-          decoration: BoxDecoration(
-            borderRadius: Rad.rMd,
-            border: Border.all(color: AppColors.dorado.withOpacity(0.5)),
-            color: Colors.grey.withOpacity(0.1),
-          ),
+          decoration: BoxDecoration(borderRadius: Rad.rMd, border: Border.all(color: AppColors.dorado.withOpacity(0.5)), color: Colors.grey.withOpacity(0.1)),
           child: ClipRRect(
             borderRadius: Rad.rMd,
             child: esVideo
