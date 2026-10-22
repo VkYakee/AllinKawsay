@@ -12,7 +12,6 @@ import 'agregar_evento_screen.dart';
 
 class EventosScreen extends StatefulWidget {
   const EventosScreen({super.key});
-
   @override
   State<EventosScreen> createState() => _EventosScreenState();
 }
@@ -31,12 +30,7 @@ class _EventosScreenState extends State<EventosScreen> {
 
   Future<void> _init() async {
     final u = await UsuarioService().miUsuarioActual();
-    if (mounted) {
-      setState(() {
-        _usuario = u;
-        _esAdmin = u?.esAdmin ?? false;
-      });
-    }
+    if (mounted) setState(() { _usuario = u; _esAdmin = u?.esAdmin ?? false; });
     final count = await NovedadesService.contarEventosNuevos();
     if (mounted) setState(() => _nuevos = count);
     await NovedadesService.marcarEventosVistos();
@@ -52,11 +46,7 @@ class _EventosScreenState extends State<EventosScreen> {
         content: Text('¿Eliminar "${e.titulo}"?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Eliminar')),
         ],
       ),
     );
@@ -76,23 +66,23 @@ class _EventosScreenState extends State<EventosScreen> {
         ],
       ),
     );
-    if (ok == true) {
-      await UsuarioService().guardarNotaEvento(e.id, ctrl.text);
-      _init(); // Recargar usuario para actualizar nota
-    }
+    if (ok == true) { await UsuarioService().guardarNotaEvento(e.id, ctrl.text); _init(); }
   }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Eventos',
-      floatingActionButton: _esAdmin
-          ? FloatingActionButton.extended(
+      floatingActionButton: _esAdmin 
+        ? Padding(
+            padding: const EdgeInsets.only(bottom: 90),
+            child: FloatingActionButton.extended(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgregarEventoScreen())),
               icon: const Icon(Icons.add),
               label: const Text('Nuevo'),
-            )
-          : null,
+            ),
+          )
+        : null,
       body: StreamBuilder<List<Evento>>(
         stream: _service.listar(),
         builder: (context, snap) {
@@ -101,14 +91,10 @@ class _EventosScreenState extends State<EventosScreen> {
           }
           final lista = snap.data ?? [];
           if (lista.isEmpty) {
-            return const AppEmptyState(
-              icon: Icons.event_busy,
-              title: 'Sin eventos',
-              subtitle: 'Aún no hay eventos programados.',
-            );
+            return const AppEmptyState(icon: Icons.event_busy, title: 'Sin eventos', subtitle: 'Aún no hay eventos programados.');
           }
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(Sp.lg, Sp.md, Sp.lg, 100),
+            padding: const EdgeInsets.fromLTRB(Sp.lg, Sp.md, Sp.lg, 120),
             itemCount: lista.length + 1,
             itemBuilder: (context, i) {
               if (i == 0) return EventosBanner(nuevos: _nuevos);
