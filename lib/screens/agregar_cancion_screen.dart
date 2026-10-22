@@ -101,7 +101,25 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
 
   Future<void> _abrirSetlist() async {
     if (_audioUrl == null) return;
-    final c = Cancion(id: widget.cancion?.id ?? '', titulo: _tituloCtrl.text, autor: _autorCtrl.text, tipo: _tipo, ritmo: _ritmoCtrl.text, region: _regionCtrl.text, numerofonia: '', estrofas: _estrofas, letra: '', letras: _letras, setlist: _setlist, imagenUrl: _imagenUrl ?? '', audioUrl: _audioUrl!, creadoPor: '', creadorNombre: '');
+    final c = Cancion(
+      id: widget.cancion?.id ?? '', 
+      titulo: _tituloCtrl.text, 
+      autor: _autorCtrl.text, 
+      tipo: _tipo, 
+      ritmo: _ritmoCtrl.text, 
+      region: _regionCtrl.text, 
+      numerofonia: '', 
+      estrofas: _estrofas, 
+      letra: '', 
+      letras: _letras, 
+      setlist: _setlist, 
+      imagenUrl: _imagenUrl ?? '', 
+      audioUrl: _audioUrl!, 
+      descripcion: '', // <-- AGREGADO
+      tags: [],        // <-- AGREGADO
+      creadoPor: '', 
+      creadorNombre: ''
+    );
     final r = await Navigator.push<List<BloqueAudio>>(context, MaterialPageRoute(builder: (_) => GrabarSetlistScreen(cancion: c, setlistInicial: _setlist)));
     if (r != null) setState(() => _setlist = r);
   }
