@@ -76,8 +76,8 @@ class _FiltrosSheetState extends State<FiltrosSheet> {
                 ChipsSeccion(
                   titulo: 'Orden',
                   children: OrdenCancion.values.map((o) {
-                    return FilterChip(
-                      label: Text(_label(o)),
+                    return AppFilterChip(
+                      label: _label(o),
                       selected: _f.orden == o,
                       onSelected: (_) => _set(_f.copyWith(orden: o)),
                     );
@@ -87,8 +87,8 @@ class _FiltrosSheetState extends State<FiltrosSheet> {
                 ChipsSeccion(
                   titulo: 'Mostrar',
                   children: [
-                    FilterChip(
-                      label: const Text('Solo favoritos'),
+                    AppFilterChip(
+                      label: 'Solo favoritos',
                       selected: _f.soloFavoritos,
                       onSelected: (v) =>
                           _set(_f.copyWith(soloFavoritos: v)),
@@ -101,8 +101,8 @@ class _FiltrosSheetState extends State<FiltrosSheet> {
                     titulo: 'Categoría',
                     children: widget.categorias.map((c) {
                       final sel = _f.categoriaId == c.id;
-                      return FilterChip(
-                        label: Text('${c.emoji} ${c.nombre}'),
+                      return AppFilterChip(
+                        label: '${c.emoji} ${c.nombre}',
                         selected: sel,
                         onSelected: (_) => _set(sel
                             ? _f.copyWith(limpiarCategoria: true)
@@ -117,8 +117,8 @@ class _FiltrosSheetState extends State<FiltrosSheet> {
                     titulo: 'Etiqueta',
                     children: widget.tags.map((t) {
                       final sel = _f.tag == t;
-                      return FilterChip(
-                        label: Text(t),
+                      return AppFilterChip(
+                        label: t,
                         selected: sel,
                         onSelected: (_) => _set(sel
                             ? _f.copyWith(limpiarTag: true)
