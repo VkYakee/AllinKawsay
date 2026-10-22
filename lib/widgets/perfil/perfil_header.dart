@@ -21,6 +21,10 @@ class PerfilHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final esDev = usuario?.esDev ?? false;
+    final esAdmin = usuario?.esAdmin ?? false;
+    final esPublico = usuario?.rol == 'publico';
+
     return Container(
       padding: const EdgeInsets.fromLTRB(Sp.xxl, Sp.xl, Sp.xxl, Sp.xxl),
       decoration: BoxDecoration(
@@ -46,10 +50,12 @@ class PerfilHeader extends StatelessWidget {
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: AppColors.gradienteDorado,
+                    gradient: esDev
+                        ? const LinearGradient(colors: [Colors.cyanAccent, Color(0xFF0A2540)])
+                        : AppColors.gradienteDorado,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.dorado.withOpacity(0.3),
+                        color: (esDev ? Colors.cyanAccent : AppColors.dorado).withOpacity(0.3),
                         blurRadius: 20,
                         spreadRadius: 2,
                       ),
@@ -57,14 +63,15 @@ class PerfilHeader extends StatelessWidget {
                   ),
                   child: CircleAvatar(
                     radius: 48,
-                    backgroundColor: AppColors.granate,
+                    backgroundColor: esDev ? const Color(0xFF0A2540) : AppColors.granate,
                     backgroundImage:
                         (usuario?.fotoUrl.isNotEmpty ?? false)
                             ? NetworkImage(usuario!.fotoUrl)
                             : null,
                     child: (usuario?.fotoUrl.isEmpty ?? true)
-                        ? const Icon(Icons.person,
-                            size: 48, color: AppColors.dorado)
+                        ? Icon(Icons.person,
+                            size: 48,
+                            color: esDev ? Colors.cyanAccent : AppColors.dorado)
                         : null,
                   ),
                 ),
@@ -128,23 +135,23 @@ class PerfilHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: Sp.lg, vertical: Sp.xs + 2),
             decoration: BoxDecoration(
-              gradient: usuario?.rol == 'publico'
-                  ? null
-                  : AppColors.gradienteGranate,
-              color: usuario?.rol == 'publico'
-                  ? AppColors.negro.withOpacity(0.1)
-                  : null,
+              gradient: esDev
+                  ? const LinearGradient(colors: [Color(0xFF0A2540), Color(0xFF163B65)])
+                  : (esAdmin ? AppColors.gradienteGranate : null),
+              color: esPublico ? AppColors.negro.withOpacity(0.1) : null,
               borderRadius: Rad.rPill,
-              border: usuario?.rol == 'publico'
-                  ? Border.all(color: onSurface.withOpacity(0.2))
-                  : null,
+              border: esDev
+                  ? Border.all(color: Colors.cyanAccent.withOpacity(0.5))
+                  : (esPublico ? Border.all(color: onSurface.withOpacity(0.2)) : null),
             ),
             child: Text(
               usuario?.rolNombre ?? 'PÚBLICO',
               style: AppType.labelXs.copyWith(
-                color: usuario?.rol == 'publico'
-                    ? onSurface.withOpacity(0.7)
-                    : AppColors.dorado,
+                color: esDev
+                    ? Colors.cyanAccent
+                    : (esPublico
+                        ? onSurface.withOpacity(0.7)
+                        : AppColors.dorado),
                 letterSpacing: 1.5,
               ),
             ),
