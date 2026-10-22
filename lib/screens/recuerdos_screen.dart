@@ -11,7 +11,6 @@ import 'recuerdo_detalle_screen.dart';
 
 class RecuerdosScreen extends StatefulWidget {
   const RecuerdosScreen({super.key});
-
   @override
   State<RecuerdosScreen> createState() => _RecuerdosScreenState();
 }
@@ -29,12 +28,7 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
 
   Future<void> _cargarUsuario() async {
     final u = await UsuarioService().miUsuarioActual();
-    if (mounted) {
-      setState(() {
-        _usuario = u;
-        _esAdmin = u?.esAdmin ?? false;
-      });
-    }
+    if (mounted) setState(() { _usuario = u; _esAdmin = u?.esAdmin ?? false; });
   }
 
   Future<void> _eliminar(Recuerdo r) async {
@@ -45,38 +39,31 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
         content: Text('¿Eliminar "${r.titulo}"? Esta acción no se puede deshacer.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Eliminar')),
         ],
       ),
     );
-    if (ok == true) {
-      await _service.eliminar(r.id);
-    }
+    if (ok == true) await _service.eliminar(r.id);
   }
 
-  void _editar(Recuerdo r) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => AgregarRecuerdoScreen(recuerdo: r)));
-  }
+  void _editar(Recuerdo r) => Navigator.push(context, MaterialPageRoute(builder: (_) => AgregarRecuerdoScreen(recuerdo: r)));
 
-  void _verDetalle(Recuerdo r) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => RecuerdoDetalleScreen(recuerdo: r)));
-  }
+  void _verDetalle(Recuerdo r) => Navigator.push(context, MaterialPageRoute(builder: (_) => RecuerdoDetalleScreen(recuerdo: r)));
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Recuerdos',
-      floatingActionButton: _esAdmin
-          ? FloatingActionButton.extended(
+      floatingActionButton: _esAdmin 
+        ? Padding(
+            padding: const EdgeInsets.only(bottom: 90),
+            child: FloatingActionButton.extended(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgregarRecuerdoScreen())),
               icon: const Icon(Icons.add_photo_alternate),
               label: const Text('Nuevo'),
-            )
-          : null,
+            ),
+          )
+        : null,
       body: StreamBuilder<List<Recuerdo>>(
         stream: _service.listar(),
         builder: (context, snap) {
@@ -85,14 +72,10 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
           }
           final lista = snap.data ?? [];
           if (lista.isEmpty) {
-            return const AppEmptyState(
-              icon: Icons.photo_library,
-              title: 'Sin recuerdos aún',
-              subtitle: 'Cuando subas fotos o videos, aparecerán aquí.',
-            );
+            return const AppEmptyState(icon: Icons.photo_library, title: 'Sin recuerdos aún', subtitle: 'Cuando subas fotos o videos, aparecerán aquí.');
           }
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(Sp.lg, Sp.md, Sp.lg, 100),
+            padding: const EdgeInsets.fromLTRB(Sp.lg, Sp.md, Sp.lg, 120),
             itemCount: lista.length,
             itemBuilder: (context, i) {
               final r = lista[i];
