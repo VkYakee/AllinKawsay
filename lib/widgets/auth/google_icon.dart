@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class GoogleIcon extends StatelessWidget {
   final double size;
-  const GoogleIcon({super.key, this.size = 22});
+  const GoogleIcon({super.key, this.size = 24});
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +21,11 @@ class GoogleIcon extends StatelessWidget {
             Color(0xFFFBBC05), // Amarillo
             Color(0xFF34A853), // Verde
           ],
+          stops: [0.2, 0.5, 0.75, 1.0],
         ).createShader(bounds),
         child: const Icon(
-          Icons.g_mobiledata_rounded, // Usamos este ícono redondeado como base para el 'G'
-          size: 40, // Tamaño grande para que el shader se vea bien
+          Icons.g_mobiledata_rounded,
+          size: 40,
           color: Colors.white,
         ),
       ),
