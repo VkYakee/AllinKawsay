@@ -20,6 +20,7 @@ class _GestionActualizacionesScreenState extends State<GestionActualizacionesScr
   List<ReleaseInfo> _releases = [];
   bool _cargando = true;
   bool _esDev = false;
+  String? _errorMsg;
 
   @override
   void initState() {
@@ -28,16 +29,19 @@ class _GestionActualizacionesScreenState extends State<GestionActualizacionesScr
   }
 
   Future<void> _cargar() async {
-    setState(() => _cargando = true);
+    setState(() { _cargando = true; _errorMsg = null; });
     try {
       final usuario = await UsuarioService().miUsuarioActual();
       final esDev = usuario?.esDev ?? false;
       final actual = await UpdateService.actual();
-      // listarTodas ya trae estables y prereleases
-      final releases = esDev ? await GithubService.listarTodas(limite: 30) : await GithubService.listarEstables(limite: 30);
+      
+      final releases = esDev 
+          ? await GithubService.listarTodas(limite: 30) 
+          : await GithubService.listarEstables(limite: 30);
+          
       if (mounted) setState(() { _actual = actual; _releases = releases; _esDev = esDev; _cargando = false; });
     } catch (e) {
-      if (mounted) setState(() => _cargando = false);
+      if (mounted) setState(() { _errorMsg = e.toString().replaceAll('Exception: ', ''); _cargando = false; });
     }
   }
 
@@ -90,56 +94,72 @@ class _GestionActualizacionesScreenState extends State<GestionActualizacionesScr
       ],
       body: _cargando
           ? const Center(child: CircularProgressIndicator(color: AppColors.granate))
-          : ListView(
-              padding: const EdgeInsets.all(Sp.lg),
-              children: [
-                if (_actual != null)
-                  AppCard(
-                    color: AppColors.granate,
+          : _errorMsg != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(Sp.xl),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('VERSIÓN APROBADA', style: AppType.eyebrow.copyWith(color: AppColors.dorado)),
-                        const SizedBox(height: Sp.xs),
-                        Text('v${_actual!.displayVersion}', style: AppType.h2.copyWith(color: AppColors.dorado)),
+                        const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                        const SizedBox(height: Sp.lg),
+                        Text(_errorMsg!, textAlign: TextAlign.center, style: AppType.body.copyWith(color: Colors.red)),
+                        const SizedBox(height: Sp.xl),
+                        AppButton(label: 'REINTENTAR', onPressed: _cargar),
                       ],
                     ),
                   ),
-                const SizedBox(height: Sp.lg),
-                const SeccionHeader(title: 'Lanzamientos', icon: Icons.cloud_download, padding: EdgeInsets.zero),
-                const SizedBox(height: Sp.md),
-                if (_releases.isEmpty)
-                  const AppEmptyState(icon: Icons.inbox, title: 'Sin lanzamientos', subtitle: 'No hay versiones disponibles en GitHub.')
-                else
-                  ..._releases.map((r) => Padding(
-                        padding: const EdgeInsets.only(bottom: Sp.sm),
-                        child: AppCard(
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(r.prerelease ? Icons.science : Icons.android, color: r.prerelease ? Colors.orange : AppColors.granate),
-                                  const SizedBox(width: Sp.sm),
-                                  Expanded(child: Text(r.tag, style: AppType.subtitle)),
-                                  if (r.prerelease) const AppBadge(label: 'BETA', variant: AppBadgeVariant.warning),
-                                ],
-                              ),
-                              const SizedBox(height: Sp.md),
-                              Row(
-                                children: [
-                                  Expanded(child: AppButton(label: 'DESCARGAR', variant: AppButtonVariant.secondary, onPressed: r.urlApk.isEmpty ? null : () => DialogoDescargaApk.mostrar(context, url: r.urlApk, nombre: 'app.apk', versionLegible: r.versionLegible))),
-                                  const SizedBox(width: Sp.sm),
-                                  if (r.prerelease && _esDev)
-                                    Expanded(child: AppButton(label: 'PROMOVER', icon: Icons.upgrade, variant: AppButtonVariant.secondary, onPressed: () => _promoverRelease(r)))
-                                  else if (!r.prerelease)
-                                    Expanded(child: AppButton(label: 'APROBAR', icon: Icons.check, onPressed: () => _aprobarRelease(r))),
-                                ],
-                              ),
-                            ],
-                          ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(Sp.lg),
+                  children: [
+                    if (_actual != null)
+                      AppCard(
+                        color: AppColors.granate,
+                        child: Column(
+                          children: [
+                            Text('VERSIÓN APROBADA', style: AppType.eyebrow.copyWith(color: AppColors.dorado)),
+                            const SizedBox(height: Sp.xs),
+                            Text('v${_actual!.displayVersion}', style: AppType.h2.copyWith(color: AppColors.dorado)),
+                          ],
                         ),
-                      )),
-              ],
-            ),
+                      ),
+                    const SizedBox(height: Sp.lg),
+                    const SeccionHeader(title: 'Lanzamientos', icon: Icons.cloud_download, padding: EdgeInsets.zero),
+                    const SizedBox(height: Sp.md),
+                    if (_releases.isEmpty)
+                      const AppEmptyState(icon: Icons.inbox, title: 'Sin lanzamientos', subtitle: 'No hay versiones disponibles en GitHub.')
+                    else
+                      ..._releases.map((r) => Padding(
+                            padding: const EdgeInsets.only(bottom: Sp.sm),
+                            child: AppCard(
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(r.prerelease ? Icons.science : Icons.android, color: r.prerelease ? Colors.orange : AppColors.granate),
+                                      const SizedBox(width: Sp.sm),
+                                      Expanded(child: Text(r.tag, style: AppType.subtitle)),
+                                      if (r.prerelease) const AppBadge(label: 'BETA', variant: AppBadgeVariant.warning),
+                                    ],
+                                  ),
+                                  const SizedBox(height: Sp.md),
+                                  Row(
+                                    children: [
+                                      Expanded(child: AppButton(label: 'DESCARGAR', variant: AppButtonVariant.secondary, onPressed: r.urlApk.isEmpty ? null : () => DialogoDescargaApk.mostrar(context, url: r.urlApk, nombre: 'app.apk', versionLegible: r.versionLegible))),
+                                      const SizedBox(width: Sp.sm),
+                                      if (r.prerelease && _esDev)
+                                        Expanded(child: AppButton(label: 'PROMOVER', icon: Icons.upgrade, variant: AppButtonVariant.secondary, onPressed: () => _promoverRelease(r)))
+                                      else if (!r.prerelease)
+                                        Expanded(child: AppButton(label: 'APROBAR', icon: Icons.check, onPressed: () => _aprobarRelease(r))),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )),
+                  ],
+                ),
     );
   }
 }
