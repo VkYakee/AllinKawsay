@@ -41,8 +41,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
     if (x == null) return;
     setState(() => _subiendoFoto = true);
     try {
-      final url =
-          await StorageService().subirFotoPerfil(File(x.path), u.uid);
+      final url = await StorageService().subirFotoPerfil(File(x.path), u.uid);
       await UsuarioService().actualizarFotoPerfil(u.uid, url);
     } catch (e) {
       if (mounted) {
@@ -92,8 +91,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 usuario: u,
                 subiendoFoto: _subiendoFoto,
                 onCambiarFoto: () => u != null ? _cambiarFoto(u) : null,
-                onCambiarNombre: () =>
-                    u != null ? _cambiarNombre(u) : null,
+                onCambiarNombre: () => u != null ? _cambiarNombre(u) : null,
               ),
               const SizedBox(height: Sp.lg),
               if (u != null) PerfilStats(usuario: u),
@@ -103,8 +101,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) =>
-                            AdminDashboardScreen(isDev: u.esDev)),
+                        builder: (_) => AdminDashboardScreen(
+                            isDev: u?.esDev ?? false)),
                   ),
                 ),
               PerfilMenuItem(
@@ -143,10 +141,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: Sp.lg),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: Rad.rMd),
+                    padding: const EdgeInsets.symmetric(vertical: Sp.lg),
+                    shape: RoundedRectangleBorder(borderRadius: Rad.rMd),
                   ),
                 ),
               ),
