@@ -59,23 +59,23 @@ class CancionFormBasico extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ChoiceChip(
-                  label: const Text('Original'),
+                child: AppFilterChip(
+                  label: 'Original',
                   selected: tipo == 'original',
                   onSelected: (_) => onTipoChanged('original'),
                 ),
               ),
               const SizedBox(width: Sp.sm),
               Expanded(
-                child: ChoiceChip(
-                  label: const Text('Adaptación'),
+                child: AppFilterChip(
+                  label: 'Adaptación',
                   selected: tipo == 'adaptacion',
                   onSelected: (_) => onTipoChanged('adaptacion'),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: Sp.md),
+          const SizedBox(height: Sp.lg),
           if (cargandoCategorias)
             const Center(child: CircularProgressIndicator())
           else
@@ -92,8 +92,8 @@ class CancionFormBasico extends StatelessWidget {
           const SizedBox(height: Sp.md),
           AppInput(
             controller: tagsCtrl,
-            label: 'Etiquetas (separadas por coma)',
-            hint: 'ej: huayño, festivo',
+            label: 'Etiquetas',
+            hint: 'separadas por coma (ej: huayño, festivo)',
             prefixIcon: Icons.local_offer_outlined,
           ),
         ],
