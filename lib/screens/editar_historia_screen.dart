@@ -1,5 +1,7 @@
+// lib/screens/editar_historia_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../design/design.dart';
 import '../models/historia.dart';
 import '../services/historia_service.dart';
 import '../theme/colors.dart';
@@ -8,8 +10,7 @@ class EditarHistoriaScreen extends StatefulWidget {
   const EditarHistoriaScreen({super.key});
 
   @override
-  State<EditarHistoriaScreen> createState() =>
-      _EditarHistoriaScreenState();
+  State<EditarHistoriaScreen> createState() => _EditarHistoriaScreenState();
 }
 
 class _EditarHistoriaScreenState extends State<EditarHistoriaScreen> {
@@ -20,13 +21,12 @@ class _EditarHistoriaScreenState extends State<EditarHistoriaScreen> {
   @override
   void initState() {
     super.initState();
-    _cargar();
-  }
-
-  Future<void> _cargar() async {
-    final h = await HistoriaService().obtener();
-    _ctrl.text = h.contenido;
-    if (mounted) setState(() => _cargando = false);
+    HistoriaService().obtener().then((h) {
+      if (mounted) {
+        _ctrl.text = h.contenido;
+        setState(() => _cargando = false);
+      }
+    });
   }
 
   Future<void> _guardar() async {
@@ -35,21 +35,9 @@ class _EditarHistoriaScreenState extends State<EditarHistoriaScreen> {
       final user = FirebaseAuth.instance.currentUser!;
       await HistoriaService().guardar(Historia(
         contenido: _ctrl.text.trim(),
-        actualizadoPor:
-            user.displayName ?? user.email ?? 'Anónimo',
+        actualizadoPor: user.displayName ?? user.email ?? 'Admin',
       ));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Historia guardada!')),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -63,98 +51,36 @@ class _EditarHistoriaScreenState extends State<EditarHistoriaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('EDITAR HISTORIA')),
+    return AppScaffold(
+      title: 'Editar Historia',
+      actions: [
+        IconButton(icon: const Icon(Icons.check), onPressed: _guardando ? null : _guardar),
+      ],
       body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(
-                  color: AppColors.granate))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.granate))
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              padding: const EdgeInsets.all(Sp.lg),
               children: [
-                // Info
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      AppColors.dorado.withOpacity(0.12),
-                      AppColors.granate.withOpacity(0.06),
-                    ]),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                        color: AppColors.dorado.withOpacity(0.3)),
-                  ),
-                  child: Row(
+                AppCard(
+                  padding: const EdgeInsets.all(Sp.lg),
+                  child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.dorado.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.tips_and_updates_outlined,
-                            color: AppColors.granate, size: 16),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Escribí la historia del grupo. Podés usar '
-                          'saltos de línea para separar secciones.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: onSurface.withOpacity(0.75),
-                            height: 1.5,
-                          ),
-                        ),
+                      const SeccionHeader(title: 'Contenido de la Historia', icon: Icons.edit_note, padding: EdgeInsets.zero),
+                      const SizedBox(height: Sp.md),
+                      AppInput(
+                        controller: _ctrl,
+                        label: 'Historia del grupo',
+                        hint: 'Escribe aquí los orígenes, logros y anécdotas del grupo...',
+                        maxLines: 20,
+                        minLines: 15,
+                        textCapitalization: TextCapitalization.sentences,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                // Editor
-                TextField(
-                  controller: _ctrl,
-                  maxLines: 20,
-                  minLines: 15,
-                  textCapitalization: TextCapitalization.sentences,
-                  style: TextStyle(
-                      fontSize: 15,
-                      height: 1.6,
-                      color: onSurface),
-                  decoration: const InputDecoration(
-                    labelText: 'Historia del grupo',
-                    alignLabelWithHint: true,
-                    hintText:
-                        'Fundación del grupo, primeros integrantes, '
-                        'logros, viajes...',
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: 54,
-                  child: FilledButton.icon(
-                    onPressed: _guardando ? null : _guardar,
-                    icon: _guardando
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: AppColors.dorado,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Icon(Icons.save),
-                    label: Text(
-                      _guardando ? 'GUARDANDO...' : 'GUARDAR HISTORIA',
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2),
-                    ),
-                  ),
-                ),
+                const SizedBox(height: Sp.xl),
+                AppButton(label: _guardando ? 'GUARDANDO...' : 'GUARDAR HISTORIA', fullWidth: true, loading: _guardando, onPressed: _guardar),
+                const SizedBox(height: Sp.xxxl),
               ],
             ),
     );
