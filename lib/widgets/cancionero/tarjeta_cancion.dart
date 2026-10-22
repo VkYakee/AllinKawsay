@@ -9,25 +9,19 @@ import 'tarjeta_cancion_play.dart';
 class TarjetaCancion extends StatelessWidget {
   final Cancion cancion;
   final bool esFavorito;
-  final bool esAdmin;
   final EstadoPlayer estado;
   final VoidCallback onTap;
   final VoidCallback onTogglePlay;
   final VoidCallback onToggleFavorito;
-  final VoidCallback onEditar;
-  final VoidCallback onEliminar;
 
   const TarjetaCancion({
     super.key,
     required this.cancion,
     required this.esFavorito,
-    required this.esAdmin,
     required this.estado,
     required this.onTap,
     required this.onTogglePlay,
     required this.onToggleFavorito,
-    required this.onEditar,
-    required this.onEliminar,
   });
 
   @override
@@ -38,17 +32,11 @@ class TarjetaCancion extends StatelessWidget {
     final cargando = sonando && estado.cargando;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Sp.lg, vertical: Sp.xs),
+      padding: const EdgeInsets.symmetric(horizontal: Sp.lg, vertical: Sp.xs),
       child: AppCard(
         padding: const EdgeInsets.all(Sp.md),
         onTap: onTap,
-        border: sonando
-            ? Border.all(
-                color: AppColors.dorado.withOpacity(0.5),
-                width: 1.5,
-              )
-            : null,
+        border: sonando ? Border.all(color: AppColors.dorado.withOpacity(0.5), width: 1.5) : null,
         child: Row(
           children: [
             TarjetaCancionPlay(
@@ -70,27 +58,17 @@ class TarjetaCancion extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${cancion.ritmo}${cancion.autor.isNotEmpty ? ' · ${cancion.autor}' : ''}',
-                    style: AppType.captionXs.copyWith(
-                      color: onSurface.withOpacity(0.55),
-                    ),
+                    style: AppType.captionXs.copyWith(color: onSurface.withOpacity(0.55)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      AppBadge(
-                        label: '${cancion.reproducciones}',
-                        icon: Icons.play_arrow_rounded,
-                        variant: AppBadgeVariant.granate,
-                      ),
+                      AppBadge(label: '${cancion.reproducciones}', icon: Icons.play_arrow_rounded, variant: AppBadgeVariant.granate),
                       if (cancion.tieneNumerofonia) ...[
                         const SizedBox(width: 4),
-                        const AppBadge(
-                          label: 'Partitura',
-                          icon: Icons.grid_on,
-                          variant: AppBadgeVariant.gold,
-                        ),
+                        const AppBadge(label: 'Partitura', icon: Icons.grid_on, variant: AppBadgeVariant.gold),
                       ],
                     ],
                   ),
@@ -100,39 +78,13 @@ class TarjetaCancion extends StatelessWidget {
             IconButton(
               icon: Icon(
                 esFavorito ? Icons.favorite : Icons.favorite_border,
-                color: esFavorito
-                    ? AppColors.granate
-                    : onSurface.withOpacity(0.3),
+                color: esFavorito ? AppColors.granate : onSurface.withOpacity(0.3),
                 size: 20,
               ),
               onPressed: onToggleFavorito,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
-            if (esAdmin)
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: onSurface.withOpacity(0.4),
-                  size: 20,
-                ),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                    borderRadius: Rad.rMd),
-                onSelected: (v) {
-                  if (v == 'editar') onEditar();
-                  if (v == 'eliminar') onEliminar();
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                      value: 'editar',
-                      child: Text('Editar')),
-                  PopupMenuItem(
-                      value: 'eliminar',
-                      child: Text('Eliminar',
-                          style: TextStyle(color: Colors.red))),
-                ],
-              ),
           ],
         ),
       ),
