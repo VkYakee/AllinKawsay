@@ -9,6 +9,7 @@ class ToolScaffold extends StatelessWidget {
   final VoidCallback onCerrar;
   final Widget body;
   final Widget? bottomBar;
+  final List<Widget>? actions; // <-- AGREGADO
 
   const ToolScaffold({
     super.key,
@@ -17,6 +18,7 @@ class ToolScaffold extends StatelessWidget {
     required this.onCerrar,
     required this.body,
     this.bottomBar,
+    this.actions,
   });
 
   @override
@@ -35,13 +37,16 @@ class ToolScaffold extends StatelessWidget {
                     onPressed: onCerrar,
                   ),
                   const SizedBox(width: Sp.sm),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(titulo, style: AppType.subtitle.copyWith(color: AppColors.dorado)),
-                      Text(subtitulo, style: AppType.captionXs.copyWith(color: AppColors.dorado.withOpacity(0.5))),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(titulo, style: AppType.subtitle.copyWith(color: AppColors.dorado)),
+                        Text(subtitulo, style: AppType.captionXs.copyWith(color: AppColors.dorado.withOpacity(0.5))),
+                      ],
+                    ),
                   ),
+                  if (actions != null) ...actions!,
                 ],
               ),
             ),
