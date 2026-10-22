@@ -30,6 +30,7 @@ class _EditorLetrasState extends State<EditorLetras> {
       children: [
         for (int i = 0; i < widget.letras.length; i++) ...[
           _CardLetra(
+            key: ValueKey(identityHashCode(widget.letras[i])),
             letra: widget.letras[i],
             indice: i,
             onCambio: _notify,
@@ -48,13 +49,36 @@ class _EditorLetrasState extends State<EditorLetras> {
   }
 }
 
-class _CardLetra extends StatelessWidget {
+class _CardLetra extends StatefulWidget {
   final Letra letra;
   final int indice;
   final VoidCallback onCambio;
   final VoidCallback? onEliminar;
 
-  const _CardLetra({required this.letra, required this.indice, required this.onCambio, this.onEliminar});
+  const _CardLetra({super.key, required this.letra, required this.indice, required this.onCambio, this.onEliminar});
+
+  @override
+  State<_CardLetra> createState() => _CardLetraState();
+}
+
+class _CardLetraState extends State<_CardLetra> {
+  late TextEditingController _tituloCtrl;
+  late TextEditingController _textoCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    // Usar controllers evita que el cursor salte al escribir
+    _tituloCtrl = TextEditingController(text: widget.letra.titulo);
+    _textoCtrl = TextEditingController(text: widget.letra.texto);
+  }
+
+  @override
+  void dispose() {
+    _tituloCtrl.dispose();
+    _textoCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,19 +94,19 @@ class _CardLetra extends StatelessWidget {
               const SizedBox(width: Sp.sm),
               Expanded(
                 child: TextFormField(
-                  initialValue: letra.titulo,
-                  onChanged: (v) { letra.titulo = v; onCambio(); },
+                  controller: _tituloCtrl,
+                  onChanged: (v) { widget.letra.titulo = v; widget.onCambio(); },
                   style: AppType.subtitle.copyWith(color: AppColors.granate),
-                  decoration: InputDecoration(hintText: 'LETRA ${indice + 1} (título)', border: InputBorder.none, isDense: true),
+                  decoration: InputDecoration(hintText: 'LETRA ${widget.indice + 1} (título)', border: InputBorder.none, isDense: true),
                 ),
               ),
-              if (onEliminar != null) IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20), onPressed: onEliminar),
+              if (widget.onEliminar != null) IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20), onPressed: widget.onEliminar),
             ],
           ),
           const SizedBox(height: Sp.sm),
           TextFormField(
-            initialValue: letra.texto,
-            onChanged: (v) { letra.texto = v; onCambio(); },
+            controller: _textoCtrl,
+            onChanged: (v) { widget.letra.texto = v; widget.onCambio(); },
             maxLines: 10, minLines: 5,
             style: AppType.body.copyWith(height: 1.6, fontStyle: FontStyle.italic),
             decoration: InputDecoration(
