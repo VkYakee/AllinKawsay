@@ -1,6 +1,7 @@
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import '../services/novedades_service.dart';
-import '../theme/colors.dart';
+import '../widgets/comunes/main_nav_bar.dart';
 import 'cancionero_screen.dart';
 import 'eventos_screen.dart';
 import 'inicio_screen.dart';
@@ -36,56 +37,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          const NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Inicio'),
-          const NavigationDestination(
-              icon: Icon(Icons.library_music_outlined),
-              selectedIcon: Icon(Icons.library_music),
-              label: 'Cancionero'),
-          NavigationDestination(
-            icon: ValueListenableBuilder<int>(
-              valueListenable: NovedadesService.eventosNuevos,
-              builder: (context, count, child) {
-                return Badge(
-                  isLabelVisible: count > 0,
-                  label: Text('$count'),
-                  backgroundColor: AppColors.granate,
-                  textColor: AppColors.dorado,
-                  child: child,
-                );
-              },
-              child: const Icon(Icons.event_outlined),
-            ),
-            selectedIcon: ValueListenableBuilder<int>(
-              valueListenable: NovedadesService.eventosNuevos,
-              builder: (context, count, child) {
-                return Badge(
-                  isLabelVisible: count > 0,
-                  label: Text('$count'),
-                  backgroundColor: AppColors.granate,
-                  textColor: AppColors.dorado,
-                  child: child,
-                );
-              },
-              child: const Icon(Icons.event),
-            ),
-            label: 'Eventos',
-          ),
-          const NavigationDestination(
-              icon: Icon(Icons.photo_library_outlined),
-              selectedIcon: Icon(Icons.photo_library),
-              label: 'Recuerdos'),
-          const NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Perfil'),
-        ],
+      bottomNavigationBar: ValueListenableBuilder<int>(
+        valueListenable: NovedadesService.eventosNuevos,
+        builder: (context, count, _) {
+          return MainNavBar(
+            selectedIndex: _index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            eventosNuevos: count,
+          );
+        },
       ),
     );
   }
