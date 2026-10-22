@@ -9,6 +9,7 @@ import '../models/recuerdo.dart';
 import '../services/permisos_service.dart';
 import '../services/recuerdo_service.dart';
 import '../services/storage_service.dart';
+import '../theme/colors.dart'; // <-- IMPORT AGREGADO
 import '../widgets/recuerdos/recuerdo_form_media.dart';
 
 class AgregarRecuerdoScreen extends StatefulWidget {
