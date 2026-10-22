@@ -54,7 +54,14 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
 
     final estrofas = widget.cancion.estrofas.where((e) => !e.vacia).toList();
     if (widget.bloque.estrofaRef < 0 || widget.bloque.estrofaRef >= estrofas.length) {
-      _errorMsg = 'Bloque sin estrofa asignada';
+      _errorMsg = 'Este bloque no tiene una estrofa asignada.\nVuelve al setlist y edita el bloque.';
+      _estrofa = EstrofaNumerofonia();
+      _cargando = false;
+      return;
+    }
+
+    if (widget.cancion.audioUrl.isEmpty) {
+      _errorMsg = 'La canción no tiene un audio cargado.';
       _estrofa = EstrofaNumerofonia();
       _cargando = false;
       return;
@@ -81,7 +88,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
       
       if (widget.bloque.tieneTimingA) {
         _toquesMs.addAll(widget.bloque.timingsMs);
-        _indexEsperada = _toquesMs.length.clamp(0, 1000);
+        _indexEsperada = _toquesMs.length;
       }
       
       await _player.seek(Duration(milliseconds: widget.bloque.inicioMs));
@@ -91,7 +98,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
       
       if (mounted) setState(() => _cargando = false);
     } catch (e) {
-      if (mounted) setState(() { _errorMsg = 'Error al cargar audio: $e'; _cargando = false; });
+      if (mounted) setState(() { _errorMsg = 'Error al cargar el audio:\n$e'; _cargando = false; });
     }
   }
 
@@ -124,7 +131,28 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
   @override
   Widget build(BuildContext context) {
     if (_cargando) return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: AppColors.dorado)));
-    if (_errorMsg.isNotEmpty) return Scaffold(backgroundColor: Colors.black, body: Center(child: Text(_errorMsg, style: const TextStyle(color: Colors.red))));
+    
+    if (_errorMsg.isNotEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(title: const Text('Error'), backgroundColor: Colors.transparent),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(Sp.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                const SizedBox(height: Sp.lg),
+                Text(_errorMsg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                const SizedBox(height: Sp.xl),
+                AppButton(label: 'VOLVER', onPressed: () => Navigator.pop(context)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return ToolScaffold(
       titulo: 'Timing: ${widget.bloque.label}',
