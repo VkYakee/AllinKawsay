@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../design/design.dart';
 import '../models/evento.dart';
 import '../services/novedades_service.dart';
-import '../theme/colors.dart'; // <-- ¡ESTE ERA EL IMPORT QUE FALTABA!
+import '../theme/colors.dart';
 import '../widgets/banner_novedades.dart';
 import '../widgets/inicio/hero_inicio.dart';
 import '../widgets/inicio/proximo_evento_card.dart';
@@ -50,7 +50,7 @@ class _InicioScreenState extends State<InicioScreen> {
         onRefresh: _onRefresh,
         color: AppColors.dorado,
         child: ListView(
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.only(bottom: 120), // <-- SOLUCIONA EL PROBLEMA DE LA BARRA
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             HeroInicio(
