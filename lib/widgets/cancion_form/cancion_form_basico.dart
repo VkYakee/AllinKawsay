@@ -39,10 +39,7 @@ class CancionFormBasico extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SeccionHeader(
-              title: 'Información Básica',
-              icon: Icons.info_outline,
-              padding: EdgeInsets.zero),
+          const SeccionHeader(title: 'Información Básica', icon: Icons.info_outline, padding: EdgeInsets.zero),
           const SizedBox(height: Sp.md),
           AppInput(controller: tituloCtrl, label: 'Título *', prefixIcon: Icons.music_note),
           const SizedBox(height: Sp.md),
@@ -59,7 +56,7 @@ class CancionFormBasico extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: AppFilterChip(
+                child: AppChoiceChip(
                   label: 'Original',
                   selected: tipo == 'original',
                   onSelected: (_) => onTipoChanged('original'),
@@ -67,7 +64,7 @@ class CancionFormBasico extends StatelessWidget {
               ),
               const SizedBox(width: Sp.sm),
               Expanded(
-                child: AppFilterChip(
+                child: AppChoiceChip(
                   label: 'Adaptación',
                   selected: tipo == 'adaptacion',
                   onSelected: (_) => onTipoChanged('adaptacion'),
@@ -84,18 +81,12 @@ class CancionFormBasico extends StatelessWidget {
               decoration: const InputDecoration(labelText: 'Categoría', prefixIcon: Icon(Icons.category)),
               items: [
                 const DropdownMenuItem(value: '', child: Text('Sin categoría')),
-                ...categorias.map((c) => DropdownMenuItem(
-                    value: c.id, child: Text('${c.emoji} ${c.nombre}'))),
+                ...categorias.map((c) => DropdownMenuItem(value: c.id, child: Text('${c.emoji} ${c.nombre}'))),
               ],
               onChanged: onCategoriaChanged,
             ),
           const SizedBox(height: Sp.md),
-          AppInput(
-            controller: tagsCtrl,
-            label: 'Etiquetas',
-            hint: 'separadas por coma (ej: huayño, festivo)',
-            prefixIcon: Icons.local_offer_outlined,
-          ),
+          AppInput(controller: tagsCtrl, label: 'Etiquetas', hint: 'separadas por coma (ej: huayño, festivo)', prefixIcon: Icons.local_offer_outlined),
         ],
       ),
     );
