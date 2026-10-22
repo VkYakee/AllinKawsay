@@ -103,7 +103,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const AdminDashboardScreen()),
+                        builder: (_) =>
+                            AdminDashboardScreen(isDev: u.esDev)),
                   ),
                 ),
               PerfilMenuItem(
