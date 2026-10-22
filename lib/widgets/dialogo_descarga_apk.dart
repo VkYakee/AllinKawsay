@@ -1,66 +1,38 @@
+// lib/widgets/dialogo_descarga_apk.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../design/design.dart';
 import '../theme/colors.dart';
 
-/// Muestra una barra flotante arriba con el progreso de descarga
-/// del APK, y al terminar ofrece instalar automáticamente.
-///
-/// Devuelve:
-///   - true si el usuario instaló (o intentó instalar).
-///   - false si canceló o hubo error.
 class DialogoDescargaApk {
-  static Future<bool> mostrar(
-    BuildContext context, {
-    required String url,
-    required String nombre,
-    required String versionLegible,
-  }) async {
-    final overlay = Overlay.maybeOf(context);
-    if (overlay == null) return false;
-
-    final resultado = await showDialog<bool>(
+  static Future<bool> mostrar(BuildContext context, {required String url, required String nombre, required String versionLegible}) async {
+    final r = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _DescargaApkDialog(
-        url: url,
-        nombre: nombre,
-        versionLegible: versionLegible,
-      ),
+      builder: (_) => _DescargaApkDialog(url: url, nombre: nombre, versionLegible: versionLegible),
     );
-    return resultado ?? false;
+    return r ?? false;
   }
 }
 
 class _DescargaApkDialog extends StatefulWidget {
-  final String url;
-  final String nombre;
-  final String versionLegible;
-
-  const _DescargaApkDialog({
-    required this.url,
-    required this.nombre,
-    required this.versionLegible,
-  });
+  final String url, nombre, versionLegible;
+  const _DescargaApkDialog({required this.url, required this.nombre, required this.versionLegible});
 
   @override
   State<_DescargaApkDialog> createState() => _DescargaApkDialogState();
 }
 
-enum _Fase { descargando, permiso, instalando, listo, error }
-
 class _DescargaApkDialogState extends State<_DescargaApkDialog> {
   static const _channel = MethodChannel('com.allinkawsay/native');
-
-  _Fase _fase = _Fase.descargando;
+  String _estado = 'descargando';
   double _progreso = 0;
-  String _mensaje = 'Conectando...';
-  String? _error;
+  String _msg = 'Conectando...';
   File? _apkFile;
-  bool _borrado = false;
 
   @override
   void initState() {
@@ -68,461 +40,82 @@ class _DescargaApkDialogState extends State<_DescargaApkDialog> {
     _descargar();
   }
 
-  @override
-  void dispose() {
-    _borrar();
-    super.dispose();
-  }
-
-  Future<void> _borrar() async {
-    if (_borrado) return;
-    _borrado = true;
-    try {
-      if (_apkFile != null && await _apkFile!.exists()) {
-        await _apkFile!.delete();
-      }
-    } catch (_) {}
-  }
-
   Future<void> _descargar() async {
-    setState(() {
-      _fase = _Fase.descargando;
-      _progreso = 0;
-      _mensaje = 'Conectando...';
-      _error = null;
-    });
-
     try {
       final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/allin_kawsay_${widget.versionLegible}.apk';
-      final archivo = File(path);
+      final file = File('${dir.path}/update.apk');
+      if (await file.exists()) await file.delete();
 
-      if (await archivo.exists()) {
-        await archivo.delete();
-      }
+      final req = http.Request('GET', Uri.parse(widget.url));
+      final res = await req.send();
+      if (res.statusCode != 200) throw Exception('Error ${res.statusCode}');
 
-      final request = http.Request('GET', Uri.parse(widget.url));
-      final response = await request.send();
-
-      if (response.statusCode != 200) {
-        throw Exception('Error ${response.statusCode}');
-      }
-
-      final total = response.contentLength ?? 0;
+      final total = res.contentLength ?? 0;
       int recibido = 0;
-
-      final sink = archivo.openWrite();
-      await for (final chunk in response.stream) {
+      final sink = file.openWrite();
+      await for (final chunk in res.stream) {
         sink.add(chunk);
         recibido += chunk.length;
-        if (total > 0 && mounted) {
-          setState(() {
-            _progreso = recibido / total;
-            final mb = (recibido / 1048576).toStringAsFixed(1);
-            final totalMb = (total / 1048576).toStringAsFixed(1);
-            _mensaje = '$mb / $totalMb MB';
-          });
-        }
+        if (total > 0 && mounted) setState(() { _progreso = recibido / total; _msg = '${(recibido / 1048576).toStringAsFixed(1)} MB'; });
       }
       await sink.flush();
       await sink.close();
-
-      if (!mounted) return;
-      _apkFile = archivo;
-
-      // Pasamos a la fase de permisos
-      setState(() => _fase = _Fase.permiso);
+      if (mounted) { _apkFile = file; setState(() => _estado = 'permiso'); }
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _fase = _Fase.error;
-        _error = 'No se pudo descargar.\n\n$e';
-      });
+      if (mounted) setState(() { _estado = 'error'; _msg = 'Error al descargar: $e'; });
     }
   }
 
-  /// Pide el permiso de instalar apps de origen desconocido.
-  Future<void> _pedirPermiso() async {
-    try {
-      var status = await Permission.requestInstallPackages.status;
-      if (!status.isGranted) {
-        status = await Permission.requestInstallPackages.request();
-      }
-      if (!mounted) return;
-      if (!status.isGranted) {
-        setState(() {
-          _fase = _Fase.error;
-          _error = 'Necesitás habilitar "Instalar apps desconocidas" '
-              'para Allin Kawsay.\n\n'
-              'Ajustes → Seguridad → Instalar apps desconocidas → '
-              'elegí Allin Kawsay → Permitir.';
-        });
-        return;
-      }
-      await _instalar();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _fase = _Fase.error;
-        _error = 'No se pudo pedir el permiso: $e';
-      });
-    }
-  }
   Future<void> _instalar() async {
-    if (_apkFile == null) return;
-    setState(() => _fase = _Fase.instalando);
-
     try {
-      await _channel.invokeMethod('instalarApk', {
-        'path': _apkFile!.path,
-      });
-      if (!mounted) return;
-      setState(() => _fase = _Fase.listo);
-
-      // Programar borrado del APK después de un rato
-      Future.delayed(const Duration(seconds: 30), _borrar);
+      if (!await Permission.requestInstallPackages.request().isGranted) throw Exception('Permiso denegado');
+      if (mounted) setState(() => _estado = 'instalando');
+      await _channel.invokeMethod('instalarApk', {'path': _apkFile!.path});
+      if (mounted) setState(() => _estado = 'listo');
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _fase = _Fase.error;
-        _error = 'No se pudo abrir el instalador.\n\n$e';
-      });
+      if (mounted) setState(() { _estado = 'error'; _msg = 'No se pudo instalar: $e'; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: _contenido(),
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: Rad.rXl),
+      contentPadding: const EdgeInsets.all(Sp.xl),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_estado == 'descargando') ...[
+            const Icon(Icons.download, color: AppColors.granate, size: 48),
+            const SizedBox(height: Sp.lg),
+            Text('Descargando v${widget.versionLegible}', style: AppType.h3, textAlign: TextAlign.center),
+            const SizedBox(height: Sp.md),
+            ClipRRect(borderRadius: Rad.rPill, child: LinearProgressIndicator(value: _progreso > 0 ? _progreso : null, color: AppColors.granate)),
+            const SizedBox(height: Sp.sm),
+            Text(_msg, style: AppType.captionXs),
+          ] else if (_estado == 'permiso') ...[
+            const Icon(Icons.shield, color: AppColors.granate, size: 48),
+            const SizedBox(height: Sp.lg),
+            Text('Permiso necesario', style: AppType.h3),
+            const SizedBox(height: Sp.sm),
+            Text('Android te pedirá permitir la instalación. Es seguro.', style: AppType.captionXs, textAlign: TextAlign.center),
+            const SizedBox(height: Sp.xl),
+            AppButton(label: 'CONTINUAR', onPressed: _instalar),
+          ] else if (_estado == 'listo') ...[
+            const Icon(Icons.check_circle, color: Colors.green, size: 48),
+            const SizedBox(height: Sp.lg),
+            Text('¡Listo!', style: AppType.h3),
+            const SizedBox(height: Sp.xl),
+            AppButton(label: 'CERRAR', onPressed: () => Navigator.pop(context, true)),
+          ] else ...[
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: Sp.lg),
+            Text(_msg, style: AppType.body.copyWith(color: Colors.red), textAlign: TextAlign.center),
+            const SizedBox(height: Sp.xl),
+            AppButton(label: 'CERRAR', variant: AppButtonVariant.secondary, onPressed: () => Navigator.pop(context, false)),
+          ],
+        ],
       ),
-    );
-  }
-
-  Widget _contenido() {
-    switch (_fase) {
-      case _Fase.descargando:
-        return _vistaDescarga();
-      case _Fase.permiso:
-        return _vistaPermiso();
-      case _Fase.instalando:
-        return _vistaInstalando();
-      case _Fase.listo:
-        return _vistaListo();
-      case _Fase.error:
-        return _vistaError();
-    }
-  }
-
-  Widget _vistaDescarga() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: AppColors.gradienteGranate,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.download,
-                  color: AppColors.dorado, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Descargando v${widget.versionLegible}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppColors.granate,
-                ),
-              ),
-            ),
-            Text(
-              '${(_progreso * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.granate,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: _progreso > 0 ? _progreso : null,
-            minHeight: 6,
-            backgroundColor: AppColors.granate.withOpacity(0.15),
-            valueColor: const AlwaysStoppedAnimation(AppColors.granate),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _mensaje,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.black.withOpacity(0.55),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Al terminar te pediremos permiso para instalar la app. '
-          'Tranqui, es normal — la instalación se hace desde la '
-          'propia app oficial.',
-          style: TextStyle(
-            fontSize: 11,
-            height: 1.4,
-            color: Colors.black.withOpacity(0.5),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _vistaPermiso() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.dorado.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.shield_outlined,
-                  color: AppColors.granate, size: 22),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Permiso necesario',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: AppColors.granate,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.granate.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _bullet('Android te pedirá habilitar "Instalar apps '
-                  'desconocidas" para Allin Kawsay.'),
-              const SizedBox(height: 8),
-              _bullet('Es seguro: la app viene del repositorio oficial '
-                  'del grupo y usa Firebase (misma tecnología que '
-                  'Duolingo, Twitter, etc.).'),
-              const SizedBox(height: 8),
-              _bullet('Solo se pide 1 vez. Después se actualiza sola.'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context, false),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.black.withOpacity(0.2)),
-                  foregroundColor: Colors.black.withOpacity(0.6),
-                ),
-                child: const Text('CANCELAR'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                onPressed: _pedirPermiso,
-                child: const Text('CONTINUAR'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _bullet(String texto) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.only(top: 5),
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(
-            color: AppColors.dorado,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            texto,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.5,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _vistaInstalando() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(
-          width: 42,
-          height: 42,
-          child: CircularProgressIndicator(
-            color: AppColors.granate,
-            strokeWidth: 3,
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Abriendo instalador...',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: AppColors.granate,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Seguí las instrucciones en pantalla.',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.black.withOpacity(0.55),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _vistaListo() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.check_circle,
-              color: Colors.green, size: 32),
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          '¡Listo!',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: AppColors.granate,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Completá la instalación desde el instalador de Android. '
-          'El archivo se borrará automáticamente.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: Colors.black.withOpacity(0.6),
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('CERRAR'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _vistaError() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.error_outline,
-              color: Colors.red, size: 32),
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          'Algo salió mal',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: AppColors.granate,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _error ?? 'Error desconocido',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: Colors.black.withOpacity(0.6),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('CERRAR'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                onPressed: _descargar,
-                child: const Text('REINTENTAR'),
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
