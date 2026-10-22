@@ -1,8 +1,4 @@
 // lib/design/components/app_input.dart
-//
-// Input unificado. Reemplaza el TextField/TextFormField repetido
-// en login, registro, agregar_cancion, agregar_evento, etc.
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/colors.dart';
@@ -10,6 +6,7 @@ import '../tokens.dart';
 
 class AppInput extends StatelessWidget {
   final TextEditingController? controller;
+  final FocusNode? focusNode; // <-- AGREGADO
   final String? label;
   final String? hint;
   final IconData? prefixIcon;
@@ -31,6 +28,7 @@ class AppInput extends StatelessWidget {
   const AppInput({
     super.key,
     this.controller,
+    this.focusNode,
     this.label,
     this.hint,
     this.prefixIcon,
@@ -56,6 +54,7 @@ class AppInput extends StatelessWidget {
 
     return TextFormField(
       controller: controller,
+      focusNode: focusNode, // <-- AGREGADO
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
