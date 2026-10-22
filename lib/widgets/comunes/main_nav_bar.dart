@@ -17,27 +17,61 @@ class MainNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Usamos un Container con márgenes para que "flote" y no toque los bordes
     return Container(
+      margin: const EdgeInsets.fromLTRB(Sp.lg, 0, Sp.lg, Sp.xl),
+      padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: Sp.sm),
       decoration: BoxDecoration(
-        color: AppColors.negro,
-        border: Border(
-          top: BorderSide(color: AppColors.dorado.withOpacity(0.15)),
-        ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: Sp.sm),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Inicio', index: 0, selectedIndex: selectedIndex, onTap: onDestinationSelected),
-              _NavItem(icon: Icons.library_music_outlined, activeIcon: Icons.library_music, label: 'Cancionero', index: 1, selectedIndex: selectedIndex, onTap: onDestinationSelected),
-              _NavItem(icon: Icons.event_outlined, activeIcon: Icons.event, label: 'Eventos', index: 2, selectedIndex: selectedIndex, onTap: onDestinationSelected, badge: eventosNuevos),
-              _NavItem(icon: Icons.photo_library_outlined, activeIcon: Icons.photo_library, label: 'Recuerdos', index: 3, selectedIndex: selectedIndex, onTap: onDestinationSelected),
-              _NavItem(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Perfil', index: 4, selectedIndex: selectedIndex, onTap: onDestinationSelected),
-            ],
+        color: AppColors.negro.withOpacity(0.95),
+        borderRadius: Rad.rPill, // Bordes totalmente curvos (forma de píldora)
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-        ),
+        ],
+        border: Border.all(color: AppColors.dorado.withOpacity(0.2), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          _NavItem(
+              icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
+              label: 'Inicio',
+              index: 0,
+              selectedIndex: selectedIndex,
+              onTap: onDestinationSelected),
+          _NavItem(
+              icon: Icons.library_music_outlined,
+              activeIcon: Icons.library_music_rounded,
+              label: 'Música',
+              index: 1,
+              selectedIndex: selectedIndex,
+              onTap: onDestinationSelected),
+          _NavItem(
+              icon: Icons.event_outlined,
+              activeIcon: Icons.event_rounded,
+              label: 'Eventos',
+              index: 2,
+              selectedIndex: selectedIndex,
+              onTap: onDestinationSelected,
+              badge: eventosNuevos),
+          _NavItem(
+              icon: Icons.photo_library_outlined,
+              activeIcon: Icons.photo_library_rounded,
+              label: 'Recuerdos',
+              index: 3,
+              selectedIndex: selectedIndex,
+              onTap: onDestinationSelected),
+          _NavItem(
+              icon: Icons.person_outline,
+              activeIcon: Icons.person_rounded,
+              label: 'Perfil',
+              index: 4,
+              selectedIndex: selectedIndex,
+              onTap: onDestinationSelected),
+        ],
       ),
     );
   }
@@ -65,48 +99,73 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSelected = index == selectedIndex;
-    return GestureDetector(
-      onTap: () => onTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: Sp.md, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.granate : Colors.transparent,
-          borderRadius: Rad.rPill,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
-                  color: isSelected ? AppColors.dorado : AppColors.dorado.withOpacity(0.5),
-                  size: 24,
-                ),
-                if (badge > 0)
-                  Positioned(
-                    top: -4, right: -6,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                      child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                    ),
+    
+    // Expanded asegura que los 5 botones se repartan el espacio 
+    // equitativamente. ¡Adiós al bug del botón desaparecido!
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTap(index),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.granate : Colors.transparent,
+            borderRadius: Rad.rPill,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    isSelected ? activeIcon : icon,
+                    color: isSelected
+                        ? AppColors.dorado
+                        : AppColors.dorado.withOpacity(0.5),
+                    size: 24,
                   ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: AppType.labelXs.copyWith(
-                color: isSelected ? AppColors.dorado : AppColors.dorado.withOpacity(0.5),
-                letterSpacing: 0.5,
-                fontSize: 9,
+                  if (badge > 0)
+                    Positioned(
+                      top: -4,
+                      right: -6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                            color: Colors.red, shape: BoxShape.circle),
+                        child: Text(
+                          '$badge',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ),
-          ],
+              // El texto solo aparece si está seleccionado para mantenerlo limpio
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                child: isSelected
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          label,
+                          style: AppType.labelXs.copyWith(
+                            color: AppColors.dorado,
+                            letterSpacing: 0.3,
+                            fontSize: 9,
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
         ),
       ),
     );
