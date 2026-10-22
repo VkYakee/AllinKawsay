@@ -144,9 +144,11 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
           key: ValueKey('cif-${identityHashCode(widget.estrofa)}-$j-${es7 ? 7 : 6}'),
           initialValue: valor,
           onChanged: (v) {
+            // Guardamos el valor SIN llamar al onCelda inmediatamente.
+            // Así evitamos que el widget padre se reconstruya y pierda el foco.
             if (es7) { widget.estrofa.columnas[j].nota7 = v; } else { widget.estrofa.columnas[j].nota6 = v; }
-            widget.onCelda();
           },
+          onFieldSubmitted: (_) => widget.onCelda(), // Solo avisamos al terminar
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
