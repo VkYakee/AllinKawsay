@@ -9,7 +9,7 @@ import '../models/recuerdo.dart';
 import '../services/permisos_service.dart';
 import '../services/recuerdo_service.dart';
 import '../services/storage_service.dart';
-import '../theme/colors.dart'; // <-- IMPORT AGREGADO
+import '../theme/colors.dart';
 import '../widgets/recuerdos/recuerdo_form_media.dart';
 
 class AgregarRecuerdoScreen extends StatefulWidget {
@@ -56,6 +56,34 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
     final res = await FilePicker.platform.pickFiles(type: FileType.video);
     if (res != null && res.files.single.path != null) {
       setState(() => _videosNuevos.add(File(res.files.single.path!)));
+    }
+  }
+
+  // LÓGICA PARA IMPORTAR DESDE DRIVE/PHOTOS
+  Future<void> _importarDesdeNube() async {
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.media, // Permite tanto imágenes como videos
+      );
+
+      if (res != null && res.files.isNotEmpty) {
+        setState(() {
+          for (var file in res.files) {
+            if (file.path == null) continue;
+            final ext = file.extension?.toLowerCase() ?? '';
+            if (['jpg', 'jpeg', 'png', 'webp', 'heic'].contains(ext)) {
+              _fotosNuevas.add(File(file.path!));
+            } else if (['mp4', 'mov', 'webm'].contains(ext)) {
+              _videosNuevos.add(File(file.path!));
+            }
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al importar: $e')));
+      }
     }
   }
 
@@ -118,6 +146,7 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
                   RecuerdoFormMedia(
                     urlsFotos: _fotosUrls, urlsVideos: _videosUrls, fotosNuevas: _fotosNuevas, videosNuevos: _videosNuevos,
                     onAgregarFoto: _agregarFoto, onAgregarVideo: _agregarVideo,
+                    onImportarNube: _importarDesdeNube, // <-- AÑADIDO
                     onEliminarFoto: (i, esNueva) => setState(() => esNueva ? _fotosNuevas.removeAt(i) : _fotosUrls.removeAt(i)),
                     onEliminarVideo: (i, esNuevo) => setState(() => esNuevo ? _videosNuevos.removeAt(i) : _videosUrls.removeAt(i)),
                   ),
