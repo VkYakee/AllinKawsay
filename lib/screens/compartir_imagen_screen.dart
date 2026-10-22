@@ -1,7 +1,9 @@
+// lib/screens/compartir_imagen_screen.dart
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import '../design/design.dart';
 import '../models/cancion.dart';
 import '../services/compartir_service.dart';
 import '../theme/colors.dart';
@@ -12,8 +14,7 @@ class CompartirImagenScreen extends StatefulWidget {
   const CompartirImagenScreen({super.key, required this.cancion});
 
   @override
-  State<CompartirImagenScreen> createState() =>
-      _CompartirImagenScreenState();
+  State<CompartirImagenScreen> createState() => _CompartirImagenScreenState();
 }
 
 class _CompartirImagenScreenState extends State<CompartirImagenScreen> {
@@ -24,45 +25,19 @@ class _CompartirImagenScreenState extends State<CompartirImagenScreen> {
     setState(() => _compartiendo = true);
     try {
       await Future.delayed(const Duration(milliseconds: 200));
+      final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('No se pudo capturar');
+      
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('Error al generar PNG');
 
-      final boundary = _repaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-      if (boundary == null) {
-        throw Exception('No se pudo capturar la imagen');
-      }
-
-      final size = boundary.size;
-      if (size.width.isInfinite ||
-          size.height.isInfinite ||
-          size.width <= 0 ||
-          size.height <= 0) {
-        throw Exception('Tamaño de imagen inválido');
-      }
-
-      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
-      final ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) {
-        throw Exception('No se pudo generar el PNG');
-      }
-
-      final Uint8List bytes = byteData.buffer.asUint8List();
-      final nombre =
-          'allin_kawsay_${widget.cancion.titulo.replaceAll(" ", "_")}.png';
-
-      await CompartirService.compartirImagen(bytes, nombre);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Listo para compartir!')),
-        );
-      }
+      final bytes = byteData.buffer.asUint8List();
+      await CompartirService.compartirImagen(bytes, 'allin_kawsay_${widget.cancion.titulo.replaceAll(" ", "_")}.png');
+      
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Imagen lista para compartir')));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _compartiendo = false);
     }
@@ -70,52 +45,32 @@ class _CompartirImagenScreenState extends State<CompartirImagenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('COMPARTIR IMAGEN')),
+    return AppScaffold(
+      title: 'Compartir Imagen',
+      actions: [
+        IconButton(icon: const Icon(Icons.share), onPressed: _compartiendo ? null : _compartir),
+      ],
       body: Column(
         children: [
-          // Info
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.granate.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.granate.withOpacity(0.2)),
-              ),
+            padding: const EdgeInsets.all(Sp.lg),
+            child: AppCard(
+              color: AppColors.granate.withOpacity(0.05),
+              padding: const EdgeInsets.all(Sp.md),
               child: Row(
                 children: [
-                  const Icon(Icons.tips_and_updates_outlined,
-                      size: 16, color: AppColors.granate),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Se generará una imagen con el logo, título, '
-                      'numerofonía y letra para compartir.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.75),
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
+                  const Icon(Icons.tips_and_updates, color: AppColors.granate, size: 20),
+                  const SizedBox(width: Sp.sm),
+                  Expanded(child: Text('Desliza para ver la vista previa. Toca el botón para compartir.', style: AppType.captionXs)),
                 ],
               ),
             ),
           ),
-          // Preview
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(Sp.lg),
               child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 2.0,
+                minScale: 0.5, maxScale: 2.0,
                 child: Center(
                   child: RepaintBoundary(
                     key: _repaintKey,
@@ -123,8 +78,7 @@ class _CompartirImagenScreenState extends State<CompartirImagenScreen> {
                       width: 800,
                       child: Material(
                         color: AppColors.blanco,
-                        child: TarjetaCompartible(
-                            cancion: widget.cancion),
+                        child: TarjetaCompartible(cancion: widget.cancion),
                       ),
                     ),
                   ),
@@ -132,48 +86,20 @@ class _CompartirImagenScreenState extends State<CompartirImagenScreen> {
               ),
             ),
           ),
-          // Botón
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(Sp.lg),
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 12,
-                  offset: const Offset(0, -4),
-                ),
-              ],
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: SafeArea(
               top: false,
-              child: SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _compartiendo ? null : _compartir,
-                  icon: _compartiendo
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: AppColors.dorado,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Icon(Icons.share),
-                  label: Text(
-                    _compartiendo
-                        ? 'GENERANDO...'
-                        : 'COMPARTIR IMAGEN',
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2),
-                  ),
-                ),
+              child: AppButton(
+                label: _compartiendo ? 'GENERANDO...' : 'COMPARTIR IMAGEN',
+                icon: Icons.share,
+                fullWidth: true,
+                loading: _compartiendo,
+                onPressed: _compartir,
               ),
             ),
           ),
