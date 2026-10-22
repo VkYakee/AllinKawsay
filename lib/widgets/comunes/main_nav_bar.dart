@@ -17,61 +17,71 @@ class MainNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos un Container con márgenes para que "flote" y no toque los bordes
+    // Al no tener margen, se pega al borde de abajo. 
+    // Redondeamos solo las esquinas de arriba para un look moderno.
     return Container(
-      margin: const EdgeInsets.fromLTRB(Sp.lg, 0, Sp.lg, Sp.xl),
-      padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: Sp.sm),
       decoration: BoxDecoration(
-        color: AppColors.negro.withOpacity(0.95),
-        borderRadius: Rad.rPill, // Bordes totalmente curvos (forma de píldora)
+        color: AppColors.negro.withOpacity(0.98),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
           ),
         ],
-        border: Border.all(color: AppColors.dorado.withOpacity(0.2), width: 1.5),
+        border: Border(
+          top: BorderSide(color: AppColors.dorado.withOpacity(0.2), width: 1.5),
+        ),
       ),
-      child: Row(
-        children: [
-          _NavItem(
-              icon: Icons.home_outlined,
-              activeIcon: Icons.home_rounded,
-              label: 'Inicio',
-              index: 0,
-              selectedIndex: selectedIndex,
-              onTap: onDestinationSelected),
-          _NavItem(
-              icon: Icons.library_music_outlined,
-              activeIcon: Icons.library_music_rounded,
-              label: 'Música',
-              index: 1,
-              selectedIndex: selectedIndex,
-              onTap: onDestinationSelected),
-          _NavItem(
-              icon: Icons.event_outlined,
-              activeIcon: Icons.event_rounded,
-              label: 'Eventos',
-              index: 2,
-              selectedIndex: selectedIndex,
-              onTap: onDestinationSelected,
-              badge: eventosNuevos),
-          _NavItem(
-              icon: Icons.photo_library_outlined,
-              activeIcon: Icons.photo_library_rounded,
-              label: 'Recuerdos',
-              index: 3,
-              selectedIndex: selectedIndex,
-              onTap: onDestinationSelected),
-          _NavItem(
-              icon: Icons.person_outline,
-              activeIcon: Icons.person_rounded,
-              label: 'Perfil',
-              index: 4,
-              selectedIndex: selectedIndex,
-              onTap: onDestinationSelected),
-        ],
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: Sp.sm),
+          child: Row(
+            children: [
+              _NavItem(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home_rounded,
+                  label: 'Inicio',
+                  index: 0,
+                  selectedIndex: selectedIndex,
+                  onTap: onDestinationSelected),
+              _NavItem(
+                  icon: Icons.library_music_outlined,
+                  activeIcon: Icons.library_music_rounded,
+                  label: 'Música',
+                  index: 1,
+                  selectedIndex: selectedIndex,
+                  onTap: onDestinationSelected),
+              _NavItem(
+                  icon: Icons.event_outlined,
+                  activeIcon: Icons.event_rounded,
+                  label: 'Eventos',
+                  index: 2,
+                  selectedIndex: selectedIndex,
+                  onTap: onDestinationSelected,
+                  badge: eventosNuevos),
+              _NavItem(
+                  icon: Icons.photo_library_outlined,
+                  activeIcon: Icons.photo_library_rounded,
+                  label: 'Recuerdos',
+                  index: 3,
+                  selectedIndex: selectedIndex,
+                  onTap: onDestinationSelected),
+              _NavItem(
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person_rounded,
+                  label: 'Perfil',
+                  index: 4,
+                  selectedIndex: selectedIndex,
+                  onTap: onDestinationSelected),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -100,8 +110,6 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSelected = index == selectedIndex;
     
-    // Expanded asegura que los 5 botones se repartan el espacio 
-    // equitativamente. ¡Adiós al bug del botón desaparecido!
     return Expanded(
       child: GestureDetector(
         onTap: () => onTap(index),
@@ -146,7 +154,6 @@ class _NavItem extends StatelessWidget {
                     ),
                 ],
               ),
-              // El texto solo aparece si está seleccionado para mantenerlo limpio
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOut,
