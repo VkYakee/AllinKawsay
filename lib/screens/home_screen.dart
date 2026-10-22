@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
+      extendBody: true, // <-- Magia: permite que el scroll pase por detrás de la barra
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: ValueListenableBuilder<int>(
         valueListenable: NovedadesService.eventosNuevos,
