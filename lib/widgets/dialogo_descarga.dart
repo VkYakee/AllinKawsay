@@ -1,14 +1,11 @@
+// lib/widgets/dialogo_descarga.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../design/design.dart';
 import '../services/descarga_progreso_service.dart';
 import '../theme/colors.dart';
 
-/// Barra flotante de descarga. NO bloquea la app.
-/// Se muestra en la parte inferior de la pantalla y desaparece sola
-/// cuando termina.
 class DialogoDescarga {
-  /// Inicia una descarga con progreso y devuelve el nombre del archivo
-  /// guardado (o null si falló). La UI no se bloquea.
   static Future<String?> mostrar(
     BuildContext context, {
     required String url,
@@ -17,10 +14,7 @@ class DialogoDescarga {
     String titulo = 'Descargando...',
   }) async {
     final overlay = Overlay.maybeOf(context);
-    if (overlay == null) {
-      // Fallback: sin overlay, descarga directa sin UI
-      return DescargaProgresoService.descargar(url, nombre, mime);
-    }
+    if (overlay == null) return DescargaProgresoService.descargar(url, nombre, mime);
 
     final completer = Completer<String?>();
     late OverlayEntry entry;
@@ -47,10 +41,7 @@ class DialogoDescarga {
 }
 
 class _BarraFlotanteDescarga extends StatefulWidget {
-  final String url;
-  final String nombre;
-  final String mime;
-  final String titulo;
+  final String url, nombre, mime, titulo;
   final void Function(String?) onFinish;
 
   const _BarraFlotanteDescarga({
@@ -62,14 +53,11 @@ class _BarraFlotanteDescarga extends StatefulWidget {
   });
 
   @override
-  State<_BarraFlotanteDescarga> createState() =>
-      _BarraFlotanteDescargaState();
+  State<_BarraFlotanteDescarga> createState() => _BarraFlotanteDescargaState();
 }
 
 class _BarraFlotanteDescargaState extends State<_BarraFlotanteDescarga> {
   double _progreso = 0;
-  int _recibidos = 0;
-  int _totales = 0;
   bool _terminado = false;
   bool _error = false;
 
@@ -81,149 +69,58 @@ class _BarraFlotanteDescargaState extends State<_BarraFlotanteDescarga> {
 
   Future<void> _iniciar() async {
     final resultado = await DescargaProgresoService.descargar(
-      widget.url,
-      widget.nombre,
-      widget.mime,
-      onProgreso: (p, r, t) {
-        if (!mounted) return;
-        setState(() {
-          _progreso = p;
-          _recibidos = r;
-          _totales = t;
-        });
-      },
+      widget.url, widget.nombre, widget.mime,
+      onProgreso: (p, r, t) { if (mounted) setState(() => _progreso = p); },
     );
 
     if (!mounted) return;
+    setState(() {
+      _error = resultado == null;
+      _terminado = true;
+      if (resultado != null) _progreso = 1.0;
+    });
 
-    if (resultado == null) {
-      setState(() {
-        _error = true;
-        _terminado = true;
-      });
-    } else {
-      setState(() {
-        _terminado = true;
-        _progreso = 1.0;
-      });
-    }
-
-    await Future.delayed(const Duration(milliseconds: 1800));
+    await Future.delayed(const Duration(milliseconds: 1500));
     if (mounted) widget.onFinish(resultado);
   }
 
   @override
   Widget build(BuildContext context) {
-    final icono = _error
-        ? Icons.error_outline
-        : _terminado
-            ? Icons.check_circle
-            : Icons.download;
-
-    final titulo = _error
-        ? 'Error al descargar'
-        : _terminado
-            ? '¡Descarga completa!'
-            : widget.titulo;
-
     return Positioned(
-      left: 12,
-      right: 12,
-      bottom: 12,
+      left: Sp.lg, right: Sp.lg, bottom: Sp.xxl,
       child: Material(
         color: Colors.transparent,
         child: SafeArea(
-          top: false,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: _error
-                  ? LinearGradient(colors: [
-                      Colors.red.shade900,
-                      Colors.red.shade700,
-                    ])
-                  : const LinearGradient(
-                      colors: [AppColors.negro, Color(0xFF2A2A2A)],
-                    ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _error
-                    ? Colors.red.shade400.withOpacity(0.6)
-                    : AppColors.dorado.withOpacity(0.4),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
+          child: AppCard(
+            padding: const EdgeInsets.all(Sp.md),
+            border: Border.all(color: _error ? Colors.red.withOpacity(0.5) : AppColors.dorado.withOpacity(0.5)),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(Sp.sm),
                   decoration: BoxDecoration(
-                    color: AppColors.dorado.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    color: _error ? Colors.red.withOpacity(0.1) : AppColors.granate.withOpacity(0.1),
+                    borderRadius: Rad.rMd,
                   ),
-                  child: Icon(icono,
-                      color: AppColors.dorado, size: 20),
+                  child: Icon(_error ? Icons.error_outline : (_terminado ? Icons.check_circle : Icons.download), color: _error ? Colors.red : AppColors.granate, size: 20),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: Sp.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        titulo,
-                        style: const TextStyle(
-                          color: AppColors.dorado,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.nombre,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(_error ? 'Error al descargar' : (_terminado ? '¡Completado!' : widget.titulo), style: AppType.subtitle.copyWith(color: _error ? Colors.red : AppColors.granate)),
+                      Text(widget.nombre, style: AppType.captionXs.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)), maxLines: 1, overflow: TextOverflow.ellipsis),
                       if (!_error && !_terminado) ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: Sp.sm),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: _progreso > 0 ? _progreso : null,
-                            minHeight: 4,
-                            backgroundColor:
-                                Colors.white.withOpacity(0.15),
-                            valueColor: const AlwaysStoppedAnimation(
-                                AppColors.dorado),
-                          ),
+                          borderRadius: Rad.rPill,
+                          child: LinearProgressIndicator(value: _progreso > 0 ? _progreso : null, minHeight: 4, backgroundColor: AppColors.granate.withOpacity(0.1), valueColor: const AlwaysStoppedAnimation(AppColors.granate)),
                         ),
                       ],
                     ],
                   ),
                 ),
-                if (!_error && !_terminado && _totales > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Text(
-                      '${(_progreso * 100).toStringAsFixed(0)}%',
-                      style: const TextStyle(
-                        color: AppColors.dorado,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
