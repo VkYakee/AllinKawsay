@@ -1,67 +1,22 @@
 // lib/design/components/app_scaffold.dart
-//
-// Scaffold unificado de la nueva UI.
-//
-// Uso simple:
-//   AppScaffold(
-//     title: 'Cancionero',
-//     subtitle: '32 canciones',
-//     body: ListView(...),
-//   )
-//
-// Uso con acciones:
-//   AppScaffold(
-//     title: 'Eventos',
-//     actions: [IconButton(icon: Icon(Icons.add), onPressed: ...)],
-//     body: StreamBuilder(...),
-//   )
-//
-// Uso con watermark (fondo con logo circular sutil):
-//   AppScaffold(title: '...', watermark: true, body: ...)
-//
-// Uso con pull-to-refresh:
-//   AppScaffold(title: '...', onRefresh: _cargar, body: ...)
-
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../theme/colors.dart';
 import '../../widgets/watermark_overlay.dart';
 import '../tokens.dart';
+import '../typography.dart';
 
 class AppScaffold extends StatelessWidget {
-  /// Título grande. Si es null, no se muestra la appbar (útil para
-  /// pantallas full-screen tipo login o presentación).
   final String? title;
-
-  /// Texto secundario debajo del título (conteo, descripción corta).
   final String? subtitle;
-
-  /// Widgets a la derecha de la appbar (íconos, menú).
   final List<Widget>? actions;
-
-  /// Contenido principal.
   final Widget body;
-
-  /// FAB opcional.
   final Widget? floatingActionButton;
-
-  /// Bottom nav opcional.
   final Widget? bottomNavigationBar;
-
-  /// Marca de agua (logo circular sutil al centro).
   final bool watermark;
-
-  /// Si no es null, envuelve el body en RefreshIndicator.
   final Future<void> Function()? onRefresh;
-
-  /// Padding interno del body. Por defecto 0 (las listas manejan su
-  /// propio padding con sus items).
   final EdgeInsets bodyPadding;
-
-  /// Respeta el safe area (notch, barra de gestos). Por defecto true.
   final bool safeArea;
-
-  /// Si true, el body arranca detrás de la appbar (para headers
-  /// con imagen de fondo). Por defecto false.
   final bool extendBodyBehindAppBar;
 
   const AppScaffold({
@@ -81,6 +36,7 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     Widget content = Padding(padding: bodyPadding, child: body);
 
     if (watermark) {
@@ -96,35 +52,111 @@ class AppScaffold extends StatelessWidget {
     }
 
     if (safeArea) {
-      content = SafeArea(top: title == null, bottom: false, child: content);
+      content = SafeArea(
+        top: extendBodyBehindAppBar ? false : (title == null),
+        bottom: false,
+        child: content,
+      );
     }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: extendBodyBehindAppBar,
-      appBar: title == null ? null : _buildAppBar(context),
-      body: content,
+      appBar: title == null ? null : _buildFrostedAppBar(context, isDark),
+      body: Stack(
+        children: [
+          // ── Luces ambientales de fondo para que el efecto Cristal resalte ──
+          Positioned(
+            top: -90,
+            right: -70,
+            child: IgnorePointer(
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.granate.withOpacity(isDark ? 0.28 : 0.12),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 80,
+            left: -90,
+            child: IgnorePointer(
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.dorado.withOpacity(isDark ? 0.14 : 0.10),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // ── Contenido real ──
+          Positioned.fill(child: content),
+        ],
+      ),
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: bottomNavigationBar,
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildFrostedAppBar(BuildContext context, bool isDark) {
     final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
 
     return AppBar(
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: GlassBlur.medium,
+            sigmaY: GlassBlur.medium,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: isDark
+                    ? [
+                        const Color(0xFF1A090D).withOpacity(0.82),
+                        const Color(0xFF120609).withOpacity(0.68),
+                      ]
+                    : [
+                        AppColors.granateOscuro.withOpacity(0.92),
+                        AppColors.granate.withOpacity(0.85),
+                      ],
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.dorado.withOpacity(0.18),
+                  width: 0.8,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       title: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title!,
-            style: const TextStyle(
+            style: AppType.h3.copyWith(
               color: AppColors.dorado,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2.5,
-              height: 1.1,
+              letterSpacing: -0.3,
             ),
           ),
           if (hasSubtitle)
@@ -132,11 +164,8 @@ class AppScaffold extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2),
               child: Text(
                 subtitle!,
-                style: TextStyle(
-                  color: AppColors.dorado.withOpacity(0.65),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.8,
+                style: AppType.captionXs.copyWith(
+                  color: AppColors.dorado.withOpacity(0.72),
                 ),
               ),
             ),
@@ -144,7 +173,8 @@ class AppScaffold extends StatelessWidget {
       ),
       actions: [
         ...?actions,
-        if (actions != null && actions!.isNotEmpty) const SizedBox(width: Sp.sm),
+        if (actions != null && actions!.isNotEmpty)
+          const SizedBox(width: Sp.sm),
       ],
       centerTitle: false,
       elevation: 0,
