@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/novedades_service.dart';
 import '../widgets/comunes/main_nav_bar.dart';
+import '../widgets/comunes/mini_player.dart'; // <-- NUEVO
 import '../widgets/onboarding/permisos_dialog.dart';
 import 'cancionero_screen.dart';
 import 'eventos_screen.dart';
@@ -31,19 +32,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _verificarOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    
-    // Verificamos si es la primera vez
     final tutorialVisto = prefs.getBool('tutorial_visto') ?? false;
     final permisosVistos = prefs.getBool('permisos_vistos') ?? false;
 
     if (!tutorialVisto && mounted) {
-      // 1. Primero mostramos el tutorial
       await Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorialScreen()));
       await prefs.setBool('tutorial_visto', true);
     }
 
     if (!permisosVistos && mounted) {
-      // 2. Luego los permisos
       await PermisosDialog.mostrar(context);
       await prefs.setBool('permisos_vistos', true);
     }
@@ -62,15 +59,21 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: ValueListenableBuilder<int>(
-        valueListenable: NovedadesService.eventosNuevos,
-        builder: (context, count, _) {
-          return MainNavBar(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            eventosNuevos: count,
-          );
-        },
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayer(), // <-- SE MUESTRA AQUÍ
+          ValueListenableBuilder<int>(
+            valueListenable: NovedadesService.eventosNuevos,
+            builder: (context, count, _) {
+              return MainNavBar(
+                selectedIndex: _index,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                eventosNuevos: count,
+              );
+            },
+          ),
+        ],
       ),
     );
   }
