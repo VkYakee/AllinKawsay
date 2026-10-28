@@ -28,20 +28,20 @@ class TarjetaCancion extends StatelessWidget {
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final sonando = estado.cancionId == cancion.id;
-    final reproduciendo = sonando && estado.playing;
-    final cargando = sonando && estado.cargando;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Sp.lg, vertical: Sp.xs),
       child: AppCard(
         padding: const EdgeInsets.all(Sp.md),
         onTap: onTap,
-        border: sonando ? Border.all(color: AppColors.dorado.withOpacity(0.5), width: 1.5) : null,
+        border: sonando 
+            ? Border.all(color: AppColors.dorado.withOpacity(0.6), width: 1.5) 
+            : Border.all(color: AppColors.dorado.withOpacity(0.1), width: 1),
         child: Row(
           children: [
             TarjetaCancionPlay(
-              reproduciendo: reproduciendo,
-              cargando: cargando,
+              reproduciendo: sonando && estado.playing,
+              cargando: sonando && estado.cargando,
               onTap: onTogglePlay,
             ),
             const SizedBox(width: Sp.md),
@@ -62,14 +62,14 @@ class TarjetaCancion extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: Sp.sm),
                   Row(
                     children: [
-                      AppBadge(label: '${cancion.reproducciones}', icon: Icons.play_arrow_rounded, variant: AppBadgeVariant.granate),
                       if (cancion.tieneNumerofonia) ...[
-                        const SizedBox(width: 4),
                         const AppBadge(label: 'Partitura', icon: Icons.grid_on, variant: AppBadgeVariant.gold),
+                        const SizedBox(width: 4),
                       ],
+                      AppBadge(label: '${cancion.reproducciones}', icon: Icons.play_arrow_rounded, variant: AppBadgeVariant.neutral),
                     ],
                   ),
                 ],
@@ -78,12 +78,10 @@ class TarjetaCancion extends StatelessWidget {
             IconButton(
               icon: Icon(
                 esFavorito ? Icons.favorite : Icons.favorite_border,
-                color: esFavorito ? AppColors.granate : onSurface.withOpacity(0.3),
-                size: 20,
+                color: esFavorito ? AppColors.granate : onSurface.withOpacity(0.2),
+                size: 22,
               ),
               onPressed: onToggleFavorito,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
             ),
           ],
         ),
