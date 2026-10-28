@@ -25,21 +25,24 @@ class CancioneroHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-          Sp.xl, Sp.lg, Sp.xl, Sp.xl),
+      padding: const EdgeInsets.fromLTRB(Sp.xl, Sp.lg, Sp.xl, Sp.xl),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.granateOscuro,
-            AppColors.granate,
-          ],
+          colors: [AppColors.granateOscuro, AppColors.granate],
         ),
         borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+          bottomLeft: Radius.circular(36),
+          bottomRight: Radius.circular(36),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.granate.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: SafeArea(
         bottom: false,
@@ -54,38 +57,18 @@ class CancioneroHero extends StatelessWidget {
                     children: [
                       Text(
                         'Cancionero',
-                        style: AppType.h1.copyWith(
-                          color: AppColors.dorado,
-                          fontSize: 26,
-                        ),
+                        style: AppType.h1.copyWith(color: AppColors.dorado, fontSize: 28, letterSpacing: -0.5),
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: AppColors.dorado.withOpacity(0.6),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$totalCanciones canciones',
-                            style: AppType.caption.copyWith(
-                              color: AppColors.dorado.withOpacity(0.7),
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '$totalCanciones canciones',
+                        style: AppType.caption.copyWith(color: AppColors.dorado.withOpacity(0.7)),
                       ),
                     ],
                   ),
                 ),
                 _BotonRedondo(
-                  icon: modoIndice
-                      ? Icons.grid_view_rounded
-                      : Icons.view_list_rounded,
+                  icon: modoIndice ? Icons.grid_view_rounded : Icons.view_list_rounded,
                   onTap: onToggleVista,
                 ),
                 const SizedBox(width: Sp.sm),
@@ -101,20 +84,14 @@ class CancioneroHero extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: onPracticar,
-                icon: const Icon(Icons.school, size: 16),
-                label: const Text('Practicar con zampoña'),
+                icon: const Icon(Icons.school, size: 18),
+                label: const Text('PRACTICAR CON ZAMPOÑA'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.dorado,
-                  side: BorderSide(
-                    color: AppColors.dorado.withOpacity(0.5),
-                    width: 1.2,
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: AppColors.dorado.withOpacity(0.6), width: 1.5),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: Rad.rMd),
-                  textStyle: AppType.label.copyWith(
-                    color: AppColors.dorado,
-                    letterSpacing: 0.8,
-                  ),
+                  textStyle: AppType.label.copyWith(color: AppColors.dorado),
                 ),
               ),
             ),
@@ -130,11 +107,7 @@ class _BotonRedondo extends StatelessWidget {
   final VoidCallback onTap;
   final int? badge;
 
-  const _BotonRedondo({
-    required this.icon,
-    required this.onTap,
-    this.badge,
-  });
+  const _BotonRedondo({required this.icon, required this.onTap, this.badge});
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +121,7 @@ class _BotonRedondo extends StatelessWidget {
             customBorder: const CircleBorder(),
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.all(Sp.sm + 2),
+              padding: const EdgeInsets.all(Sp.md),
               child: Icon(icon, color: AppColors.dorado, size: 20),
             ),
           ),
@@ -168,11 +141,7 @@ class _BotonRedondo extends StatelessWidget {
               child: Text(
                 '$badge',
                 textAlign: TextAlign.center,
-                style: AppType.labelXs.copyWith(
-                  color: AppColors.granateOscuro,
-                  fontSize: 9,
-                  letterSpacing: 0,
-                ),
+                style: AppType.labelXs.copyWith(color: AppColors.granateOscuro, fontSize: 9),
               ),
             ),
           ),
