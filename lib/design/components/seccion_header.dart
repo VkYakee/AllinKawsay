@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/colors.dart';
 import '../tokens.dart';
+import '../typography.dart'; // <-- IMPORT AGREGADO
 
 class SeccionHeader extends StatelessWidget {
   final String title;
