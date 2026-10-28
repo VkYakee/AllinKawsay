@@ -1,12 +1,7 @@
 // lib/design/tokens.dart
-//
-// Sistema de diseño: espaciado, radios, duraciones, sombras.
-// Regla: TODO widget nuevo debe usar estas constantes.
-// Los widgets viejos se migran cuando se toquen (no antes).
-
 import 'package:flutter/material.dart';
 
-/// Espaciado. Se usa para padding, margin, SizedBox.
+/// Espaciado estándar del sistema.
 class Sp {
   static const double xs = 4;
   static const double sm = 8;
@@ -18,12 +13,12 @@ class Sp {
   static const double huge = 48;
 }
 
-/// Radios de bordes redondeados.
+/// Radios de bordes redondeados estilo iOS (Squircle).
 class Rad {
-  static const double sm = 10;
-  static const double md = 14;
-  static const double lg = 18;
-  static const double xl = 24;
+  static const double sm = 12;
+  static const double md = 16;
+  static const double lg = 22;
+  static const double xl = 28;
   static const double pill = 999;
 
   static BorderRadius get rSm => BorderRadius.circular(sm);
@@ -33,36 +28,46 @@ class Rad {
   static BorderRadius get rPill => BorderRadius.circular(pill);
 }
 
-/// Duraciones de animación.
-class Dur {
-  static const Duration fast = Duration(milliseconds: 150);
-  static const Duration normal = Duration(milliseconds: 250);
-  static const Duration slow = Duration(milliseconds: 400);
+/// Intensidades de desenfoque para efecto Glassmorphism (iOS).
+class GlassBlur {
+  static const double subtle = 12.0;
+  static const double medium = 22.0;
+  static const double heavy = 35.0;
 }
 
-/// Sombras sutiles.
+/// Duraciones de animación suaves.
+class Dur {
+  static const Duration fast = Duration(milliseconds: 140);
+  static const Duration normal = Duration(milliseconds: 260);
+  static const Duration slow = Duration(milliseconds: 420);
+}
+
+/// Sombras ambientales profundas y suaves estilo Apple.
 class Elev {
   static List<BoxShadow> get sm => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
+          color: Colors.black.withOpacity(0.07),
+          blurRadius: 16,
+          spreadRadius: -2,
+          offset: const Offset(0, 6),
         ),
       ];
 
   static List<BoxShadow> get md => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.08),
-          blurRadius: 16,
-          offset: const Offset(0, 4),
+          color: Colors.black.withOpacity(0.12),
+          blurRadius: 24,
+          spreadRadius: -4,
+          offset: const Offset(0, 10),
         ),
       ];
 
   static List<BoxShadow> get lg => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.12),
-          blurRadius: 24,
-          offset: const Offset(0, 8),
+          color: Colors.black.withOpacity(0.20),
+          blurRadius: 36,
+          spreadRadius: -6,
+          offset: const Offset(0, 16),
         ),
       ];
 }
