@@ -9,7 +9,7 @@ class ToolScaffold extends StatelessWidget {
   final VoidCallback onCerrar;
   final Widget body;
   final Widget? bottomBar;
-  final List<Widget>? actions; // <-- AGREGADO
+  final List<Widget>? actions;
 
   const ToolScaffold({
     super.key,
@@ -52,8 +52,12 @@ class ToolScaffold extends StatelessWidget {
             ),
             Expanded(child: body),
             if (bottomBar != null)
-              Padding(
-                padding: const EdgeInsets.all(Sp.sm),
+              Container(
+                padding: const EdgeInsets.all(Sp.md),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.8),
+                  border: Border(top: BorderSide(color: AppColors.dorado.withOpacity(0.15))),
+                ),
                 child: bottomBar!,
               ),
           ],
