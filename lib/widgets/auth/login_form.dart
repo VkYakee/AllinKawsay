@@ -76,7 +76,7 @@ class LoginForm extends StatelessWidget {
           const SizedBox(height: Sp.lg),
           SizedBox(
             width: double.infinity,
-            height: 54, // Más alto
+            height: 54,
             child: OutlinedButton.icon(
               onPressed: loading || loadingGoogle ? null : onGoogle,
               icon: loadingGoogle
@@ -86,7 +86,7 @@ class LoginForm extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.negro,
                 backgroundColor: Colors.white,
-                side: BorderSide(color: Colors.grey.shade300, width: 1.5), // Borde gris sutil
+                side: BorderSide(color: Colors.grey.shade300, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: Rad.rMd),
               ),
             ),
