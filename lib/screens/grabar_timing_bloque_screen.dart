@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
-import '../data/zampona_catalogo.dart';
 import '../design/design.dart';
 import '../models/bloque_audio.dart';
 import '../models/cancion.dart';
 import '../models/numerofonia.dart';
 import '../models/zampona_nota.dart';
+import '../services/player_service.dart';
 import '../theme/colors.dart';
 import '../widgets/visor_numerofonia.dart';
 import '../widgets/zampona/tool_scaffold.dart';
@@ -21,18 +21,15 @@ class GrabarTimingBloqueScreen extends StatefulWidget {
   final Cancion cancion;
   final BloqueAudio bloque;
 
-  const GrabarTimingBloqueScreen({
-    super.key,
-    required this.cancion,
-    required this.bloque,
-  });
+  const GrabarTimingBloqueScreen({super.key, required this.cancion, required this.bloque});
 
   @override
   State<GrabarTimingBloqueScreen> createState() => _GrabarTimingBloqueScreenState();
 }
 
 class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
-  final _player = AudioPlayer();
+  // ✅ USAMOS EL REPRODUCTOR GLOBAL
+  final _player = PlayerService().player;
   late EstrofaNumerofonia _estrofa;
   bool _cargando = true;
   String _errorMsg = '';
@@ -54,7 +51,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
 
     final estrofas = widget.cancion.estrofas.where((e) => !e.vacia).toList();
     if (widget.bloque.estrofaRef < 0 || widget.bloque.estrofaRef >= estrofas.length) {
-      _errorMsg = 'Este bloque no tiene una estrofa asignada.\nVuelve al setlist y edita el bloque.';
+      _errorMsg = 'Este bloque no tiene una estrofa asignada. Vuelve al setlist y edita el bloque.';
       _estrofa = EstrofaNumerofonia();
       _cargando = false;
       return;
@@ -75,7 +72,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
   void dispose() {
     _subPos?.cancel();
     _subDur?.cancel();
-    _player.dispose();
+    _player.pause();
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -83,19 +80,24 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
 
   Future<void> _cargarAudio() async {
     try {
+      await _player.stop();
       final tag = MediaItem(id: 'timing_${widget.cancion.id}_${widget.bloque.inicioMs}', title: 'Timing: ${widget.bloque.label}', artist: 'Allin Kawsay');
-      await _player.setAudioSource(AudioSource.uri(Uri.parse(widget.cancion.audioUrl), tag: tag));
       
+      // ⏱️ TIMEOUT DE 15 SEGUNDOS
+      await _player.setAudioSource(
+        AudioSource.uri(Uri.parse(widget.cancion.audioUrl), tag: tag),
+      ).timeout(const Duration(seconds: 15));
+
       if (widget.bloque.tieneTimingA) {
         _toquesMs.addAll(widget.bloque.timingsMs);
         _indexEsperada = _toquesMs.length;
       }
-      
+
       await _player.seek(Duration(milliseconds: widget.bloque.inicioMs));
-      
+
       _subPos = _player.positionStream.listen((p) { if (mounted) setState(() => _pos = p); });
       _subDur = _player.durationStream.listen((d) { if (mounted) setState(() => _duracion = d); });
-      
+
       if (mounted) setState(() => _cargando = false);
     } catch (e) {
       if (mounted) setState(() { _errorMsg = 'Error al cargar el audio:\n$e'; _cargando = false; });
