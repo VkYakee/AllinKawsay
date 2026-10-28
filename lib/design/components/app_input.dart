@@ -1,4 +1,5 @@
 // lib/design/components/app_input.dart
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/colors.dart';
@@ -6,7 +7,7 @@ import '../tokens.dart';
 
 class AppInput extends StatelessWidget {
   final TextEditingController? controller;
-  final FocusNode? focusNode; // <-- AGREGADO
+  final FocusNode? focusNode;
   final String? label;
   final String? hint;
   final IconData? prefixIcon;
@@ -50,64 +51,89 @@ class AppInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final accentColor = isDark ? AppColors.dorado : AppColors.granate;
 
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode, // <-- AGREGADO
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      onChanged: onChanged,
-      maxLines: obscureText ? 1 : maxLines,
-      minLines: minLines,
-      maxLength: maxLength,
-      enabled: enabled,
-      inputFormatters: inputFormatters,
-      autofocus: autofocus,
-      textCapitalization: textCapitalization,
-      textInputAction: textInputAction,
-      onFieldSubmitted: onFieldSubmitted,
-      style: TextStyle(color: onSurface, fontSize: 15),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: prefixIcon == null
-            ? null
-            : Icon(prefixIcon, color: AppColors.granate, size: 20),
-        suffixIcon: suffix,
-        counterText: '',
-        filled: true,
-        fillColor: AppColors.cardColor(context),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: Sp.lg,
-          vertical: Sp.lg,
+    return ClipRRect(
+      borderRadius: Rad.rMd,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: GlassBlur.subtle,
+          sigmaY: GlassBlur.subtle,
         ),
-        labelStyle: const TextStyle(color: AppColors.granate),
-        floatingLabelStyle: const TextStyle(
-          color: AppColors.granate,
-          fontWeight: FontWeight.bold,
-        ),
-        hintStyle: TextStyle(color: onSurface.withOpacity(0.4)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: Rad.rMd,
-          borderSide: const BorderSide(color: AppColors.dorado, width: 2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: Rad.rMd,
-          borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.5)),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: Rad.rMd,
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: Rad.rMd,
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: Rad.rMd,
-          borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.2)),
+        child: TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          validator: validator,
+          onChanged: onChanged,
+          maxLines: obscureText ? 1 : maxLines,
+          minLines: minLines,
+          maxLength: maxLength,
+          enabled: enabled,
+          inputFormatters: inputFormatters,
+          autofocus: autofocus,
+          textCapitalization: textCapitalization,
+          textInputAction: textInputAction,
+          onFieldSubmitted: onFieldSubmitted,
+          style: TextStyle(
+            color: onSurface,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            prefixIcon: prefixIcon == null
+                ? null
+                : Icon(prefixIcon, color: accentColor, size: 20),
+            suffixIcon: suffix,
+            counterText: '',
+            filled: true,
+            fillColor: isDark
+                ? Colors.white.withOpacity(0.07)
+                : Colors.white.withOpacity(0.75),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: Sp.lg,
+              vertical: Sp.lg,
+            ),
+            labelStyle: TextStyle(
+              color: onSurface.withOpacity(0.65),
+              fontWeight: FontWeight.w500,
+            ),
+            floatingLabelStyle: TextStyle(
+              color: accentColor,
+              fontWeight: FontWeight.w700,
+            ),
+            hintStyle: TextStyle(color: onSurface.withOpacity(0.38)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: Rad.rMd,
+              borderSide: const BorderSide(color: AppColors.dorado, width: 1.6),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: Rad.rMd,
+              borderSide: BorderSide(
+                color: isDark
+                    ? Colors.white.withOpacity(0.14)
+                    : AppColors.granate.withOpacity(0.15),
+                width: 1,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: Rad.rMd,
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1.4),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: Rad.rMd,
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1.8),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: Rad.rMd,
+              borderSide: BorderSide(color: onSurface.withOpacity(0.08)),
+            ),
+          ),
         ),
       ),
     );
