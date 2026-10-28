@@ -1,46 +1,62 @@
+// lib/theme/colors.dart
 import 'package:flutter/material.dart';
 
 class AppColors {
   // === PALETA PRINCIPAL DEL GRUPO ===
-  static const granate = Color(0xFF6E1423);
-  static const granateOscuro = Color(0xFF4A0D18);
-  static const granateClaro = Color(0xFF8B1F35);
-  static const dorado = Color(0xFFD4AF37);
-  static const doradoClaro = Color(0xFFE8C86A);
+  static const granate = Color(0xFF7A1628);
+  static const granateOscuro = Color(0xFF420A14);
+  static const granateClaro = Color(0xFF9E243B);
+  static const dorado = Color(0xFFD9B64E);
+  static const doradoClaro = Color(0xFFF0D78C);
   static const doradoOscuro = Color(0xFFA67C00);
-  static const negro = Color(0xFF1A1A1A);
+  static const negro = Color(0xFF121011);
   static const blanco = Color(0xFFFFFFFF);
-  static const grisClaro = Color(0xFFF5F5F5);
-  static const grisMedio = Color(0xFFBDBDBD);
-  static const grisOscuro = Color(0xFF424242);
+  static const grisClaro = Color(0xFFF2F2F7);
+  static const grisMedio = Color(0xFFAEAEB2);
+  static const grisOscuro = Color(0xFF3A3A3C);
 
-  // === MODO OSCURO ===
-  static const fondoOscuro = Color(0xFF0F0F0F);
-  static const fondoCardOscuro = Color(0xFF1A1A1A);
-  static const fondoCardOscuroElevado = Color(0xFF242424);
-  static const textoOscuroClaro = Color(0xFFE8E8E8);
-  static const textoOscuroMedio = Color(0xFFB0B0B0);
+  // === MODO OSCURO (OLED Profundo con matiz cálido) ===
+  static const fondoOscuro = Color(0xFF090507);
+  static const fondoCardOscuro = Color(0xFF171114);
+  static const fondoCardOscuroElevado = Color(0xFF241B1F);
+  static const textoOscuroClaro = Color(0xFFF5F3F4);
+  static const textoOscuroMedio = Color(0xFFA89F91);
 
   // === GRADIENTES ===
   static const gradienteGranate = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [granateOscuro, granate],
+    colors: [granateClaro, granate, granateOscuro],
   );
 
   static const gradienteOscuro = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [negro, granateOscuro],
+    colors: [fondoOscuro, granateOscuro],
   );
 
   static const gradienteDorado = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [dorado, doradoOscuro],
+    colors: [doradoClaro, dorado, doradoOscuro],
   );
 
-  // === HELPERS DE TEXTO ===
+  // === HELPERS DE CRISTAL (LIQUID GLASS) ===
+  static Color glassFill(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark
+        ? Colors.white.withOpacity(0.07)
+        : Colors.white.withOpacity(0.74);
+  }
+
+  static Color glassBorder(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark
+        ? Colors.white.withOpacity(0.14)
+        : Colors.white.withOpacity(0.88);
+  }
+
+  // === HELPERS DE TEXTO Y SUPERFICIE ===
   static Color textoPrincipal(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
         ? textoOscuroClaro
@@ -50,36 +66,33 @@ class AppColors {
   static Color textoSecundario(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
         ? textoOscuroMedio
-        : negro.withOpacity(0.65);
+        : negro.withOpacity(0.62);
   }
 
   static Color textoTerciario(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
-        ? textoOscuroMedio.withOpacity(0.7)
-        : negro.withOpacity(0.5);
+        ? textoOscuroMedio.withOpacity(0.68)
+        : negro.withOpacity(0.45);
   }
 
   static Color borde(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
-        ? dorado.withOpacity(0.35)
-        : dorado.withOpacity(0.55);
+        ? dorado.withOpacity(0.28)
+        : dorado.withOpacity(0.42);
   }
 
   static Color cardColor(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
-        ? fondoCardOscuro
-        : blanco;
+        ? fondoCardOscuro.withOpacity(0.82)
+        : blanco.withOpacity(0.85);
   }
 
   static Color fondoApp(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
         ? fondoOscuro
-        : const Color(0xFFFAFAFA);
+        : const Color(0xFFF2F2F7);
   }
 
-  /// Color para títulos de sección ("INFO BÁSICA", "NUMEROFONÍA", etc.).
-  /// En claro: granate (contrasta bien con fondo blanco).
-  /// En oscuro: dorado (contrasta bien con fondo #0F0F0F).
   static Color seccionTitulo(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
         ? dorado
