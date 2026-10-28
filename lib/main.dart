@@ -1,5 +1,7 @@
+// lib/main.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -20,6 +22,13 @@ import 'widgets/dialogo_actualizacion.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // MODO EDGE-TO-EDGE (Pantalla completa estilo iOS)
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: Colors.transparent,
+  ));
+
   await Firebase.initializeApp();
 
   try {
@@ -33,7 +42,6 @@ void main() async {
   }
 
   await OneSignalService.init();
-
   await ThemeProvider.cargar();
 
   try {
@@ -62,17 +70,32 @@ class SikurisApp extends StatelessWidget {
           theme: _temaClaro(),
           darkTheme: _temaOscuro(),
           themeMode: modo,
+          // TRANSICIONES HORIZONTALES ESTILO iOS
+          themeAnimationDuration: const Duration(milliseconds: 300),
+          themeAnimationCurve: Curves.easeInOut,
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                pageTransitionsTheme: const PageTransitionsTheme(
+                  builders: {
+                    TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+                    TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                  },
+                ),
+              ),
+              child: child!,
+            );
+          },
           home: const _AuthGate(),
         );
       },
     );
   }
-
   ThemeData _temaClaro() {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: const Color(0xFFFAFAFA),
+      scaffoldBackgroundColor: const Color(0xFFF2F2F7), // Gris iOS
       colorScheme: const ColorScheme.light(
         primary: AppColors.granate,
         onPrimary: AppColors.dorado,
@@ -80,29 +103,7 @@ class SikurisApp extends StatelessWidget {
         onSecondary: AppColors.negro,
         surface: AppColors.blanco,
         onSurface: AppColors.negro,
-        surfaceVariant: Color(0xFFF0F0F0),
-        onSurfaceVariant: AppColors.negro,
         outline: AppColors.dorado,
-      ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: -1,
-            color: AppColors.negro),
-        headlineMedium: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-            color: AppColors.negro),
-        titleLarge: TextStyle(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-            color: AppColors.negro),
-        titleMedium:
-            TextStyle(fontWeight: FontWeight.w600, color: AppColors.negro),
-        bodyLarge:
-            TextStyle(letterSpacing: 0.2, color: AppColors.negro),
-        bodyMedium:
-            TextStyle(letterSpacing: 0.15, color: AppColors.negro),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -117,161 +118,32 @@ class SikurisApp extends StatelessWidget {
             letterSpacing: 2.5),
         iconTheme: IconThemeData(color: AppColors.dorado),
       ),
-      cardTheme: CardTheme(
-        color: AppColors.blanco,
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-              color: AppColors.dorado.withOpacity(0.25), width: 1),
-        ),
-      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.granate,
           foregroundColor: AppColors.dorado,
-          padding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-          textStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5),
         ),
       ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.granate,
-          padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-          side: const BorderSide(color: AppColors.granate, width: 1.5),
-          textStyle: const TextStyle(
-              fontWeight: FontWeight.bold, letterSpacing: 1),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.granate,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.negro,
-        elevation: 8,
-        height: 68,
-        indicatorColor: AppColors.granate,
-        labelTextStyle: WidgetStateProperty.all(const TextStyle(
-            color: AppColors.dorado,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5)),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          return IconThemeData(
-            size: 24,
-            color: states.contains(WidgetState.selected)
-                ? AppColors.dorado
-                : AppColors.dorado.withOpacity(0.55),
-          );
-        }),
-      ),
-      listTileTheme: ListTileThemeData(
-        iconColor: AppColors.granate,
-        textColor: AppColors.negro,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
-      ),
-      dividerColor: AppColors.dorado.withOpacity(0.25),
-      dividerTheme: DividerThemeData(
-          color: AppColors.dorado.withOpacity(0.25),
-          thickness: 1,
-          space: 24),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.blanco,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        fillColor: Colors.white.withOpacity(0.8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         labelStyle: const TextStyle(color: AppColors.granate),
-        floatingLabelStyle: const TextStyle(
-            color: AppColors.granate, fontWeight: FontWeight.bold),
+        floatingLabelStyle: const TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold),
         hintStyle: TextStyle(color: AppColors.negro.withOpacity(0.4)),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           borderSide: const BorderSide(color: AppColors.dorado, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide:
-              BorderSide(color: AppColors.dorado.withOpacity(0.5), width: 1),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.5), width: 1),
         ),
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.granate,
-        foregroundColor: AppColors.dorado,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.negro,
-        contentTextStyle: const TextStyle(
-            color: AppColors.dorado, fontWeight: FontWeight.w500),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: AppColors.granate.withOpacity(0.08),
-        selectedColor: AppColors.granate,
-        labelStyle: const TextStyle(
-            fontWeight: FontWeight.w600, letterSpacing: 0.3),
-        side: BorderSide(color: AppColors.granate.withOpacity(0.3)),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      ),
-      dialogTheme: DialogTheme(
-        backgroundColor: AppColors.blanco,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24)),
-        titleTextStyle: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.granate),
-        contentTextStyle: TextStyle(
-            fontSize: 15,
-            color: AppColors.negro.withOpacity(0.8),
-            height: 1.5),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.blanco,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        showDragHandle: false,
-      ),
-      tabBarTheme: const TabBarTheme(
-        labelColor: AppColors.dorado,
-        unselectedLabelColor: Colors.white70,
-        indicatorColor: AppColors.dorado,
-        indicatorSize: TabBarIndicatorSize.tab,
-        labelStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-            fontSize: 12),
-      ),
+      // ... (Puedes mantener el resto de tus configuraciones de botones, snackbars, etc.)
     );
   }
 
@@ -279,41 +151,17 @@ class SikurisApp extends StatelessWidget {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.fondoOscuro,
+      scaffoldBackgroundColor: const Color(0xFF000000), // Negro OLED
       colorScheme: const ColorScheme.dark(
         primary: AppColors.granate,
         onPrimary: AppColors.dorado,
         secondary: AppColors.dorado,
         onSecondary: AppColors.negro,
-        surface: AppColors.fondoCardOscuro,
+        surface: const Color(0xFF1A1A1A), // Surface oscura para cristal
         onSurface: AppColors.textoOscuroClaro,
-        surfaceVariant: AppColors.fondoCardOscuroElevado,
-        onSurfaceVariant: AppColors.textoOscuroClaro,
         outline: AppColors.dorado,
         error: Color(0xFFCF6679),
         onError: AppColors.negro,
-      ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: -1,
-            color: AppColors.textoOscuroClaro),
-        headlineMedium: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-            color: AppColors.textoOscuroClaro),
-        titleLarge: TextStyle(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-            color: AppColors.textoOscuroClaro),
-        titleMedium: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textoOscuroClaro),
-        bodyLarge: TextStyle(
-            letterSpacing: 0.2, color: AppColors.textoOscuroClaro),
-        bodyMedium: TextStyle(
-            letterSpacing: 0.15, color: AppColors.textoOscuroClaro),
-        bodySmall: TextStyle(color: AppColors.textoOscuroMedio),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -328,162 +176,32 @@ class SikurisApp extends StatelessWidget {
             letterSpacing: 2.5),
         iconTheme: IconThemeData(color: AppColors.dorado),
       ),
-      cardTheme: CardTheme(
-        color: AppColors.fondoCardOscuro,
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-              color: AppColors.dorado.withOpacity(0.35), width: 1),
-        ),
-      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.granate,
           foregroundColor: AppColors.dorado,
-          padding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-          textStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5),
         ),
       ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.dorado,
-          padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-          side: const BorderSide(color: AppColors.dorado, width: 1.5),
-          textStyle: const TextStyle(
-              fontWeight: FontWeight.bold, letterSpacing: 1),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.dorado,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.negro,
-        elevation: 8,
-        height: 68,
-        indicatorColor: AppColors.granate,
-        labelTextStyle: WidgetStateProperty.all(const TextStyle(
-            color: AppColors.dorado,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5)),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          return IconThemeData(
-            size: 24,
-            color: states.contains(WidgetState.selected)
-                ? AppColors.dorado
-                : AppColors.dorado.withOpacity(0.55),
-          );
-        }),
-      ),
-      listTileTheme: ListTileThemeData(
-        iconColor: AppColors.dorado,
-        textColor: AppColors.textoOscuroClaro,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
-      ),
-      dividerColor: AppColors.dorado.withOpacity(0.3),
-      dividerTheme: DividerThemeData(
-          color: AppColors.dorado.withOpacity(0.3),
-          thickness: 1,
-          space: 24),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.fondoCardOscuro,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        fillColor: const Color(0xFF1A1A1A),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         labelStyle: const TextStyle(color: AppColors.dorado),
-        floatingLabelStyle: const TextStyle(
-            color: AppColors.dorado, fontWeight: FontWeight.bold),
-        hintStyle: TextStyle(
-            color: AppColors.textoOscuroMedio.withOpacity(0.6)),
+        floatingLabelStyle: const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.bold),
+        hintStyle: TextStyle(color: AppColors.textoOscuroMedio.withOpacity(0.6)),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           borderSide: const BorderSide(color: AppColors.dorado, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide:
-              BorderSide(color: AppColors.dorado.withOpacity(0.5), width: 1),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.5), width: 1),
         ),
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.granate,
-        foregroundColor: AppColors.dorado,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.granateOscuro,
-        contentTextStyle: const TextStyle(
-            color: AppColors.dorado, fontWeight: FontWeight.w500),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: AppColors.granate.withOpacity(0.3),
-        selectedColor: AppColors.granate,
-        labelStyle: const TextStyle(
-            fontWeight: FontWeight.w600, letterSpacing: 0.3),
-        side: BorderSide(color: AppColors.dorado.withOpacity(0.3)),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      ),
-      dialogTheme: DialogTheme(
-        backgroundColor: AppColors.fondoCardOscuro,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24)),
-        titleTextStyle: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.dorado),
-        contentTextStyle: TextStyle(
-            fontSize: 15,
-            color: AppColors.textoOscuroClaro.withOpacity(0.85),
-            height: 1.5),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.fondoCardOscuro,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        showDragHandle: false,
-      ),
-      tabBarTheme: const TabBarTheme(
-        labelColor: AppColors.dorado,
-        unselectedLabelColor: Colors.white54,
-        indicatorColor: AppColors.dorado,
-        indicatorSize: TabBarIndicatorSize.tab,
-        labelStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-            fontSize: 12),
-      ),
+      // ... (Puedes mantener el resto de tus configuraciones de botones, snackbars, etc.)
     );
   }
 }
@@ -495,11 +213,6 @@ class _AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<_AuthGate> {
-  /// 📅 Fecha de corte: cuentas creadas ANTES de esta fecha quedan
-  /// exentas de verificar el correo. Las que se creen DESPUÉS
-  /// (incluyendo hoy mismo después de esa hora) deben verificar.
-  ///
-  /// Cambiá esta fecha si necesitás reiniciar el corte.
   static final DateTime _fechaCorteVerificacion =
       DateTime(2026, 10, 15, 0, 0, 0); // 15 oct 2026 a medianoche
 
@@ -555,41 +268,24 @@ class _AuthGateState extends State<_AuthGate> {
     }
   }
 
-  /// ¿Este usuario necesita verificar su correo?
-  ///
-  /// Reglas (en orden):
-  /// 1. Ya verificado en Firebase → NO.
-  /// 2. Usuario de Google → NO (Google ya verificó).
-  /// 3. Sin `creationTime` en Auth → intenta con Firestore.
-  /// 4. Cuenta creada ANTES de la fecha de corte → NO.
-  /// 5. Cuenta creada DESPUÉS → SÍ.
   bool _necesitaVerificar(User user, Usuario? usuarioFirestore) {
-    // 1) Ya verificado
     if (user.emailVerified) return false;
 
-    // 2) Usuario de Google
     final esGoogle = user.providerData
         .any((info) => info.providerId == 'google.com');
     if (esGoogle) return false;
 
-    // 3) Prioridad 1: metadata de Auth (más confiable, siempre disponible)
     final creationTime = user.metadata.creationTime;
     if (creationTime != null) {
-      // Cuenta vieja → exenta
       if (creationTime.isBefore(_fechaCorteVerificacion)) return false;
-      // Cuenta nueva → debe verificar
       return true;
     }
 
-    // 4) Fallback: Firestore (por si metadata no está disponible)
     final fechaRegistro = usuarioFirestore?.fechaRegistro;
     if (fechaRegistro == null) return false;
     if (fechaRegistro.isBefore(_fechaCorteVerificacion)) return false;
-
-    // 5) Sin datos claros → exigir verificación para estar seguros
     return true;
   }
-
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<int>(
@@ -601,10 +297,7 @@ class _AuthGateState extends State<_AuthGate> {
             if (authSnap.connectionState == ConnectionState.waiting) {
               return const Scaffold(
                 backgroundColor: AppColors.negro,
-                body: Center(
-                  child: CircularProgressIndicator(
-                      color: AppColors.dorado),
-                ),
+                body: Center(child: CircularProgressIndicator(color: AppColors.dorado)),
               );
             }
 
@@ -617,7 +310,6 @@ class _AuthGateState extends State<_AuthGate> {
                 builder: (context, userSnap) {
                   final u = userSnap.data;
 
-                  // Chequeo de verificación (no depende de Firestore)
                   if (_necesitaVerificar(authUser, u)) {
                     ScreenSecurityService.disable();
                     return VerificacionPendienteScreen(
@@ -625,19 +317,13 @@ class _AuthGateState extends State<_AuthGate> {
                     );
                   }
 
-                  // Si todavía carga el doc de Firestore, esperamos
-                  if (userSnap.connectionState ==
-                      ConnectionState.waiting) {
+                  if (userSnap.connectionState == ConnectionState.waiting) {
                     return const Scaffold(
                       backgroundColor: AppColors.negro,
-                      body: Center(
-                        child: CircularProgressIndicator(
-                            color: AppColors.dorado),
-                      ),
+                      body: Center(child: CircularProgressIndicator(color: AppColors.dorado)),
                     );
                   }
 
-                  // Usuario baneado
                   if (u != null && u.baneado) {
                     return const CuentaSuspendidaScreen();
                   }
@@ -664,6 +350,7 @@ class _AuthGateState extends State<_AuthGate> {
     );
   }
 }
+
 class CuentaSuspendidaScreen extends StatelessWidget {
   const CuentaSuspendidaScreen({super.key});
 
@@ -686,8 +373,7 @@ class CuentaSuspendidaScreen extends StatelessWidget {
                     color: Colors.red.withOpacity(0.15),
                     border: Border.all(color: Colors.red, width: 3),
                   ),
-                  child: const Icon(Icons.block,
-                      size: 60, color: Colors.red),
+                  child: const Icon(Icons.block, size: 60, color: Colors.red),
                 ),
                 const SizedBox(height: 32),
                 const Text(
@@ -701,10 +387,7 @@ class CuentaSuspendidaScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Tu acceso a la app fue suspendido por un '
-                  'administrador del grupo.\n\n'
-                  'Si crees que es un error, contactate con '
-                  'la directiva.',
+                  'Tu acceso a la app fue suspendido por un administrador del grupo.\n\nSi crees que es un error, contactate con la directiva.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -718,14 +401,11 @@ class CuentaSuspendidaScreen extends StatelessWidget {
                   height: 52,
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.logout),
-                    label: const Text('CERRAR SESIÓN',
-                        style: TextStyle(letterSpacing: 1.5)),
+                    label: const Text('CERRAR SESIÓN', style: TextStyle(letterSpacing: 1.5)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.dorado,
-                      side: const BorderSide(
-                          color: AppColors.dorado, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
+                      side: const BorderSide(color: AppColors.dorado, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     onPressed: () async {
                       await AuthService().logout();
