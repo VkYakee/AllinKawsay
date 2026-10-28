@@ -27,6 +27,7 @@ class GrabarSetlistScreen extends StatefulWidget {
 }
 
 class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
+  // ✅ USAMOS EL REPRODUCTOR GLOBAL, NO UNO LOCAL
   final _player = PlayerService().player;
   final _scrollCtrl = ScrollController();
   Duration _posicion = Duration.zero;
@@ -46,7 +47,8 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
 
   @override
   void dispose() {
-    _subPos?.cancel(); _subDur?.cancel();
+    _subPos?.cancel();
+    _subDur?.cancel();
     _player.pause();
     _scrollCtrl.dispose();
     super.dispose();
@@ -56,12 +58,22 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
     try {
       await _player.stop();
       final tag = MediaItem(id: 'setlist_${widget.cancion.id}', title: 'Setlist: ${widget.cancion.titulo}', artist: 'Allin Kawsay');
-      await _player.setAudioSource(AudioSource.uri(Uri.parse(widget.cancion.audioUrl), tag: tag));
+      
+      // ⏱️ TIMEOUT DE 15 SEGUNDOS PARA EVITAR CARGA INFINITA
+      await _player.setAudioSource(
+        AudioSource.uri(Uri.parse(widget.cancion.audioUrl), tag: tag),
+      ).timeout(const Duration(seconds: 15));
+
       _subPos = _player.positionStream.listen((p) { if (mounted) setState(() => _posicion = p); });
       _subDur = _player.durationStream.listen((d) { if (mounted) setState(() => _duracion = d); });
       if (mounted) setState(() => _cargando = false);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _cargando = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar audio: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
