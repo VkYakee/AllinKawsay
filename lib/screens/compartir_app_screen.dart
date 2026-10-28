@@ -20,9 +20,9 @@ class CompartirAppScreen extends StatefulWidget {
 class _CompartirAppScreenState extends State<CompartirAppScreen> {
   static const MethodChannel _channel = MethodChannel('com.allinkawsay/native');
   
-  // Link directo al ÚLTIMO RELEASE ESTABLE (El que tú lanzas manualmente)
-  static const String _enlaceDescarga = 'https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk';
-  static const String _enlacePagina = 'https://yeo-drake.github.io/AllinKawsay/';
+  // ⚠️ ENLACES ACTUALIZADOS A VKYAKEE
+  static const String _enlaceDescarga = 'https://github.com/VkYakee/AllinKawsay/releases/latest/download/AllinKawsay.apk';
+  static const String _enlacePagina = 'https://VkYakee.github.io/AllinKawsay/';
   
   bool _descargandoApk = false;
 
@@ -48,9 +48,6 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
     setState(() => _descargandoApk = true);
     try {
       String urlApk = _enlaceDescarga;
-      
-      // Si la API de GitHub falla, usa el enlace por defecto. 
-      // Si funciona, asegura obtener el link del último Release manual.
       try {
         final releases = await GithubService.listarEstables(limite: 1);
         if (releases.isNotEmpty && releases.first.tieneApk) {
@@ -131,7 +128,7 @@ class _CompartirAppScreenState extends State<CompartirAppScreen> {
                   padding: const EdgeInsets.all(Sp.md),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: Rad.rLg),
                   child: QrImageView(
-                    data: _enlaceDescarga, // <-- Ahora el QR va al APK directo
+                    data: _enlaceDescarga,
                     size: 200,
                     eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.granate),
                     dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppColors.negro),
