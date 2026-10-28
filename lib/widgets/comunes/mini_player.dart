@@ -1,0 +1,91 @@
+// lib/widgets/comunes/mini_player.dart
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import '../../design/design.dart';
+import '../../services/player_service.dart';
+import '../../theme/colors.dart';
+
+class MiniPlayer extends StatelessWidget {
+  const MiniPlayer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<EstadoPlayer>(
+      valueListenable: PlayerService().estado,
+      builder: (context, estado, _) {
+        if (estado.cancionId == null) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.lg, 0, Sp.lg, Sp.sm),
+          child: ClipRRect(
+            borderRadius: Rad.rLg,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.granateOscuro.withOpacity(0.85),
+                  borderRadius: Rad.rLg,
+                  border: Border.all(color: AppColors.dorado.withOpacity(0.3), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: Sp.md),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.gradienteDorado,
+                        borderRadius: Rad.rSm,
+                      ),
+                      child: const Icon(Icons.music_note, color: AppColors.granate, size: 20),
+                    ),
+                    const SizedBox(width: Sp.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            estado.cancionTitulo ?? 'Reproduciendo',
+                            style: AppType.subtitle.copyWith(color: AppColors.dorado),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Allin Kawsay',
+                            style: AppType.captionXs.copyWith(color: AppColors.dorado.withOpacity(0.6)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        estado.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        color: AppColors.dorado,
+                        size: 30,
+                      ),
+                      onPressed: () {
+                        if (estado.playing) {
+                          PlayerService().player.pause();
+                        } else {
+                          PlayerService().player.play();
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                      onPressed: () => PlayerService().detener(),
+                    ),
+                    const SizedBox(width: Sp.sm),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
