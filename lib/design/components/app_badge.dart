@@ -20,71 +20,41 @@ class AppBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg, border) = _resolve();
+    final (bg, fg) = _resolve();
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Sp.sm,
-        vertical: 3,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: Rad.rPill,
-        border: border == null ? null : Border.all(color: border, width: 1),
+        border: Border.all(color: fg.withOpacity(0.2), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 10, color: fg),
+            Icon(icon, size: 12, color: fg),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: AppType.labelXs.copyWith(color: fg),
-          ),
+          Text(label, style: AppType.labelXs.copyWith(color: fg)),
         ],
       ),
     );
   }
 
-  (Color, Color, Color?) _resolve() {
+  (Color, Color) _resolve() {
     switch (variant) {
       case AppBadgeVariant.gold:
-        return (
-          AppColors.dorado.withOpacity(0.18),
-          AppColors.doradoOscuro,
-          AppColors.dorado.withOpacity(0.4),
-        );
+        return (AppColors.dorado.withOpacity(0.15), AppColors.doradoOscuro);
       case AppBadgeVariant.granate:
-        return (
-          AppColors.granate.withOpacity(0.12),
-          AppColors.granate,
-          null,
-        );
+        return (AppColors.granate.withOpacity(0.1), AppColors.granate);
       case AppBadgeVariant.success:
-        return (
-          Colors.green.withOpacity(0.14),
-          Colors.green.shade800,
-          Colors.green.withOpacity(0.3),
-        );
+        return (Colors.green.withOpacity(0.15), Colors.green.shade700);
       case AppBadgeVariant.warning:
-        return (
-          Colors.orange.withOpacity(0.14),
-          Colors.orange.shade800,
-          Colors.orange.withOpacity(0.3),
-        );
+        return (Colors.orange.withOpacity(0.15), Colors.orange.shade800);
       case AppBadgeVariant.danger:
-        return (
-          Colors.red.withOpacity(0.14),
-          Colors.red.shade700,
-          Colors.red.withOpacity(0.3),
-        );
+        return (Colors.red.withOpacity(0.15), Colors.red.shade700);
       case AppBadgeVariant.neutral:
-        return (
-          Colors.grey.withOpacity(0.15),
-          Colors.grey.shade700,
-          Colors.grey.withOpacity(0.25),
-        );
+        return (Colors.grey.withOpacity(0.15), Colors.grey.shade600);
     }
   }
 }
