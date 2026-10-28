@@ -5,15 +5,13 @@ import '../../theme/colors.dart';
 import '../tokens.dart';
 
 enum AppButtonVariant { primary, secondary, ghost, danger }
-enum AppButtonSize { sm, md, lg }
 
-class AppButton extends StatefulWidget {
+class AppButton extends StatelessWidget {
   final String label;
   final IconData? icon;
   final VoidCallback? onPressed;
   final bool loading;
   final AppButtonVariant variant;
-  final AppButtonSize size;
   final bool fullWidth;
 
   const AppButton({
@@ -23,112 +21,44 @@ class AppButton extends StatefulWidget {
     this.onPressed,
     this.loading = false,
     this.variant = AppButtonVariant.primary,
-    this.size = AppButtonSize.md,
     this.fullWidth = false,
   });
 
   @override
-  State<AppButton> createState() => _AppButtonState();
-}
-
-class _AppButtonState extends State<AppButton> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final disabled = widget.onPressed == null || widget.loading;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final (bg, fg, borderColor, hasGradient) = _resolve(disabled, isDark);
+    final disabled = onPressed == null || loading;
+    final (bg, fg, borderColor) = _resolve(disabled);
 
-    final height = switch (widget.size) {
-      AppButtonSize.sm => 40.0,
-      AppButtonSize.md => 50.0,
-      AppButtonSize.lg => 56.0,
-    };
-    final fontSize = switch (widget.size) {
-      AppButtonSize.sm => 12.0,
-      AppButtonSize.md => 13.5,
-      AppButtonSize.lg => 15.0,
-    };
-
-    return GestureDetector(
-      onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
-      onTapUp: disabled ? null : (_) => setState(() => _pressed = false),
-      onTapCancel: disabled ? null : () => setState(() => _pressed = false),
-      onTap: disabled
-          ? null
-          : () {
-              HapticFeedback.lightImpact();
-              widget.onPressed?.call();
-            },
-      child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: Dur.fast,
-        curve: Curves.easeOutCubic,
-        child: AnimatedOpacity(
-          duration: Dur.fast,
-          opacity: disabled ? 0.5 : 1.0,
+    return SizedBox(
+      width: fullWidth ? double.infinity : null,
+      height: 50,
+      child: Material(
+        color: bg,
+        borderRadius: Rad.rMd,
+        child: InkWell(
+          borderRadius: Rad.rMd,
+          onTap: disabled ? null : () {
+            HapticFeedback.lightImpact();
+            onPressed!();
+          },
           child: Container(
-            width: widget.fullWidth ? double.infinity : null,
-            height: height,
             padding: const EdgeInsets.symmetric(horizontal: Sp.xl),
             decoration: BoxDecoration(
-              color: hasGradient ? null : bg,
-              gradient: hasGradient
-                  ? const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.granate, AppColors.granateOscuro],
-                    )
-                  : null,
               borderRadius: Rad.rMd,
-              border: borderColor == null
-                  ? Border.all(
-                      color: Colors.white.withOpacity(0.14),
-                      width: 0.8,
-                    )
-                  : Border.all(color: borderColor, width: 1.2),
-              boxShadow: (!disabled &&
-                      widget.variant == AppButtonVariant.primary)
-                  ? [
-                      BoxShadow(
-                        color: AppColors.granate.withOpacity(0.32),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : null,
+              border: borderColor == null ? null : Border.all(color: borderColor, width: 1.5),
             ),
             child: Row(
-              mainAxisSize:
-                  widget.fullWidth ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (widget.loading)
-                  SizedBox(
-                    width: 17,
-                    height: 17,
-                    child: CircularProgressIndicator(
-                      color: fg,
-                      strokeWidth: 2.2,
-                    ),
-                  )
-                else if (widget.icon != null)
-                  Icon(widget.icon, color: fg, size: 18),
-                if (widget.loading || widget.icon != null)
-                  const SizedBox(width: Sp.sm),
-                Flexible(
-                  child: Text(
-                    widget.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: fg,
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
+                if (loading)
+                  SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: fg, strokeWidth: 2.5))
+                else if (icon != null)
+                  Icon(icon, color: fg, size: 20),
+                if (loading || icon != null) const SizedBox(width: Sp.sm),
+                Text(
+                  label,
+                  style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                 ),
               ],
             ),
@@ -138,40 +68,16 @@ class _AppButtonState extends State<AppButton> {
     );
   }
 
-  (Color, Color, Color?, bool) _resolve(bool disabled, bool isDark) {
-    switch (widget.variant) {
+  (Color, Color, Color?) _resolve(bool disabled) {
+    switch (variant) {
       case AppButtonVariant.primary:
-        return (
-          AppColors.granate,
-          AppColors.dorado,
-          null,
-          true,
-        );
+        return (disabled ? AppColors.granate.withOpacity(0.4) : AppColors.granate, AppColors.dorado, null);
       case AppButtonVariant.secondary:
-        return (
-          isDark
-              ? Colors.white.withOpacity(0.08)
-              : AppColors.granate.withOpacity(0.07),
-          isDark ? AppColors.dorado : AppColors.granate,
-          isDark
-              ? AppColors.dorado.withOpacity(0.35)
-              : AppColors.granate.withOpacity(0.28),
-          false,
-        );
+        return (Colors.transparent, disabled ? AppColors.granate.withOpacity(0.4) : AppColors.granate, AppColors.granate.withOpacity(disabled ? 0.2 : 0.6));
       case AppButtonVariant.ghost:
-        return (
-          Colors.transparent,
-          isDark ? AppColors.dorado : AppColors.granate,
-          Colors.transparent,
-          false,
-        );
+        return (Colors.transparent, disabled ? AppColors.granate.withOpacity(0.4) : AppColors.granate, null);
       case AppButtonVariant.danger:
-        return (
-          Colors.red.shade700,
-          Colors.white,
-          null,
-          false,
-        );
+        return (disabled ? Colors.red.withOpacity(0.4) : Colors.red.shade700, Colors.white, null);
     }
   }
 }
