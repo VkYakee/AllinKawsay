@@ -1,17 +1,13 @@
 // lib/design/components/app_button.dart
-//
-// Botón unificado. Reemplaza FilledButton / OutlinedButton / TextButton
-// en TODA la app nueva. Tiene estados: primary, secondary, ghost, danger.
-// Auto-maneja loading y disabled.
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/colors.dart';
 import '../tokens.dart';
 
 enum AppButtonVariant { primary, secondary, ghost, danger }
 enum AppButtonSize { sm, md, lg }
 
-class AppButton extends StatelessWidget {
+class AppButton extends StatefulWidget {
   final String label;
   final IconData? icon;
   final VoidCallback? onPressed;
@@ -32,61 +28,106 @@ class AppButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final disabled = onPressed == null || loading;
-    final (bg, fg, borderColor) = _resolve(disabled);
+  State<AppButton> createState() => _AppButtonState();
+}
 
-    final height = switch (size) {
+class _AppButtonState extends State<AppButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = widget.onPressed == null || widget.loading;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final (bg, fg, borderColor, hasGradient) = _resolve(disabled, isDark);
+
+    final height = switch (widget.size) {
       AppButtonSize.sm => 40.0,
       AppButtonSize.md => 50.0,
       AppButtonSize.lg => 56.0,
     };
-    final fontSize = switch (size) {
-      AppButtonSize.sm => 11.0,
-      AppButtonSize.md => 12.0,
-      AppButtonSize.lg => 13.0,
+    final fontSize = switch (widget.size) {
+      AppButtonSize.sm => 12.0,
+      AppButtonSize.md => 13.5,
+      AppButtonSize.lg => 15.0,
     };
 
-    return SizedBox(
-      width: fullWidth ? double.infinity : null,
-      height: height,
-      child: Material(
-        color: bg,
-        borderRadius: Rad.rMd,
-        child: InkWell(
-          borderRadius: Rad.rMd,
-          onTap: disabled ? null : onPressed,
+    return GestureDetector(
+      onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
+      onTapUp: disabled ? null : (_) => setState(() => _pressed = false),
+      onTapCancel: disabled ? null : () => setState(() => _pressed = false),
+      onTap: disabled
+          ? null
+          : () {
+              HapticFeedback.lightImpact();
+              widget.onPressed?.call();
+            },
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: Dur.fast,
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          duration: Dur.fast,
+          opacity: disabled ? 0.5 : 1.0,
           child: Container(
+            width: widget.fullWidth ? double.infinity : null,
+            height: height,
             padding: const EdgeInsets.symmetric(horizontal: Sp.xl),
             decoration: BoxDecoration(
+              color: hasGradient ? null : bg,
+              gradient: hasGradient
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.granate, AppColors.granateOscuro],
+                    )
+                  : null,
               borderRadius: Rad.rMd,
               border: borderColor == null
-                  ? null
-                  : Border.all(color: borderColor, width: 1.5),
+                  ? Border.all(
+                      color: Colors.white.withOpacity(0.14),
+                      width: 0.8,
+                    )
+                  : Border.all(color: borderColor, width: 1.2),
+              boxShadow: (!disabled &&
+                      widget.variant == AppButtonVariant.primary)
+                  ? [
+                      BoxShadow(
+                        color: AppColors.granate.withOpacity(0.32),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
-              mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisSize:
+                  widget.fullWidth ? MainAxisSize.max : MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (loading)
+                if (widget.loading)
                   SizedBox(
-                    width: 16,
-                    height: 16,
+                    width: 17,
+                    height: 17,
                     child: CircularProgressIndicator(
                       color: fg,
-                      strokeWidth: 2.5,
+                      strokeWidth: 2.2,
                     ),
                   )
-                else if (icon != null)
-                  Icon(icon, color: fg, size: 18),
-                if (loading || icon != null) const SizedBox(width: Sp.sm),
-                Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    color: fg,
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
+                else if (widget.icon != null)
+                  Icon(widget.icon, color: fg, size: 18),
+                if (widget.loading || widget.icon != null)
+                  const SizedBox(width: Sp.sm),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: fg,
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
               ],
@@ -97,31 +138,39 @@ class AppButton extends StatelessWidget {
     );
   }
 
-  (Color, Color, Color?) _resolve(bool disabled) {
-    switch (variant) {
+  (Color, Color, Color?, bool) _resolve(bool disabled, bool isDark) {
+    switch (widget.variant) {
       case AppButtonVariant.primary:
         return (
-          disabled ? AppColors.granate.withOpacity(0.4) : AppColors.granate,
+          AppColors.granate,
           AppColors.dorado,
           null,
+          true,
         );
       case AppButtonVariant.secondary:
         return (
-          Colors.transparent,
-          disabled ? AppColors.granate.withOpacity(0.4) : AppColors.granate,
-          AppColors.granate.withOpacity(disabled ? 0.2 : 0.6),
+          isDark
+              ? Colors.white.withOpacity(0.08)
+              : AppColors.granate.withOpacity(0.07),
+          isDark ? AppColors.dorado : AppColors.granate,
+          isDark
+              ? AppColors.dorado.withOpacity(0.35)
+              : AppColors.granate.withOpacity(0.28),
+          false,
         );
       case AppButtonVariant.ghost:
         return (
           Colors.transparent,
-          disabled ? AppColors.granate.withOpacity(0.4) : AppColors.granate,
-          null,
+          isDark ? AppColors.dorado : AppColors.granate,
+          Colors.transparent,
+          false,
         );
       case AppButtonVariant.danger:
         return (
-          disabled ? Colors.red.withOpacity(0.4) : Colors.red.shade700,
+          Colors.red.shade700,
           Colors.white,
           null,
+          false,
         );
     }
   }
