@@ -15,12 +15,12 @@ class LoginHero extends StatelessWidget {
           height: 110,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.dorado.withOpacity(0.6), width: 2),
+            border: Border.all(color: AppColors.dorado.withOpacity(0.8), width: 2),
             boxShadow: [
               BoxShadow(
                 color: AppColors.dorado.withOpacity(0.3),
-                blurRadius: 30,
-                spreadRadius: 4,
+                blurRadius: 40,
+                spreadRadius: 10,
               ),
             ],
           ),
@@ -40,8 +40,9 @@ class LoginHero extends StatelessWidget {
           'ALLIN KAWSAY',
           style: AppType.h1.copyWith(
             color: AppColors.dorado,
-            letterSpacing: 5,
+            letterSpacing: 8,
             fontSize: 26,
+            fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: Sp.xs),
