@@ -1,17 +1,16 @@
 // lib/design/components/app_card.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/colors.dart';
 import '../tokens.dart';
 
-class AppCard extends StatefulWidget {
+class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
   final VoidCallback? onTap;
   final Color? color;
   final Border? border;
-  final bool elevated;
-  final bool glass;
 
   const AppCard({
     super.key,
@@ -20,87 +19,46 @@ class AppCard extends StatefulWidget {
     this.onTap,
     this.color,
     this.border,
-    this.elevated = true,
-    this.glass = true,
   });
-
-  @override
-  State<AppCard> createState() => _AppCardState();
-}
-
-class _AppCardState extends State<AppCard> {
-  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = widget.color ??
-        (isDark
-            ? Colors.white.withOpacity(0.07)
-            : Colors.white.withOpacity(0.75));
-
-    final effectiveColor = widget.color != null
-        ? (widget.glass ? widget.color!.withOpacity(0.88) : widget.color!)
-        : baseColor;
-
-    final defaultBorder = Border.all(
-      color: isDark
-          ? Colors.white.withOpacity(0.12)
-          : Colors.white.withOpacity(0.85),
-      width: 1.1,
-    );
-
-    Widget cardContent = Container(
-      padding: widget.padding ?? const EdgeInsets.all(Sp.lg),
-      decoration: BoxDecoration(
-        color: effectiveColor,
-        borderRadius: Rad.rLg,
-        border: widget.border ?? defaultBorder,
-        boxShadow: widget.elevated ? Elev.sm : null,
-        gradient: widget.color == null
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? [
-                        Colors.white.withOpacity(0.10),
-                        Colors.white.withOpacity(0.04),
-                      ]
-                    : [
-                        Colors.white.withOpacity(0.88),
-                        Colors.white.withOpacity(0.65),
-                      ],
-              )
-            : null,
-      ),
-      child: widget.child,
-    );
-
-    if (widget.glass) {
-      cardContent = ClipRRect(
-        borderRadius: Rad.rLg,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: GlassBlur.subtle,
-            sigmaY: GlassBlur.subtle,
+    
+    Widget content = ClipRRect(
+      borderRadius: Rad.rLg,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: padding ?? const EdgeInsets.all(Sp.lg),
+          decoration: BoxDecoration(
+            color: color ?? AppColors.glassFill(context),
+            borderRadius: Rad.rLg,
+            border: border ?? Border.all(color: AppColors.glassBorder(context), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          child: cardContent,
+          child: child,
         ),
-      );
-    }
+      ),
+    );
 
-    if (widget.onTap == null) return cardContent;
+    if (onTap == null) return content;
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.975 : 1.0,
-        duration: Dur.fast,
-        curve: Curves.easeOutCubic,
-        child: cardContent,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: Rad.rLg,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap!();
+        },
+        child: content,
       ),
     );
   }
