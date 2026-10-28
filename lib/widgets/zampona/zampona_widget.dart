@@ -30,9 +30,9 @@ class ZamponaWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _fila(notasFila7, diametro, separacion),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               _liston(diametro, separacion),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               _fila(notasFila6, diametro, separacion),
             ],
           ),
@@ -66,10 +66,10 @@ class ZamponaWidget extends StatelessWidget {
       width: diametro * 7 + sep * 6,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2A0308), AppColors.granateOscuro, Color(0xFF2A0308)],
+          colors: [Color(0xFF1A1A1A), Color(0xFF0A0A0A), Color(0xFF1A1A1A)],
         ),
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.35), width: 0.7),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: AppColors.dorado.withOpacity(0.2), width: 0.5),
       ),
     );
   }
@@ -93,33 +93,50 @@ class _Tubo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final contenido = AnimatedScale(
-      scale: brillando ? 1.08 : 1.0,
+      scale: brillando ? 1.1 : 1.0,
       duration: const Duration(milliseconds: 100),
+      curve: Curves.easeOut,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 130),
+        duration: const Duration(milliseconds: 150),
         width: diametro, height: diametro,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: brillando
-                ? [const Color(0xFF0A0103), const Color(0xFF1A0205), AppColors.granate, AppColors.dorado]
-                : [const Color(0xFF0A0103), const Color(0xFF1A0205), const Color(0xFF3A0810), AppColors.granateClaro],
-            stops: const [0.0, 0.35, 0.78, 1.0],
+                ? [const Color(0xFFFFE066), AppColors.dorado, AppColors.doradoOscuro]
+                : [const Color(0xFF2A0308), AppColors.granateOscuro, const Color(0xFF0A0103)],
+            stops: const [0.0, 0.6, 1.0],
+            center: const Alignment(-0.3, -0.3), // Simula la luz superior
           ),
-          border: Border.all(color: brillando ? AppColors.dorado : AppColors.dorado.withOpacity(0.35), width: brillando ? 2 : 1.2),
+          border: Border.all(
+            color: brillando ? AppColors.doradoClaro : AppColors.granateClaro,
+            width: brillando ? 2.5 : 1.5,
+          ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.85), blurRadius: 5, offset: const Offset(0, 2)),
-            if (brillando) BoxShadow(color: AppColors.dorado.withOpacity(0.7), blurRadius: 16, spreadRadius: 1),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.8),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+            if (brillando)
+              BoxShadow(
+                color: AppColors.dorado.withOpacity(0.8),
+                blurRadius: 24,
+                spreadRadius: 4,
+              ),
           ],
         ),
         child: Center(
           child: Text(
             '${nota.posicion}',
             style: TextStyle(
-              color: brillando ? AppColors.dorado : AppColors.dorado.withOpacity(0.6),
+              color: brillando ? AppColors.granateOscuro : AppColors.dorado.withOpacity(0.8),
               fontWeight: FontWeight.bold,
-              fontSize: diametro * 0.32,
+              fontSize: diametro * 0.35,
               height: 1.0,
+              shadows: [
+                if (!brillando) Shadow(color: Colors.black87, blurRadius: 4, offset: const Offset(0, 1)),
+              ],
             ),
           ),
         ),
