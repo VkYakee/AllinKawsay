@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, redesign/v2 ]   # ← agregá redesign/v2
+    branches: [ main, redesign/v2 ]
   workflow_dispatch:
     inputs:
       motivo:
@@ -256,5 +256,5 @@ jobs:
               --notes-file /tmp/notas.md
             echo "✅ Release ESTABLE creado: $TAG"
             echo "📥 Link de descarga directa:"
-            echo "https://github.com/yeo-drake/AllinKawsay/releases/latest/download/AllinKawsay.apk"
+            echo "https://github.com/VkYakee/AllinKawsay/releases/latest/download/AllinKawsay.apk"
           fi
