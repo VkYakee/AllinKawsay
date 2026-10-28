@@ -18,7 +18,7 @@ class CancionPartituraFija extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
       child: AppCard(
         padding: const EdgeInsets.all(Sp.lg),
-        border: Border.all(color: AppColors.dorado.withOpacity(0.4)),
+        border: Border.all(color: AppColors.dorado.withOpacity(0.4), width: 1.2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -28,7 +28,7 @@ class CancionPartituraFija extends StatelessWidget {
                 const SizedBox(width: Sp.sm),
                 Text(
                   'PARTITURA',
-                  style: AppType.eyebrow.copyWith(color: AppColors.granate),
+                  style: AppType.label.copyWith(color: AppColors.granate, letterSpacing: 1.5),
                 ),
                 const Spacer(),
                 InkWell(
@@ -36,16 +36,20 @@ class CancionPartituraFija extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => NumerofoniaFullscreenScreen(
-                            estrofas: cancion.estrofas),
+                        builder: (_) => NumerofoniaFullscreenScreen(estrofas: cancion.estrofas),
                       ),
                     );
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
+                  borderRadius: Rad.rPill,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.granate.withOpacity(0.1),
+                      borderRadius: Rad.rPill,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.zoom_out_map, color: AppColors.granate, size: 16),
+                        const Icon(Icons.zoom_out_map, color: AppColors.granate, size: 14),
                         const SizedBox(width: 4),
                         Text(
                           'AMPLIAR',
@@ -58,7 +62,7 @@ class CancionPartituraFija extends StatelessWidget {
               ],
             ),
             const SizedBox(height: Sp.lg),
-            // Llamamos a la tabla, SIN SingleChildScrollView.
+            // Llamamos a la tabla, SIN SingleChildScrollView para que se auto-escale.
             VisorNumerofonia(
               estrofas: cancion.estrofas,
               escala: 1.0,
