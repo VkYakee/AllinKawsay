@@ -61,9 +61,9 @@ class ReleaseInfo {
 }
 
 class GithubService {
-  static const _repo = 'yeo-drake/AllinKawsay';
+  // ⚠️ REPOSITORIO ACTUALIZADO
+  static const _repo = 'VkYakee/AllinKawsay';
 
-  // Lee el token de Firestore para evitar el límite de peticiones de GitHub
   static Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Accept': 'application/vnd.github+json',
@@ -101,7 +101,7 @@ class GithubService {
 
   static Future<List<ReleaseInfo>> listarTodas({int limite = 30}) async {
     final todas = await listarReleases(limite: limite);
-    return todas; // Devuelve todas, tengan APK o no
+    return todas;
   }
 
   static Future<bool> promoverAEstable(int releaseId) async {
