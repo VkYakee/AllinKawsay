@@ -1,6 +1,5 @@
 // lib/widgets/visor_numerofonia.dart
 import 'package:flutter/material.dart';
-
 import '../models/numerofonia.dart';
 import '../theme/colors.dart';
 
@@ -22,7 +21,7 @@ class VisorNumerofonia extends StatelessWidget {
   final List<EstrofaNumerofonia> estrofas;
   final double escala;
   final CeldaActiva? celdaActiva;
-  final bool fondoOscuro; // Parámetro para forzar texto claro en pantallas negras
+  final bool fondoOscuro;
 
   const VisorNumerofonia({
     super.key,
@@ -48,10 +47,7 @@ class VisorNumerofonia extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, cons) {
-        final double disponible = cons.hasBoundedWidth
-            ? cons.maxWidth
-            : MediaQuery.of(context).size.width - 32;
-
+        final double disponible = cons.hasBoundedWidth ? cons.maxWidth : MediaQuery.of(context).size.width - 32;
         double maxBase = 0;
         for (final e in validas) {
           final b = baseDe(e);
@@ -107,16 +103,14 @@ class _TablaEstrofa extends StatelessWidget {
     final e = escala;
     final oscuro = fondoOscuro || Theme.of(context).brightness == Brightness.dark;
     
-    // COLORES CORREGIDOS PARA ALTO CONTRASTE
     final colorNota = oscuro ? Colors.white : AppColors.negro;
     final colorLinea = oscuro ? Colors.white24 : AppColors.granate.withOpacity(0.2);
     final colorEtiquetaBg = oscuro ? AppColors.granateOscuro : AppColors.granate;
-    final colorEtiquetaTexto = AppColors.dorado;
 
     final n = estrofa.columnas.length;
     final tabla = Table(
       columnWidths: {
-        0: FixedColumnWidth(24 * e), // Un poco más ancho para que respire
+        0: FixedColumnWidth(24 * e),
         for (int j = 0; j < n; j++)
           j + 1: FixedColumnWidth(VisorNumerofonia.anchoCol(estrofa.columnas[j], e)),
       },
@@ -124,12 +118,12 @@ class _TablaEstrofa extends StatelessWidget {
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
         TableRow(children: [
-          _etiqueta('7', e, colorEtiquetaBg, colorEtiquetaTexto),
+          _etiqueta('7', e, colorEtiquetaBg),
           for (int j = 0; j < n; j++)
             _nota(columna: j, esFila7: true, valor: estrofa.columnas[j].nota7, e: e, color: colorNota),
         ]),
         TableRow(children: [
-          _etiqueta('6', e, colorEtiquetaBg, colorEtiquetaTexto),
+          _etiqueta('6', e, colorEtiquetaBg),
           for (int j = 0; j < n; j++)
             _nota(columna: j, esFila7: false, valor: estrofa.columnas[j].nota6, e: e, color: colorNota),
         ]),
@@ -167,18 +161,13 @@ class _TablaEstrofa extends StatelessWidget {
     );
   }
 
-  Widget _etiqueta(String t, double e, Color bg, Color fg) => Container(
-        height: 28 * e,
+  Widget _etiqueta(String t, double e, Color bg) => Container(
+        height: 30 * e,
         color: bg,
         alignment: Alignment.center,
         child: Text(
           t,
-          style: TextStyle(
-            color: fg,
-            fontWeight: FontWeight.bold,
-            fontSize: 12 * e,
-            height: 1.0,
-          ),
+          style: TextStyle(color: AppColors.dorado, fontWeight: FontWeight.bold, fontSize: 12 * e, height: 1.0),
         ),
       );
 
@@ -189,9 +178,7 @@ class _TablaEstrofa extends StatelessWidget {
     required double e,
     required Color color,
   }) {
-    final activa = celdaActiva != null &&
-        celdaActiva!.columna == columna &&
-        celdaActiva!.esFila7 == esFila7;
+    final activa = celdaActiva != null && celdaActiva!.columna == columna && celdaActiva!.esFila7 == esFila7;
 
     if (!activa || valor.trim().isEmpty) {
       return _notaSimple(valor, e, color);
@@ -199,33 +186,29 @@ class _TablaEstrofa extends StatelessWidget {
 
     final textoLimpio = valor.trim();
     final idx = celdaActiva!.notaIndex;
-    if (idx < 0 || idx >= textoLimpio.length) {
-      return _notaSimple(valor, e, color);
-    }
+    if (idx < 0 || idx >= textoLimpio.length) return _notaSimple(valor, e, color);
 
     final antes = textoLimpio.substring(0, idx);
     final letra = textoLimpio.substring(idx, idx + 1);
     final despues = textoLimpio.substring(idx + 1);
 
     return Container(
-      height: 28 * e,
+      height: 30 * e,
       alignment: Alignment.center,
-      padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e),
+      decoration: BoxDecoration(
+        color: AppColors.dorado.withOpacity(0.1), // Fondo resaltado
+        boxShadow: [BoxShadow(color: AppColors.dorado.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)], // Resplandor
+      ),
       child: RichText(
         text: TextSpan(
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'monospace',
-            fontSize: 14 * e,
-            height: 1.0,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
           children: [
             if (antes.isNotEmpty) TextSpan(text: antes, style: TextStyle(color: color)),
             TextSpan(
               text: letra,
               style: TextStyle(
                 color: AppColors.dorado,
-                shadows: [Shadow(color: AppColors.dorado.withOpacity(0.8), blurRadius: 8)],
+                shadows: [Shadow(color: AppColors.dorado, blurRadius: 10)],
               ),
             ),
             if (despues.isNotEmpty) TextSpan(text: despues, style: TextStyle(color: color)),
@@ -236,18 +219,12 @@ class _TablaEstrofa extends StatelessWidget {
   }
 
   Widget _notaSimple(String valor, double e, Color color) => Container(
-        height: 28 * e,
+        height: 30 * e,
         alignment: Alignment.center,
         padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e),
         child: Text(
           valor,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'monospace',
-            fontSize: 14 * e,
-            height: 1.0,
-          ),
+          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
         ),
       );
 }
