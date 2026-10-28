@@ -27,8 +27,9 @@ class CancionHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Sp.xl, Sp.lg, Sp.xl, Sp.xl),
+      padding: const EdgeInsets.fromLTRB(Sp.xl, Sp.md, Sp.xl, Sp.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -41,7 +42,7 @@ class CancionHero extends StatelessWidget {
                   children: [
                     Text(
                       cancion.titulo,
-                      style: AppType.h1.copyWith(color: AppColors.granate),
+                      style: AppType.h1.copyWith(color: onSurface, fontSize: 26, letterSpacing: -0.5),
                     ),
                     if (cancion.autor.isNotEmpty) ...[
                       const SizedBox(height: Sp.xs),
@@ -66,7 +67,7 @@ class CancionHero extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: Sp.md),
+          const SizedBox(height: Sp.sm),
           Row(
             children: [
               if (cancion.ritmo.isNotEmpty)
@@ -81,29 +82,30 @@ class CancionHero extends StatelessWidget {
                   onPressed: onPracticar,
                   icon: const Icon(Icons.school, size: 18),
                   label: const Text('PRACTICAR'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.granate,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.granate),
                 ),
             ],
           ),
           const SizedBox(height: Sp.lg),
+          // Botón de Play tipo Píldora
           SizedBox(
             width: double.infinity,
-            height: 54,
+            height: 56,
             child: FilledButton.icon(
               onPressed: onTogglePlay,
               icon: cargando
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(color: AppColors.dorado, strokeWidth: 2))
-                  : Icon(reproduciendo ? Icons.pause_rounded : Icons.play_arrow_rounded),
-              label: Text(reproduciendo ? 'PAUSAR AUDIO' : 'ESCUCHAR AUDIO'),
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppColors.dorado, strokeWidth: 2))
+                  : Icon(reproduciendo ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 28),
+              label: Text(
+                reproduciendo ? 'PAUSAR AUDIO' : 'ESCUCHAR AUDIO',
+                style: AppType.label.copyWith(fontSize: 14, letterSpacing: 1.2),
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.granate,
                 foregroundColor: AppColors.dorado,
-                shape: RoundedRectangleBorder(borderRadius: Rad.rMd),
+                shape: RoundedRectangleBorder(borderRadius: Rad.rPill),
+                elevation: 4,
+                shadowColor: AppColors.granate.withOpacity(0.5),
               ),
             ),
           ),
