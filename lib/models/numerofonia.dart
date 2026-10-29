@@ -1,24 +1,10 @@
+// lib/models/numerofonia.dart
 /// Modelo de numerofonía de Allin Kawsay.
-///
-/// Cada estrofa es una TABLA de 2 hileras x N columnas:
-///   - Hilera 7 (arriba): cañas agudas
-///   - Hilera 6 (abajo): cañas graves
-/// Cada celda contiene una nota o un grupo ("4", "56665", "44.6").
-/// Compatible con todos los formatos históricos guardados en Firestore.
-///
-/// NUEVO: cada celda puede guardar "timings" (ms entre notas consecutivas)
-/// para el modo ensayo. Opcional: si falta, se usa BPM fijo.
 
 class ColumnaNumerofonia {
   String nota7;
   String nota6;
-
-  /// Timings en milisegundos de cada nota de `nota7`.
-  /// Ej: nota7="43335" → timings7=[0, 420, 380, 550, 400]
-  /// El primer elemento es siempre 0 (inicio de la columna).
   List<int> timings7;
-
-  /// Igual que timings7, pero para la fila 6.
   List<int> timings6;
 
   ColumnaNumerofonia({
@@ -31,7 +17,6 @@ class ColumnaNumerofonia {
 
   bool get vacia => nota7.trim().isEmpty && nota6.trim().isEmpty;
 
-  /// Largo de la celda más larga de la columna (para el ancho tipo Excel).
   int get maxLen {
     final a = nota7.trim().length;
     final b = nota6.trim().length;
@@ -56,14 +41,8 @@ class ColumnaNumerofonia {
     return ColumnaNumerofonia(
       nota7: (m['nota7'] ?? '') as String,
       nota6: (m['nota6'] ?? '') as String,
-      timings7: (m['timings7'] as List?)
-              ?.map((x) => (x as num).toInt())
-              .toList() ??
-          <int>[],
-      timings6: (m['timings6'] as List?)
-              ?.map((x) => (x as num).toInt())
-              .toList() ??
-          <int>[],
+      timings7: (m['timings7'] as List?)?.map((x) => (x as num).toInt()).toList() ?? <int>[],
+      timings6: (m['timings6'] as List?)?.map((x) => (x as num).toInt()).toList() ?? <int>[],
     );
   }
 }
@@ -75,7 +54,6 @@ class EstrofaNumerofonia {
   EstrofaNumerofonia({List<ColumnaNumerofonia>? columnas, this.bis = false})
       : columnas = columnas ?? <ColumnaNumerofonia>[];
 
-  /// Estrofa nueva con [n] columnas vacías (el editor usa 2 por defecto).
   factory EstrofaNumerofonia.nueva({int n = 2}) => EstrofaNumerofonia(
         columnas: List.generate(n, (_) => ColumnaNumerofonia()),
       );
@@ -87,8 +65,6 @@ class EstrofaNumerofonia {
         bis: bis,
       );
 
-  /// Texto plano para compartir por WhatsApp / respaldo.
-  /// Ej: "4 4 3 4 / 5 5 6 5 \ 3 3 2 3"
   String get texto {
     final sb = StringBuffer();
     int? hilera;
@@ -116,17 +92,14 @@ class EstrofaNumerofonia {
       };
 
   factory EstrofaNumerofonia.fromMap(Map<String, dynamic> m) {
-    // 1) Formato actual: columnas de tabla
     if (m['columnas'] != null) {
       return EstrofaNumerofonia(
         columnas: (m['columnas'] as List)
-            .map((x) =>
-                ColumnaNumerofonia.fromMap(Map<String, dynamic>.from(x)))
+            .map((x) => ColumnaNumerofonia.fromMap(Map<String, dynamic>.from(x)))
             .toList(),
         bis: m['bis'] ?? false,
       );
     }
-    // 2) Formato intermedio: eventos secuenciales {tipo, valor}
     if (m['eventos'] != null) {
       return EstrofaNumerofonia(
         columnas: _eventosAColumnas((m['eventos'] as List)
@@ -135,7 +108,6 @@ class EstrofaNumerofonia {
         bis: m['bis'] ?? false,
       );
     }
-    // 3) Formato viejo: fila7 / fila6
     if (m['fila7'] != null || m['fila6'] != null) {
       final f6 = List<String>.from(m['fila6'] ?? []);
       final f7 = List<String>.from(m['fila7'] ?? []);
@@ -147,14 +119,12 @@ class EstrofaNumerofonia {
         bis: m['bis'] ?? false,
       );
     }
-    // 4) Texto plano legacy
     return EstrofaNumerofonia(
       columnas: parsearTexto((m['texto'] as String?) ?? ''),
       bis: m['bis'] ?? false,
     );
   }
 
-  /// Convierte "4 4 3 4 / 5 5 6 5 \ 3 3 2 3" (o "4434 / 5565") a columnas.
   static List<ColumnaNumerofonia> parsearTexto(String texto) {
     final cols = <ColumnaNumerofonia>[];
     int hilera = 6;
@@ -175,9 +145,62 @@ class EstrofaNumerofonia {
     return cols;
   }
 
-  /// TipoEvento antiguo: 0 = nota7, 1 = nota6, 2 = direccion
-  static List<ColumnaNumerofonia> _eventosAColumnas(
-      List<Map<String, dynamic>> eventos) {
+  /// ⚡ INGRESO RÁPIDO (Nueva Lógica)
+  /// 43653/2332 -> 43653 va abajo (6), 2332 va arriba (7).
+  /// 43653\2332 -> 43653 va arriba (7), 2332 va abajo (6).
+  static List<ColumnaNumerofonia> parsearTextoRapido(String input) {
+    final cleanInput = input.replaceAll(RegExp(r'\s+'), '');
+    if (cleanInput.isEmpty) return [];
+
+    final cols = <ColumnaNumerofonia>[];
+    final parts = <String>[];
+    final separators = <String>[];
+    
+    String currentPart = '';
+    for (int i = 0; i < cleanInput.length; i++) {
+      final char = cleanInput[i];
+      if (char == '/' || char == '\\') {
+        parts.add(currentPart);
+        separators.add(char);
+        currentPart = '';
+      } else {
+        currentPart += char;
+      }
+    }
+    parts.add(currentPart);
+
+    for (int i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      if (part.isEmpty) continue;
+
+      if (i < separators.length) {
+        // Si hay un separador después, la fila de este bloque depende de ese separador
+        if (separators[i] == '/') {
+          // / significa "subir", así que este bloque es fila 6
+          cols.add(ColumnaNumerofonia(nota6: part));
+        } else {
+          // \ significa "bajar", así que este bloque es fila 7
+          cols.add(ColumnaNumerofonia(nota7: part));
+        }
+      } else {
+        // Es el último bloque. Depende del último separador que se encontró
+        if (separators.isNotEmpty) {
+          final lastSep = separators.last;
+          if (lastSep == '/') {
+            cols.add(ColumnaNumerofonia(nota7: part)); // Venía subiendo
+          } else {
+            cols.add(ColumnaNumerofonia(nota6: part)); // Venía bajando
+          }
+        } else {
+          cols.add(ColumnaNumerofonia(nota6: part)); // Sin barras, va a fila 6
+        }
+      }
+    }
+
+    return cols;
+  }
+
+  static List<ColumnaNumerofonia> _eventosAColumnas(List<Map<String, dynamic>> eventos) {
     final cols = <ColumnaNumerofonia>[];
     int hilera = 6;
     for (final e in eventos) {
@@ -197,12 +220,9 @@ class EstrofaNumerofonia {
   }
 }
 
-/// Números romanos para rotular las partes (PARTE I, II, III...).
 String romanoNumerofonia(int n) {
   const vals = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
-  const sim = [
-    'M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'
-  ];
+  const sim = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'];
   final sb = StringBuffer();
   var x = n;
   for (int i = 0; i < vals.length; i++) {
