@@ -115,8 +115,8 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
       setlist: _setlist, 
       imagenUrl: _imagenUrl ?? '', 
       audioUrl: _audioUrl!, 
-      descripcion: '', // <-- AGREGADO
-      tags: [],        // <-- AGREGADO
+      descripcion: '',
+      tags: [],
       creadoPor: '', 
       creadorNombre: ''
     );
@@ -142,7 +142,7 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
     return AppScaffold(
       title: widget.cancion == null ? 'Nueva Canción' : 'Editar Canción',
       actions: [
-        IconButton(icon: const Icon(Icons.check), onPressed: _guardando ? null : _guardar),
+        IconButton(icon: const Icon(Icons.check, color: AppColors.dorado), onPressed: _guardando ? null : _guardar),
       ],
       body: Form(
         key: _formKey,
@@ -155,6 +155,8 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               categoriaId: _categoriaId, categorias: _categorias, cargandoCategorias: _cargandoCategorias, onCategoriaChanged: (v) => setState(() => _categoriaId = v ?? ''),
             ),
             const SizedBox(height: Sp.md),
+            
+            // Editor de Numerofonía
             AppCard(
               padding: const EdgeInsets.all(Sp.lg),
               child: Column(children: [
@@ -164,6 +166,8 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               ]),
             ),
             const SizedBox(height: Sp.md),
+            
+            // Editor de Letras
             AppCard(
               padding: const EdgeInsets.all(Sp.lg),
               child: Column(children: [
@@ -173,6 +177,8 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               ]),
             ),
             const SizedBox(height: Sp.md),
+            
+            // Multimedia (Audio, Imagen, Video)
             CancionFormMedia(
               imagenUrl: _imagenUrl, audioUrl: _audioUrl, audioNombre: _audioNombre,
               subiendoImagen: _subiendoImagen, subiendoAudio: _subiendoAudio,
@@ -182,9 +188,13 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               videoCtrl: _videoCtrl,
             ),
             const SizedBox(height: Sp.md),
+            
+            // Botón para marcar Setlist
             AppButton(label: 'MARCAR SETLIST', icon: Icons.queue_music, variant: AppButtonVariant.secondary, onPressed: _audioUrl != null ? _abrirSetlist : null),
+            
             const SizedBox(height: Sp.xxl),
             AppButton(label: _guardando ? 'GUARDANDO...' : 'GUARDAR CANCIÓN', fullWidth: true, loading: _guardando, onPressed: _guardar),
+            const SizedBox(height: Sp.xxxl),
           ],
         ),
       ),
