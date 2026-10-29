@@ -39,27 +39,14 @@ class PermisosDialog extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: Sp.xl),
-            _ItemPermiso(
-              icon: Icons.notifications_active,
-              title: 'Notificaciones',
-              desc: 'Para avisarte de nuevos eventos y canciones.',
-            ),
-            _ItemPermiso(
-              icon: Icons.photo_library,
-              title: 'Fotos y Videos',
-              desc: 'Para que puedas subir recuerdos del grupo y personalizar tu perfil.',
-            ),
-            _ItemPermiso(
-              icon: Icons.audiotrack,
-              title: 'Audio',
-              desc: 'Para que puedas escuchar las canciones de la zampoña.',
-            ),
+            _ItemPermiso(icon: Icons.notifications_active, title: 'Notificaciones', desc: 'Para avisarte de nuevos eventos y canciones.'),
+            _ItemPermiso(icon: Icons.photo_library, title: 'Fotos y Videos', desc: 'Para que puedas subir recuerdos del grupo y personalizar tu perfil.'),
+            _ItemPermiso(icon: Icons.audiotrack, title: 'Audio', desc: 'Para que puedas escuchar las canciones de la zampoña.'),
             const SizedBox(height: Sp.xl),
             AppButton(
               label: 'ACEPTAR Y CONTINUAR',
               fullWidth: true,
               onPressed: () async {
-                // Pedimos los permisos reales al sistema operativo
                 await [
                   Permission.notification,
                   Permission.photos,
