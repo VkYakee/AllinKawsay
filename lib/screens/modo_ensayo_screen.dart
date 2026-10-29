@@ -44,7 +44,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
   
   CeldaActiva? _celdaActiva;
   String? _notaSonando;
-  int _lineaLetraActiva = 0;
+  String _textoKaraokeActual = '';
   
   late List<BloqueAudio> _bloques;
   List<_EventoEnsayo> _eventosDelBloque = [];
@@ -112,7 +112,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       _bloqueActual = idx;
       _celdaActiva = null;
       _notaSonando = null;
-      _lineaLetraActiva = 0;
+      _textoKaraokeActual = '';
       necesitaRedibujar = true;
       if (idx >= 0) {
         _calcularEventosDelBloque(_bloques[idx]);
@@ -138,7 +138,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     }
 
     if (eventoActual != null) {
-      // 🚀 CORREGIDO: Comparar el ID exacto de la nota, no solo si cambió la fila
       if (_notaSonando != eventoActual.idNota) {
         _celdaActiva = CeldaActiva(estrofa: 0, columna: eventoActual.columna, esFila7: eventoActual.esFila7, notaIndex: 0);
         _notaSonando = eventoActual.idNota; 
@@ -152,19 +151,18 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       }
     }
 
-    if (bloque.conLetra && bloque.letraTimingsMs.isNotEmpty) {
-      int linea = 0;
-      for (int i = 0; i < bloque.letraTimingsMs.length; i++) {
-        if (msActual >= bloque.letraTimingsMs[i]) {
-          linea = i;
-        } else {
-          break;
-        }
+    // 🚀 NUEVA LÓGICA DE KARAOKE POR FRAGMENTOS
+    String textoNuevo = '';
+    for (final frag in bloque.karaokeFragments) {
+      if (msActual >= frag.inicioMs && msActual <= frag.finMs) {
+        textoNuevo = frag.texto;
+        break;
       }
-      if (linea != _lineaLetraActiva) {
-        _lineaLetraActiva = linea;
-        necesitaRedibujar = true;
-      }
+    }
+
+    if (textoNuevo != _textoKaraokeActual) {
+      _textoKaraokeActual = textoNuevo;
+      necesitaRedibujar = true;
     }
 
     if (necesitaRedibujar && mounted) {
@@ -208,10 +206,8 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
     for (int i = 0; i < secuenciaNotas.length; i++) {
       if (i >= timingsToUse.length) break;
-      
       final inicio = timingsToUse[i];
       final fin = (i + 1 < timingsToUse.length) ? timingsToUse[i + 1] : inicio + 400;
-
       _eventosDelBloque.add(_EventoEnsayo(
         columna: secuenciaNotas[i].key,
         esFila7: secuenciaNotas[i].value.startsWith('fila7'),
@@ -220,14 +216,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
         finMs: fin,
       ));
     }
-  }
-
-  String get _letraActual {
-    final b = _bloqueActual >= 0 && _bloqueActual < _bloques.length ? _bloques[_bloqueActual] : null;
-    if (b == null || !b.conLetra || !widget.cancion.tieneLetra) return '';
-    final lineas = widget.cancion.letras.first.texto.split('\n').where((l) => l.trim().isNotEmpty).toList();
-    if (lineas.isEmpty) return '';
-    return lineas[_lineaLetraActiva.clamp(0, lineas.length - 1)];
   }
 
   List<EstrofaNumerofonia> get _estrofasAMostrar {
@@ -280,12 +268,12 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
             padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
             child: Center(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 200),
                 child: Text(
-                  _letraActual.isEmpty ? '♪ (Sin letra en este bloque) ♪' : _letraActual,
-                  key: ValueKey(_letraActual),
+                  _textoKaraokeActual.isEmpty ? '♪ (Esperando letra...) ♪' : _textoKaraokeActual,
+                  key: ValueKey(_textoKaraokeActual),
                   textAlign: TextAlign.center,
-                  style: AppType.body.copyWith(color: AppColors.dorado, fontSize: 18, fontStyle: FontStyle.italic),
+                  style: AppType.body.copyWith(color: AppColors.dorado, fontSize: 20, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic),
                 ),
               ),
             ),
