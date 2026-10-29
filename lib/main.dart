@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'models/usuario.dart';
 import 'services/auth_service.dart';
 import 'services/onesignal_service.dart';
@@ -36,6 +35,8 @@ void main() async {
       androidNotificationChannelId: 'com.allinkawsay.app.channel.audio',
       androidNotificationChannelName: 'Reproducción de audio',
       androidNotificationOngoing: true,
+      // 🎨 Mejora premium para la notificación del reproductor
+      androidNotificationIcon: 'mipmap/ic_launcher', 
     );
   } catch (e) {
     debugPrint('⚠️ Error al inicializar audio background: $e');
@@ -44,14 +45,7 @@ void main() async {
   await OneSignalService.init();
   await ThemeProvider.cargar();
 
-  try {
-    final status = await Permission.notification.status;
-    if (status.isDenied) {
-      await Permission.notification.request();
-    }
-  } catch (e) {
-    debugPrint('⚠️ Error pidiendo permiso de notificaciones: $e');
-  }
+  // ❌ SE ELIMINÓ LA PETICIÓN AUTOMÁTICA DE NOTIFICACIONES AQUÍ
 
   runApp(const SikurisApp());
 }
@@ -91,62 +85,84 @@ class SikurisApp extends StatelessWidget {
       },
     );
   }
-  ThemeData _temaClaro() {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: const Color(0xFFF2F2F7), // Gris iOS
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.granate,
-        onPrimary: AppColors.dorado,
-        secondary: AppColors.dorado,
-        onSecondary: AppColors.negro,
-        surface: AppColors.blanco,
-        onSurface: AppColors.negro,
-        outline: AppColors.dorado,
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+ThemeData _temaClaro() {
+  return ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    scaffoldBackgroundColor: const Color(0xFFF2F2F7), // Gris iOS
+    colorScheme: const ColorScheme.light(
+      primary: AppColors.granate,
+      onPrimary: AppColors.dorado,
+      secondary: AppColors.dorado,
+      onSecondary: AppColors.negro,
+      surface: AppColors.blanco,
+      onSurface: AppColors.negro,
+      outline: AppColors.dorado,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.transparent,
+      foregroundColor: AppColors.dorado,
+      elevation: 0,
+      centerTitle: true,
+      scrolledUnderElevation: 0,
+      titleTextStyle: TextStyle(
+          color: AppColors.dorado,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 2.5),
+      iconTheme: IconThemeData(color: AppColors.dorado),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.granate,
         foregroundColor: AppColors.dorado,
-        elevation: 0,
-        centerTitle: true,
-        scrolledUnderElevation: 0,
-        titleTextStyle: TextStyle(
-            color: AppColors.dorado,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2.5),
-        iconTheme: IconThemeData(color: AppColors.dorado),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5),
       ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.granate,
-          foregroundColor: AppColors.dorado,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-        ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      labelStyle: const TextStyle(color: AppColors.granate),
+      floatingLabelStyle: const TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold),
+      hintStyle: TextStyle(color: AppColors.negro.withOpacity(0.4)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(color: AppColors.dorado, width: 2),
       ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.8),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        labelStyle: const TextStyle(color: AppColors.granate),
-        floatingLabelStyle: const TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold),
-        hintStyle: TextStyle(color: AppColors.negro.withOpacity(0.4)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: AppColors.dorado, width: 2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.5), width: 1),
-        ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.5), width: 1),
       ),
-      // ... (Puedes mantener el resto de tus configuraciones de botones, snackbars, etc.)
-    );
-  }
-
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.negro,
+      contentTextStyle: const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.w500),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: AppColors.blanco,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.granate),
+      contentTextStyle: TextStyle(fontSize: 15, color: AppColors.negro.withOpacity(0.8), height: 1.5),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppColors.blanco,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      showDragHandle: false,
+    ),
+    tabBarTheme: const TabBarTheme(
+      labelColor: AppColors.dorado,
+      unselectedLabelColor: Colors.white70,
+      indicatorColor: AppColors.dorado,
+      indicatorSize: TabBarIndicatorSize.tab,
+      labelStyle: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 12),
+    ),
+  );
+}
   ThemeData _temaOscuro() {
     return ThemeData(
       useMaterial3: true,
@@ -157,7 +173,7 @@ class SikurisApp extends StatelessWidget {
         onPrimary: AppColors.dorado,
         secondary: AppColors.dorado,
         onSecondary: AppColors.negro,
-        surface: const Color(0xFF1A1A1A), // Surface oscura para cristal
+        surface: const Color(0xFF1A1A1A),
         onSurface: AppColors.textoOscuroClaro,
         outline: AppColors.dorado,
         error: Color(0xFFCF6679),
@@ -201,10 +217,34 @@ class SikurisApp extends StatelessWidget {
           borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.5), width: 1),
         ),
       ),
-      // ... (Puedes mantener el resto de tus configuraciones de botones, snackbars, etc.)
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.granateOscuro,
+        contentTextStyle: const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.w500),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      dialogTheme: DialogTheme(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.dorado),
+        contentTextStyle: TextStyle(fontSize: 15, color: AppColors.textoOscuroClaro.withOpacity(0.85), height: 1.5),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        showDragHandle: false,
+      ),
+      tabBarTheme: const TabBarTheme(
+        labelColor: AppColors.dorado,
+        unselectedLabelColor: Colors.white54,
+        indicatorColor: AppColors.dorado,
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelStyle: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 12),
+      ),
     );
   }
 }
+
 class _AuthGate extends StatefulWidget {
   const _AuthGate();
 
@@ -213,8 +253,7 @@ class _AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<_AuthGate> {
-  static final DateTime _fechaCorteVerificacion =
-      DateTime(2026, 10, 15, 0, 0, 0); // 15 oct 2026 a medianoche
+  static final DateTime _fechaCorteVerificacion = DateTime(2026, 10, 15, 0, 0, 0);
 
   StreamSubscription? _userSub;
   String? _ultimoRol;
@@ -253,9 +292,7 @@ class _AuthGateState extends State<_AuthGate> {
       if (!mounted) return;
 
       await DialogoActualizacion.mostrar(context, info);
-    } catch (_) {
-      // Silencioso
-    }
+    } catch (_) {}
   }
 
   void _syncOneSignal(String? uid) {
@@ -271,8 +308,7 @@ class _AuthGateState extends State<_AuthGate> {
   bool _necesitaVerificar(User user, Usuario? usuarioFirestore) {
     if (user.emailVerified) return false;
 
-    final esGoogle = user.providerData
-        .any((info) => info.providerId == 'google.com');
+    final esGoogle = user.providerData.any((info) => info.providerId == 'google.com');
     if (esGoogle) return false;
 
     final creationTime = user.metadata.creationTime;
