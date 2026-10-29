@@ -22,7 +22,6 @@ class _VerificacionPendienteScreenState extends State<VerificacionPendienteScree
   bool _reenviando = false;
   bool _verificando = false;
   int _segundos = 0;
-  bool _enviado = false;
 
   @override
   void initState() {
@@ -36,7 +35,6 @@ class _VerificacionPendienteScreenState extends State<VerificacionPendienteScree
       await FirebaseAuth.instance.currentUser?.sendEmailVerification();
       if (mounted) {
         setState(() {
-          _enviado = true;
           _segundos = 60;
           if (!primeraVez) _reenviando = false;
         });
@@ -78,68 +76,63 @@ class _VerificacionPendienteScreenState extends State<VerificacionPendienteScree
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0F0F0F), AppColors.granateOscuro, AppColors.granate],
-            stops: [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(Sp.xxl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 100, height: 100,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.1), border: Border.all(color: AppColors.dorado.withOpacity(0.4), width: 2)),
-                    child: const Icon(Icons.mark_email_unread_outlined, size: 48, color: AppColors.dorado),
-                  ),
-                  const SizedBox(height: Sp.xl),
-                  Text('VERIFICA TU CORREO', style: AppType.h2.copyWith(color: AppColors.dorado, letterSpacing: 2)),
-                  const SizedBox(height: Sp.sm),
-                  Text('Hemos enviado un enlace a:', style: AppType.body.copyWith(color: AppColors.dorado.withOpacity(0.7))),
-                  Text(widget.email, style: AppType.subtitle.copyWith(color: AppColors.dorado)),
-                  const SizedBox(height: Sp.xxl),
-                  
-                  AppCard(
-                    padding: const EdgeInsets.all(Sp.xl),
-                    child: Column(
-                      children: [
-                        _paso(1, 'Abre tu correo', 'Busca el email de Allin Kawsay (revisa spam).'),
-                        _paso(2, 'Toca el enlace', 'Haz clic en "Verificar correo".'),
-                        _paso(3, 'Vuelve aquí', 'Toca el botón de abajo para entrar.', ultimo: true),
-                        const SizedBox(height: Sp.xl),
-                        AppButton(
-                          label: _verificando ? 'VERIFICANDO...' : 'YA VERIFIQUÉ',
-                          fullWidth: true,
-                          loading: _verificando,
-                          onPressed: _verificar,
-                        ),
-                        const SizedBox(height: Sp.sm),
-                        AppButton(
-                          label: _reenviando ? 'ENVIANDO...' : (_segundos > 0 ? 'REENVIAR EN ${_segundos}s' : 'REENVIAR EMAIL'),
-                          fullWidth: true,
-                          variant: AppButtonVariant.secondary,
-                          loading: _reenviando,
-                          onPressed: _segundos > 0 ? null : () => _enviarEmail(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: Sp.lg),
-                  TextButton(
-                    onPressed: () => AuthService().logout(),
-                    child: Text('Cerrar sesión', style: AppType.caption.copyWith(color: AppColors.dorado.withOpacity(0.6))),
-                  ),
-                ],
+    return AppScaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(Sp.xxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 100, height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.granate.withOpacity(0.1),
+                  border: Border.all(color: AppColors.dorado.withOpacity(0.5), width: 2),
+                  boxShadow: [
+                    BoxShadow(color: AppColors.dorado.withOpacity(0.2), blurRadius: 20, spreadRadius: 5),
+                  ],
+                ),
+                child: const Icon(Icons.mark_email_unread_outlined, size: 48, color: AppColors.dorado),
               ),
-            ),
+              const SizedBox(height: Sp.xl),
+              Text('VERIFICA TU CORREO', style: AppType.h2.copyWith(color: AppColors.granate, letterSpacing: 1.5)),
+              const SizedBox(height: Sp.sm),
+              Text('Hemos enviado un enlace a:', style: AppType.body.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+              Text(widget.email, style: AppType.subtitle.copyWith(color: AppColors.granate)),
+              const SizedBox(height: Sp.xxl),
+              
+              AppCard(
+                padding: const EdgeInsets.all(Sp.xl),
+                child: Column(
+                  children: [
+                    _paso(1, 'Abre tu correo', 'Busca el email de Allin Kawsay (revisa spam).'),
+                    _paso(2, 'Toca el enlace', 'Haz clic en "Verificar correo".'),
+                    _paso(3, 'Vuelve aquí', 'Toca el botón de abajo para entrar.', ultimo: true),
+                    const SizedBox(height: Sp.xl),
+                    AppButton(
+                      label: _verificando ? 'VERIFICANDO...' : 'YA VERIFIQUÉ',
+                      fullWidth: true,
+                      loading: _verificando,
+                      onPressed: _verificar,
+                    ),
+                    const SizedBox(height: Sp.sm),
+                    AppButton(
+                      label: _reenviando ? 'ENVIANDO...' : (_segundos > 0 ? 'REENVIAR EN ${_segundos}s' : 'REENVIAR EMAIL'),
+                      fullWidth: true,
+                      variant: AppButtonVariant.secondary,
+                      loading: _reenviando,
+                      onPressed: _segundos > 0 ? null : () => _enviarEmail(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: Sp.lg),
+              TextButton(
+                onPressed: () => AuthService().logout(),
+                child: Text('Cerrar sesión', style: AppType.caption.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+              ),
+            ],
           ),
         ),
       ),
@@ -163,8 +156,8 @@ class _VerificacionPendienteScreenState extends State<VerificacionPendienteScree
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(titulo, style: AppType.subtitle.copyWith(color: AppColors.granate)),
-                Text(desc, style: AppType.captionXs.copyWith(color: Colors.black54, height: 1.4)),
+                Text(titulo, style: AppType.subtitle.copyWith(color: Theme.of(context).colorScheme.onSurface)),
+                Text(desc, style: AppType.captionXs.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), height: 1.4)),
               ],
             ),
           ),
