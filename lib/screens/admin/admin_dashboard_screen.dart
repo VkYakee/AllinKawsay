@@ -23,21 +23,9 @@ class AdminDashboardScreen extends StatelessWidget {
         padding: const EdgeInsets.all(Sp.lg),
         children: [
           if (isDev) ...[
-            Container(
-              padding: const EdgeInsets.all(Sp.lg),
-              margin: const EdgeInsets.only(bottom: Sp.lg),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0A2540),
-                borderRadius: Rad.rLg,
-                border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.cyanAccent.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  )
-                ],
-              ),
+            AppCard(
+              color: const Color(0xFF0A2540).withOpacity(0.9),
+              border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
               child: Row(
                 children: [
                   const Icon(Icons.code, color: Colors.cyanAccent, size: 28),
@@ -46,39 +34,27 @@ class AdminDashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'DEV MODE ACTIVO',
-                          style: AppType.label.copyWith(
-                            color: Colors.cyanAccent,
-                            letterSpacing: 2,
-                          ),
-                        ),
+                        Text('DEV MODE ACTIVO', style: AppType.label.copyWith(color: Colors.cyanAccent, letterSpacing: 2)),
                         const SizedBox(height: 4),
-                        Text(
-                          'Acceso a prereleases y gestión de admins',
-                          style: AppType.captionXs.copyWith(
-                            color: Colors.white70,
-                          ),
-                        ),
+                        Text('Acceso a prereleases y gestión de admins', style: AppType.captionXs.copyWith(color: Colors.white70)),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: Sp.lg),
           ],
+          
+          const SeccionHeader(title: 'Resumen', icon: Icons.insights),
           _OpcionLista(
             icon: Icons.insights,
             title: 'Estadísticas del grupo',
             subtitle: 'Métricas, top canciones y usuarios',
             onTap: () => _nav(context, const EstadisticasAdminScreen()),
           ),
-          const SizedBox(height: Sp.lg),
-          const SeccionHeader(
-              title: 'Comunicación',
-              icon: Icons.campaign,
-              padding: EdgeInsets.zero),
-          const SizedBox(height: Sp.sm),
+          
+          const SeccionHeader(title: 'Comunicación', icon: Icons.campaign),
           _OpcionLista(
             icon: Icons.notifications,
             title: 'Notificaciones',
@@ -87,18 +63,12 @@ class AdminDashboardScreen extends StatelessWidget {
           ),
           _OpcionLista(
             icon: Icons.system_update,
-            title: isDev ? 'Actualizaciones (Todos los builds)' : 'Actualizaciones',
-            subtitle: isDev
-                ? 'Ver releases oficiales y prereleases'
-                : 'Aprobar versiones de la app',
+            title: isDev ? 'Actualizaciones (Todos)' : 'Actualizaciones',
+            subtitle: isDev ? 'Ver releases y prereleases' : 'Aprobar versiones',
             onTap: () => _nav(context, const GestionActualizacionesScreen()),
           ),
-          const SizedBox(height: Sp.lg),
-          const SeccionHeader(
-              title: 'Gestión',
-              icon: Icons.settings,
-              padding: EdgeInsets.zero),
-          const SizedBox(height: Sp.sm),
+          
+          const SeccionHeader(title: 'Gestión de Contenido', icon: Icons.settings),
           _OpcionLista(
             icon: Icons.people,
             title: 'Usuarios y Roles',
@@ -112,16 +82,16 @@ class AdminDashboardScreen extends StatelessWidget {
             onTap: () => _nav(context, const GestionCategoriasScreen()),
           ),
           _OpcionLista(
-            icon: Icons.backup,
-            title: 'Exportar respaldo',
-            subtitle: 'Descargar base de datos',
-            onTap: () => _nav(context, const ExportarRespaldoScreen()),
+            icon: Icons.history,
+            title: 'Historial de Actividad',
+            subtitle: 'Ver quién hizo qué en el grupo',
+            onTap: () => _nav(context, const ActividadScreen()),
           ),
           _OpcionLista(
-            icon: Icons.history,
-            title: 'Historial',
-            subtitle: 'Ver actividad reciente',
-            onTap: () => _nav(context, const ActividadScreen()),
+            icon: Icons.backup,
+            title: 'Exportar respaldo',
+            subtitle: 'Descargar base de datos en JSON',
+            onTap: () => _nav(context, const ExportarRespaldoScreen()),
           ),
           const SizedBox(height: Sp.xxxl),
         ],
@@ -159,10 +129,10 @@ class _OpcionLista extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(Sp.sm),
               decoration: BoxDecoration(
-                color: AppColors.granate.withOpacity(0.08),
+                color: AppColors.granate.withOpacity(0.1),
                 borderRadius: Rad.rMd,
               ),
-              child: Icon(icon, color: AppColors.granate, size: 20),
+              child: Icon(icon, color: AppColors.granate, size: 22),
             ),
             const SizedBox(width: Sp.md),
             Expanded(
@@ -170,17 +140,12 @@ class _OpcionLista extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: AppType.subtitle),
-                  Text(subtitle,
-                      style: AppType.captionXs.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.55))),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: AppType.captionXs.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right,
-                color: AppColors.dorado, size: 20),
+            Icon(Icons.chevron_right, color: AppColors.dorado.withOpacity(0.6), size: 20),
           ],
         ),
       ),
