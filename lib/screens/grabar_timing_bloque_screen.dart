@@ -126,7 +126,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
   void _terminar() {
     if (_toquesMs.isEmpty) return;
     final recortado = _toquesMs.length > _notasTotales ? _toquesMs.sublist(0, _notasTotales) : _toquesMs;
-    Navigator.pop(context, [recortado, _letrasMs]); // Devolvemos ambos arrays
+    Navigator.pop(context, [recortado, _letrasMs]);
   }
 
   @override
@@ -141,7 +141,8 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
       bottomBar: Row(
         children: [
           if (widget.bloque.conLetra)
-            Expanded(child: AppButton(label: 'MARCAR LETRA', icon: Icons.text_fields, color: Colors.blueAccent, onPressed: _marcarLetra)),
+            // 🚀 CORREGIDO: Sin parámetro color
+            Expanded(child: AppButton(label: 'MARCAR LETRA', icon: Icons.text_fields, variant: AppButtonVariant.secondary, onPressed: _marcarLetra)),
           if (widget.bloque.conLetra) const SizedBox(width: Sp.sm),
           Expanded(child: AppButton(label: 'DESHACER', icon: Icons.undo, variant: AppButtonVariant.secondary, onPressed: _toquesMs.isEmpty ? null : () {
             setState(() { _toquesMs.removeLast(); _indexEsperada = _toquesMs.length; });
