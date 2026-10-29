@@ -31,14 +31,14 @@ class VisorNumerofonia extends StatelessWidget {
     this.fondoOscuro = false,
   });
 
-  static const double charW = 7.5;
-  static const double padH = 3.0;
+  static const double charW = 8.0; // Un poco más ancho
+  static const double padH = 4.0;
 
   static double anchoCol(ColumnaNumerofonia c, double e) =>
       (c.maxLen.clamp(1, 99) * charW + padH * 2 + 1) * e;
 
   static double baseDe(EstrofaNumerofonia estrofa) =>
-      18 + estrofa.columnas.fold<double>(0, (s, c) => s + anchoCol(c, 1.0));
+      24 + estrofa.columnas.fold<double>(0, (s, c) => s + anchoCol(c, 1.0));
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +56,7 @@ class VisorNumerofonia extends StatelessWidget {
         
         double e = escala;
         if (maxBase > 0 && disponible > 0 && maxBase * e > disponible) {
-          e = (disponible / maxBase).clamp(0.4, escala);
+          e = (disponible / maxBase).clamp(0.3, escala); // Permite achicar más
         }
 
         return Column(
@@ -180,13 +180,26 @@ class _TablaEstrofa extends StatelessWidget {
   }) {
     final activa = celdaActiva != null && celdaActiva!.columna == columna && celdaActiva!.esFila7 == esFila7;
 
+    // EL SECRETO PARA QUE NO SE APILEN: FittedBox con maxLines 1
+    Widget texto = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        valor,
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
+      ),
+    );
+
     if (!activa || valor.trim().isEmpty) {
-      return _notaSimple(valor, e, color);
+      return Container(height: 30 * e, alignment: Alignment.center, padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e), child: texto);
     }
 
     final textoLimpio = valor.trim();
     final idx = celdaActiva!.notaIndex;
-    if (idx < 0 || idx >= textoLimpio.length) return _notaSimple(valor, e, color);
+    if (idx < 0 || idx >= textoLimpio.length) {
+       return Container(height: 30 * e, alignment: Alignment.center, padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e), child: texto);
+    }
 
     final antes = textoLimpio.substring(0, idx);
     final letra = textoLimpio.substring(idx, idx + 1);
@@ -196,35 +209,29 @@ class _TablaEstrofa extends StatelessWidget {
       height: 30 * e,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.dorado.withOpacity(0.1), // Fondo resaltado
-        boxShadow: [BoxShadow(color: AppColors.dorado.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)], // Resplandor
+        color: AppColors.dorado.withOpacity(0.1),
+        boxShadow: [BoxShadow(color: AppColors.dorado.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)],
       ),
-      child: RichText(
-        text: TextSpan(
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
-          children: [
-            if (antes.isNotEmpty) TextSpan(text: antes, style: TextStyle(color: color)),
-            TextSpan(
-              text: letra,
-              style: TextStyle(
-                color: AppColors.dorado,
-                shadows: [Shadow(color: AppColors.dorado, blurRadius: 10)],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: RichText(
+          maxLines: 1,
+          text: TextSpan(
+            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
+            children: [
+              if (antes.isNotEmpty) TextSpan(text: antes, style: TextStyle(color: color)),
+              TextSpan(
+                text: letra,
+                style: TextStyle(
+                  color: AppColors.dorado,
+                  shadows: [Shadow(color: AppColors.dorado, blurRadius: 10)],
+                ),
               ),
-            ),
-            if (despues.isNotEmpty) TextSpan(text: despues, style: TextStyle(color: color)),
-          ],
+              if (despues.isNotEmpty) TextSpan(text: despues, style: TextStyle(color: color)),
+            ],
+          ),
         ),
       ),
     );
   }
-
-  Widget _notaSimple(String valor, double e, Color color) => Container(
-        height: 30 * e,
-        alignment: Alignment.center,
-        padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e),
-        child: Text(
-          valor,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
-        ),
-      );
 }
