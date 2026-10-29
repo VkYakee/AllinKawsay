@@ -8,6 +8,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import '../design/design.dart';
 import '../models/bloque_audio.dart';
 import '../models/cancion.dart';
+import '../models/numerofonia.dart'; // <-- IMPORT AGREGADO
 import '../services/player_service.dart';
 import '../services/zampona_service.dart';
 import '../theme/colors.dart';
@@ -68,7 +69,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
         final tag = MediaItem(id: 'ensayo_${widget.cancion.id}', title: 'Ensayo: ${widget.cancion.titulo}', artist: 'Allin Kawsay');
         await _player.setAudioSource(AudioSource.uri(Uri.parse(widget.cancion.audioUrl), tag: tag));
         
-        // 🚀 FIX LAG: No hacemos setState en cada tick. Solo actualizamos la posición internamente.
         _subPos = _player.positionStream.listen((p) {
           _pos = p;
           _actualizarNotaActiva();
@@ -83,7 +83,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
   @override
   void dispose() {
-    // 🚀 FIX ORIENTACIÓN: Volver a vertical al salir
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _subPos?.cancel();
@@ -146,7 +145,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       }
     }
 
-    // Solo redibujamos si REALMENTE cambió la nota o el bloque
     if (necesitaRedibujar && mounted) {
       setState(() {});
     }
@@ -189,7 +187,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     return '';
   }
 
-  // 🚀 SOLO MOSTRAMOS LA ESTROFA ACTIVA
   List<EstrofaNumerofonia> get _estrofasAMostrar {
     if (_bloqueActual < 0 || _bloqueActual >= _bloques.length) return [];
     final bloque = _bloques[_bloqueActual];
@@ -209,7 +206,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       onCerrar: () { _player.pause(); Navigator.pop(context); },
       actions: [
         IconButton(
-          icon: const Icon(Icons.tune, color: AppColors.dorado), // Ícono cambiado a herramientas
+          icon: const Icon(Icons.tune, color: AppColors.dorado),
           tooltip: 'Práctica Libre (Solo 6/7)',
           onPressed: () {
             _player.pause();
@@ -219,7 +216,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       ],
       body: Column(
         children: [
-          // 1. TABLA (Ocupa todo el ancho disponible)
           Expanded(
             flex: 3,
             child: Container(
@@ -231,18 +227,17 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
                 border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
               ),
               child: Center(
-                // Si hay estrofa activa, la muestra. Si no, un texto.
                 child: _estrofasAMostrar.isEmpty
                     ? Text('Esperando estrofa...', style: AppType.caption.copyWith(color: AppColors.dorado.withOpacity(0.5)))
                     : FittedBox(
                         fit: BoxFit.scaleDown,
                         child: VisorNumerofonia(
-                          estrofas: _estrofasAMostrar, // SOLO LA ESTROFA ACTIVA
+                          estrofas: _estrofasAMostrar,
                           escala: 1.2,
                           fondoOscuro: true,
                           celdaActiva: _notaActiva != null
                               ? CeldaActiva(
-                                  estrofa: 0, // Es 0 porque solo hay 1 en la lista
+                                  estrofa: 0,
                                   columna: _notaActiva!.columna,
                                   esFila7: _notaActiva!.esFila7,
                                   notaIndex: _notaActiva!.notaIndex,
@@ -254,7 +249,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
             ),
           ),
           
-          // 2. LETRA SINCRO
           Container(
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
@@ -264,7 +258,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
             ),
           ),
 
-          // 3. ZAMPOÑA (Protagonista) + Controles
           Expanded(
             flex: 5,
             child: Row(
