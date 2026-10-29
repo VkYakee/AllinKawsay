@@ -1,4 +1,5 @@
 // lib/widgets/setlist/configurar_bloque_modal.dart
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../design/design.dart';
 import '../../models/bloque_audio.dart';
@@ -48,51 +49,60 @@ class _ModalContentState extends State<_ModalContent> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(Sp.xl),
-      decoration: BoxDecoration(color: AppColors.cardColor(context), borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.granate.withOpacity(0.3), borderRadius: Rad.rPill))),
-          const SizedBox(height: Sp.lg),
-          Text('Configurar Bloque', style: AppType.h3, textAlign: TextAlign.center),
-          const SizedBox(height: Sp.lg),
-          Wrap(
-            spacing: Sp.sm, runSpacing: Sp.sm,
-            children: TipoBloque.values.map((t) => AppChoiceChip(
-              label: t.name,
-              selected: _tipo == t,
-              onSelected: (_) => setState(() { _tipo = t; if (_requiereEstrofa && _estrofaRef < 0) _estrofaRef = 0; }),
-            )).toList(),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.all(Sp.xl),
+          decoration: BoxDecoration(
+            color: AppColors.cardColor(context).withOpacity(0.9),
+            border: Border(top: BorderSide(color: AppColors.dorado.withOpacity(0.3), width: 1)),
           ),
-          if (_requiereEstrofa && widget.estrofasDisponibles > 0) ...[
-            const SizedBox(height: Sp.lg),
-            Text('Estrofa de la tabla', style: AppType.eyebrow.copyWith(color: AppColors.granate)),
-            const SizedBox(height: Sp.sm),
-            Wrap(
-              spacing: Sp.sm,
-              children: [
-                for (int i = 0; i < widget.estrofasDisponibles; i++)
-                  AppChoiceChip(label: 'E${i + 1}', selected: _estrofaRef == i, onSelected: (_) => setState(() => _estrofaRef = i)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.granate.withOpacity(0.3), borderRadius: Rad.rPill))),
+              const SizedBox(height: Sp.lg),
+              Text('Configurar Bloque', style: AppType.h3, textAlign: TextAlign.center),
+              const SizedBox(height: Sp.lg),
+              Wrap(
+                spacing: Sp.sm, runSpacing: Sp.sm,
+                children: TipoBloque.values.map((t) => AppChoiceChip(
+                  label: t.name,
+                  selected: _tipo == t,
+                  onSelected: (_) => setState(() { _tipo = t; if (_requiereEstrofa && _estrofaRef < 0) _estrofaRef = 0; }),
+                )).toList(),
+              ),
+              if (_requiereEstrofa && widget.estrofasDisponibles > 0) ...[
+                const SizedBox(height: Sp.lg),
+                Text('Estrofa de la tabla', style: AppType.label.copyWith(color: AppColors.granate, letterSpacing: 1)),
+                const SizedBox(height: Sp.sm),
+                Wrap(
+                  spacing: Sp.sm,
+                  children: [
+                    for (int i = 0; i < widget.estrofasDisponibles; i++)
+                      AppChoiceChip(label: 'E${i + 1}', selected: _estrofaRef == i, onSelected: (_) => setState(() => _estrofaRef = i)),
+                  ],
+                ),
               ],
-            ),
-          ],
-          const SizedBox(height: Sp.xl),
-          AppButton(
-            label: widget.bloqueExistente == null ? 'AGREGAR BLOQUE' : 'GUARDAR CAMBIOS',
-            onPressed: () {
-              Navigator.pop(context, BloqueAudio(
-                inicioMs: widget.inicioMs,
-                estrofaRef: _requiereEstrofa ? _estrofaRef : -1,
-                conLetra: _tipo == TipoBloque.estrofa && _conLetra,
-                tipo: _tipo,
-                velocidad: 1.0,
-              ));
-            },
+              const SizedBox(height: Sp.xl),
+              AppButton(
+                label: widget.bloqueExistente == null ? 'AGREGAR BLOQUE' : 'GUARDAR CAMBIOS',
+                onPressed: () {
+                  Navigator.pop(context, BloqueAudio(
+                    inicioMs: widget.inicioMs,
+                    estrofaRef: _requiereEstrofa ? _estrofaRef : -1,
+                    conLetra: _tipo == TipoBloque.estrofa && _conLetra,
+                    tipo: _tipo,
+                    velocidad: 1.0,
+                  ));
+                },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
