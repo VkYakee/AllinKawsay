@@ -22,7 +22,6 @@ class UsuarioCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     
-    // Colores según el rol
     Color colorRol = onSurface.withOpacity(0.5);
     if (usuario.rol == 'dev') colorRol = Colors.cyanAccent.shade700;
     if (usuario.rol == 'admin') colorRol = AppColors.granate;
@@ -35,7 +34,7 @@ class UsuarioCard extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(
-              radius: 22,
+              radius: 24,
               backgroundColor: AppColors.granate.withOpacity(0.1),
               backgroundImage: usuario.fotoUrl.isNotEmpty ? NetworkImage(usuario.fotoUrl) : null,
               child: usuario.fotoUrl.isEmpty
@@ -51,12 +50,13 @@ class UsuarioCard extends StatelessWidget {
                   Text(usuario.nombre, style: AppType.subtitle.copyWith(color: onSurface), maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text(usuario.email, style: AppType.captionXs.copyWith(color: onSurface.withOpacity(0.5)), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
-                  Text(usuario.rolNombre, style: AppType.labelXs.copyWith(color: colorRol)),
+                  Text(usuario.rolNombre, style: AppType.labelXs.copyWith(color: colorRol, letterSpacing: 1)),
                 ],
               ),
             ),
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert, color: onSurface.withOpacity(0.5), size: 20),
+              shape: RoundedRectangleBorder(borderRadius: Rad.rMd),
               onSelected: (v) {
                 if (v == 'banear') {
                   onBanear();
