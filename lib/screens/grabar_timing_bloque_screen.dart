@@ -28,13 +28,13 @@ class GrabarTimingBloqueScreen extends StatefulWidget {
 }
 
 class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
-  // ✅ USAMOS EL REPRODUCTOR GLOBAL
   final _player = PlayerService().player;
   late EstrofaNumerofonia _estrofa;
   bool _cargando = true;
   String _errorMsg = '';
   
   final List<int> _toquesMs = [];
+  final List<int> _letrasMs = [];
   int _indexEsperada = 0;
   final Set<String> _brillo = {};
   
@@ -51,14 +51,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
 
     final estrofas = widget.cancion.estrofas.where((e) => !e.vacia).toList();
     if (widget.bloque.estrofaRef < 0 || widget.bloque.estrofaRef >= estrofas.length) {
-      _errorMsg = 'Este bloque no tiene una estrofa asignada. Vuelve al setlist y edita el bloque.';
-      _estrofa = EstrofaNumerofonia();
-      _cargando = false;
-      return;
-    }
-
-    if (widget.cancion.audioUrl.isEmpty) {
-      _errorMsg = 'La canción no tiene un audio cargado.';
+      _errorMsg = 'Este bloque no tiene una estrofa asignada.';
       _estrofa = EstrofaNumerofonia();
       _cargando = false;
       return;
@@ -83,7 +76,6 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
       await _player.stop();
       final tag = MediaItem(id: 'timing_${widget.cancion.id}_${widget.bloque.inicioMs}', title: 'Timing: ${widget.bloque.label}', artist: 'Allin Kawsay');
       
-      // ⏱️ TIMEOUT DE 15 SEGUNDOS
       await _player.setAudioSource(
         AudioSource.uri(Uri.parse(widget.cancion.audioUrl), tag: tag),
       ).timeout(const Duration(seconds: 15));
@@ -91,6 +83,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
       if (widget.bloque.tieneTimingA) {
         _toquesMs.addAll(widget.bloque.timingsMs);
         _indexEsperada = _toquesMs.length;
+        _letrasMs.addAll(widget.bloque.letraTimingsMs);
       }
 
       await _player.seek(Duration(milliseconds: widget.bloque.inicioMs));
@@ -116,6 +109,12 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
     });
   }
 
+  void _marcarLetra() {
+    setState(() {
+      _letrasMs.add(_pos.inMilliseconds);
+    });
+  }
+
   int get _notasTotales {
     int count = 0;
     for (var c in _estrofa.columnas) {
@@ -127,47 +126,29 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
   void _terminar() {
     if (_toquesMs.isEmpty) return;
     final recortado = _toquesMs.length > _notasTotales ? _toquesMs.sublist(0, _notasTotales) : _toquesMs;
-    Navigator.pop(context, recortado);
+    Navigator.pop(context, [recortado, _letrasMs]); // Devolvemos ambos arrays
   }
 
   @override
   Widget build(BuildContext context) {
     if (_cargando) return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: AppColors.dorado)));
-    
-    if (_errorMsg.isNotEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(title: const Text('Error'), backgroundColor: Colors.transparent),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(Sp.xl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 60),
-                const SizedBox(height: Sp.lg),
-                Text(_errorMsg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 16)),
-                const SizedBox(height: Sp.xl),
-                AppButton(label: 'VOLVER', onPressed: () => Navigator.pop(context)),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    if (_errorMsg.isNotEmpty) return Scaffold(backgroundColor: Colors.black, body: Center(child: Text(_errorMsg, style: const TextStyle(color: Colors.red))));
 
     return ToolScaffold(
       titulo: 'Timing: ${widget.bloque.label}',
-      subtitulo: 'Toca al ritmo del audio',
+      subtitulo: 'Toca al ritmo y marca las letras',
       onCerrar: () => Navigator.pop(context),
       bottomBar: Row(
         children: [
+          if (widget.bloque.conLetra)
+            Expanded(child: AppButton(label: 'MARCAR LETRA', icon: Icons.text_fields, color: Colors.blueAccent, onPressed: _marcarLetra)),
+          if (widget.bloque.conLetra) const SizedBox(width: Sp.sm),
           Expanded(child: AppButton(label: 'DESHACER', icon: Icons.undo, variant: AppButtonVariant.secondary, onPressed: _toquesMs.isEmpty ? null : () {
             setState(() { _toquesMs.removeLast(); _indexEsperada = _toquesMs.length; });
           })),
           const SizedBox(width: Sp.sm),
           Expanded(flex: 2, child: AppButton(
-            label: _indexEsperada >= _notasTotales ? 'GUARDAR TIMING' : 'TERMINAR',
+            label: _indexEsperada >= _notasTotales ? 'GUARDAR' : 'TERMINAR',
             icon: Icons.check,
             onPressed: _toquesMs.isEmpty ? null : _terminar,
           )),
@@ -190,8 +171,11 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
                     margin: const EdgeInsets.all(Sp.sm),
                     padding: const EdgeInsets.all(Sp.sm),
                     decoration: BoxDecoration(color: const Color(0xFF14080A), borderRadius: Rad.rMd, border: Border.all(color: AppColors.dorado.withOpacity(0.3))),
-                    child: SingleChildScrollView(
-                      child: VisorNumerofonia(estrofas: [_estrofa], escala: 1.0),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: VisorNumerofonia(estrofas: [_estrofa], escala: 1.2, fondoOscuro: true),
+                      ),
                     ),
                   ),
                 ),
