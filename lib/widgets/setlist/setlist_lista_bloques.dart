@@ -9,6 +9,7 @@ class SetlistListaBloques extends StatelessWidget {
   final ScrollController scrollCtrl;
   final void Function(int index) onEditar;
   final void Function(int index) onRegrabarTiming;
+  final void Function(int index) onGrabarKaraoke; // <-- NUEVO
   final void Function(int index) onEliminar;
 
   const SetlistListaBloques({
@@ -17,6 +18,7 @@ class SetlistListaBloques extends StatelessWidget {
     required this.scrollCtrl,
     required this.onEditar,
     required this.onRegrabarTiming,
+    required this.onGrabarKaraoke, // <-- NUEVO
     required this.onEliminar,
   });
 
@@ -62,6 +64,13 @@ class SetlistListaBloques extends StatelessWidget {
                   IconButton(
                     icon: Icon(Icons.timer, color: b.tieneTimingA ? Colors.green : Colors.grey, size: 20),
                     onPressed: () => onRegrabarTiming(i),
+                    tooltip: 'Timing Notas',
+                  ),
+                if (b.conLetra)
+                  IconButton(
+                    icon: Icon(Icons.text_fields, color: b.karaokeFragments.isNotEmpty ? Colors.green : Colors.grey, size: 20),
+                    onPressed: () => onGrabarKaraoke(i),
+                    tooltip: 'Timing Letra (Karaoke)',
                   ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
