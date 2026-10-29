@@ -11,7 +11,7 @@ class RecuerdoFormMedia extends StatelessWidget {
   final List<File> videosNuevos;
   final VoidCallback onAgregarFoto;
   final VoidCallback onAgregarVideo;
-  final VoidCallback onImportarNube; // <-- NUEVO
+  final VoidCallback onImportarNube;
   final Function(int, bool) onEliminarFoto;
   final Function(int, bool) onEliminarVideo;
 
@@ -23,7 +23,7 @@ class RecuerdoFormMedia extends StatelessWidget {
     required this.videosNuevos,
     required this.onAgregarFoto,
     required this.onAgregarVideo,
-    required this.onImportarNube, // <-- NUEVO
+    required this.onImportarNube,
     required this.onEliminarFoto,
     required this.onEliminarVideo,
   });
@@ -32,7 +32,6 @@ class RecuerdoFormMedia extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Botón de importación desde la nube
         AppButton(
           label: 'IMPORTAR DESDE LA NUBE (DRIVE / FOTOS)',
           icon: Icons.cloud_download,
