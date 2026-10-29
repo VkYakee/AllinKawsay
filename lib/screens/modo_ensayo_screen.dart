@@ -39,7 +39,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
   final _player = PlayerService().player;
   final _service = ZamponaService();
   bool _cargando = true;
-  bool _reproduciendo = false;
   double _velocidad = 1.0;
   bool _bucle = true;
   int _bloqueActual = -1;
@@ -87,8 +86,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
   void dispose() {
     _subPos?.cancel();
     _player.pause();
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _service.detener(); // Detener zampoña al salir
     super.dispose();
   }
 
@@ -170,6 +168,15 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     return actual / total;
   }
 
+  String get _letraActual {
+    if (_bloqueActual >= 0 && _bloques[_bloqueActual].conLetra && widget.cancion.tieneLetra) {
+      return widget.cancion.letras.first.texto;
+    }
+    // Si no hay setlist configurado para esta canción, mostramos la letra general
+    if (widget.cancion.tieneLetra) return widget.cancion.letras.first.texto;
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_cargando) return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: AppColors.dorado)));
@@ -179,8 +186,9 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       subtitulo: 'Modo Ensayo con Audio',
       onCerrar: () { _player.pause(); Navigator.pop(context); },
       actions: [
+        // 🎹 CAMBIADO POR UN ÍCONO DE METRÓNOMO / HERRAMIENTAS
         IconButton(
-          icon: const Icon(Icons.piano, color: AppColors.dorado),
+          icon: const Icon(Icons.av_timer, color: AppColors.dorado),
           tooltip: 'Práctica Libre (Solo 6/7)',
           onPressed: () {
             _player.pause();
@@ -188,76 +196,84 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
           },
         ),
       ],
-      body: Row(
+      body: Column(
         children: [
-          // Panel izquierdo: Tabla + Letra
-          Expanded(
-            flex: 7,
-            child: Column(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    margin: const EdgeInsets.all(Sp.sm),
-                    padding: const EdgeInsets.all(Sp.sm),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF14080A),
-                      borderRadius: Rad.rMd,
-                      border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
-                    ),
-                    child: SingleChildScrollView(
-                      child: VisorNumerofonia(
-                        estrofas: widget.cancion.estrofas,
-                        escala: 0.9,
-                        fondoOscuro: true, // Aseguramos alto contraste
-                        celdaActiva: _notaActiva != null
-                            ? CeldaActiva(
-                                estrofa: _notaActiva!.estrofa,
-                                columna: _notaActiva!.columna,
-                                esFila7: _notaActiva!.esFila7,
-                                notaIndex: _notaActiva!.notaIndex,
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                ),
-                Container(
-                  height: 60,
-                  padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
-                  child: LetraSincronizada(
-                    letra: _bloqueActual >= 0 && _bloques[_bloqueActual].conLetra && widget.cancion.tieneLetra
-                        ? widget.cancion.letras.first.texto
-                        : '',
-                    progreso: _progreso,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Panel derecho: Zampoña + Controles
+          // 1. TABLA (Compacta y sin scroll)
           Expanded(
             flex: 3,
-            child: Column(
+            child: Container(
+              margin: const EdgeInsets.all(Sp.sm),
+              padding: const EdgeInsets.all(Sp.sm),
+              decoration: BoxDecoration(
+                color: const Color(0xFF14080A),
+                borderRadius: Rad.rMd,
+                border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
+              ),
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: VisorNumerofonia(
+                    estrofas: widget.cancion.estrofas,
+                    escala: 1.0,
+                    fondoOscuro: true,
+                    celdaActiva: _notaActiva != null
+                        ? CeldaActiva(
+                            estrofa: _notaActiva!.estrofa,
+                            columna: _notaActiva!.columna,
+                            esFila7: _notaActiva!.esFila7,
+                            notaIndex: _notaActiva!.notaIndex,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          
+          // 2. LETRA SINCRO
+          Container(
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
+            child: LetraSincronizada(
+              letra: _letraActual,
+              progreso: _progreso,
+            ),
+          ),
+
+          // 3. ZAMPOÑA (Protagonista abajo) + Controles
+          Expanded(
+            flex: 5,
+            child: Row(
               children: [
-                Expanded(child: ZamponaWidget(brillando: _notaSonando != null ? {_notaSonando!} : {}, onTapNota: null)),
-                Padding(
-                  padding: const EdgeInsets.all(Sp.sm),
-                  child: ControlesEnsayo(
-                    reproduciendo: _player.playing,
-                    velocidad: _velocidad,
-                    bucle: _bucle,
-                    posMs: _pos.inMilliseconds.toDouble(),
-                    totalMs: (_duracion?.inMilliseconds ?? 1).toDouble(),
-                    onPlay: () async {
-                      if (_player.processingState == ProcessingState.completed) await _player.seek(Duration.zero);
-                      _player.play();
-                    },
-                    onPause: () => _player.pause(),
-                    onStop: () { _player.pause(); _player.seek(Duration.zero); },
-                    onToggleBucle: () => setState(() => _bucle = !_bucle),
-                    onVelocidad: (v) { setState(() => _velocidad = v); _player.setSpeed(v); },
-                    onSeek: (v) => _player.seek(Duration(milliseconds: v.toInt())),
+                // Zampoña Grande
+                Expanded(
+                  flex: 6,
+                  child: ZamponaWidget(
+                    brillando: _notaSonando != null ? {_notaSonando!} : {}, 
+                    onTapNota: null, // En modo ensayo se toca sola
+                  ),
+                ),
+                // Controles Rediseñados
+                Expanded(
+                  flex: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.all(Sp.sm),
+                    child: ControlesEnsayo(
+                      reproduciendo: _player.playing,
+                      velocidad: _velocidad,
+                      bucle: _bucle,
+                      posMs: _pos.inMilliseconds.toDouble(),
+                      totalMs: (_duracion?.inMilliseconds ?? 1).toDouble(),
+                      onPlay: () async {
+                        if (_player.processingState == ProcessingState.completed) await _player.seek(Duration.zero);
+                        _player.play();
+                      },
+                      onPause: () => _player.pause(),
+                      onStop: () { _player.pause(); _player.seek(Duration.zero); },
+                      onToggleBucle: () => setState(() => _bucle = !_bucle),
+                      onVelocidad: (v) { setState(() => _velocidad = v); _player.setSpeed(v); },
+                      onSeek: (v) => _player.seek(Duration(milliseconds: v.toInt())),
+                    ),
                   ),
                 ),
               ],
