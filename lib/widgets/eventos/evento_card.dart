@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../design/design.dart';
 import '../../models/evento.dart';
+import '../../screens/evento_detalle_screen.dart';
 import '../../theme/colors.dart';
 
 class EventoCard extends StatelessWidget {
@@ -32,6 +33,10 @@ class EventoCard extends StatelessWidget {
       child: AppCard(
         padding: EdgeInsets.zero,
         border: esPasado ? Border.all(color: onSurface.withOpacity(0.1)) : null,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => EventoDetalleScreen(evento: evento)),
+        ),
         child: Column(
           children: [
             Padding(
@@ -54,40 +59,26 @@ class EventoCard extends StatelessWidget {
                         const SizedBox(height: Sp.xs),
                         Row(
                           children: [
-                            Icon(Icons.access_time, size: 12, color: onSurface.withOpacity(0.5)),
+                            Icon(Icons.place, size: 12, color: onSurface.withOpacity(0.5)),
                             const SizedBox(width: 4),
-                            Text(_hora(evento.fecha), style: AppType.captionXs),
-                            if (evento.lugar.isNotEmpty) ...[
-                              const SizedBox(width: Sp.sm),
-                              Icon(Icons.place, size: 12, color: onSurface.withOpacity(0.5)),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  evento.lugar,
-                                  style: AppType.captionXs,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                            Expanded(
+                              child: Text(
+                                evento.lugar.isEmpty ? 'Lugar a confirmar' : evento.lugar,
+                                style: AppType.captionXs,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
+                            ),
+                            Icon(Icons.chevron_right, color: AppColors.dorado.withOpacity(0.5), size: 18),
                           ],
                         ),
-                        if (evento.descripcion.isNotEmpty) ...[
-                          const SizedBox(height: Sp.sm),
-                          Text(
-                            evento.descripcion,
-                            style: AppType.bodySm.copyWith(
-                                color: onSurface.withOpacity(esPasado ? 0.3 : 0.7)),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
                       ],
                     ),
                   ),
                 ],
               ),
             ),
+            // ... (El resto de tu código para mostrar las notas y los botones de admin se mantiene igual)
             if (nota.isNotEmpty)
               Container(
                 width: double.infinity,
