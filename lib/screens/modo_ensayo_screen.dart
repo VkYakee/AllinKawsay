@@ -13,7 +13,6 @@ import '../services/player_service.dart';
 import '../services/zampona_service.dart';
 import '../theme/colors.dart';
 import '../widgets/visor_numerofonia.dart';
-import '../widgets/ensayo/letra_sincronizada.dart';
 import '../widgets/ensayo/controles_ensayo.dart';
 import '../widgets/zampona/tool_scaffold.dart';
 import '../widgets/zampona/zampona_widget.dart';
@@ -129,7 +128,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     final bloque = _bloques[idx];
     final msActual = _pos.inMilliseconds;
 
-    // 1. Detectar casilla activa
     _EventoEnsayo? eventoActual;
     for (final ev in _eventosDelBloque) {
       if (msActual >= ev.inicioMs && msActual < ev.finMs) {
@@ -141,7 +139,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     if (eventoActual != null) {
       if (_celdaActiva?.columna != eventoActual.columna || _celdaActiva?.esFila7 != eventoActual.esFila7) {
         _celdaActiva = CeldaActiva(estrofa: 0, columna: eventoActual.columna, esFila7: eventoActual.esFila7, notaIndex: 0);
-        _notaSonando = eventoActual.esFila7 ? 'fila7_1' : 'fila6_1'; // Simulación visual
+        _notaSonando = eventoActual.esFila7 ? 'fila7_1' : 'fila6_1';
         necesitaRedibujar = true;
       }
     } else {
@@ -152,7 +150,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       }
     }
 
-    // 2. Detectar línea de letra
     if (bloque.conLetra && bloque.letraTimingsMs.isNotEmpty) {
       int linea = 0;
       for (int i = 0; i < bloque.letraTimingsMs.length; i++) {
@@ -181,8 +178,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     if (bloque.estrofaRef < 0 || bloque.estrofaRef >= estrofas.length) return;
     final estrofa = estrofas[bloque.estrofaRef];
 
-    // Creamos una lista plana de qué columna y fila toca cada nota
-    List<MapEntry<int, bool>> secuenciaNotas = []; // Key = Columna, Value = EsFila7
+    List<MapEntry<int, bool>> secuenciaNotas = [];
     for (int c = 0; c < estrofa.columnas.length; c++) {
       final col = estrofa.columnas[c];
       for (int i = 0; i < col.nota7.trim().length; i++) {
@@ -193,14 +189,11 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       }
     }
 
-    // Emparejamos la secuencia con los timings guardados
     for (int i = 0; i < secuenciaNotas.length; i++) {
       if (i >= bloque.timingsMs.length) break;
       
       final inicio = bloque.timingsMs[i];
-      final fin = (i + 1 < bloque.timingsMs.length) 
-          ? bloque.timingsMs[i + 1] 
-          : inicio + 400; // Si es la última nota, dura 400ms por defecto
+      final fin = (i + 1 < bloque.timingsMs.length) ? bloque.timingsMs[i + 1] : inicio + 400;
 
       _eventosDelBloque.add(_EventoEnsayo(
         columna: secuenciaNotas[i].key,
