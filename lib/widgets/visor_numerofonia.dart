@@ -38,7 +38,7 @@ class VisorNumerofonia extends StatelessWidget {
       (c.maxLen.clamp(1, 99) * charW + padH * 2 + 1) * e;
 
   static double baseDe(EstrofaNumerofonia estrofa) =>
-      24 + estrofa.columnas.fold<double>(0, (s, c) => s + anchoCol(c, 1.0));
+      32 + estrofa.columnas.fold<double>(0, (s, c) => s + anchoCol(c, 1.0));
 
   @override
   Widget build(BuildContext context) {
@@ -104,11 +104,37 @@ class _TablaEstrofa extends StatelessWidget {
     final oscuro = fondoOscuro || Theme.of(context).brightness == Brightness.dark;
     
     final colorNota = oscuro ? Colors.white : AppColors.negro;
-    final colorLinea = oscuro ? Colors.white24 : AppColors.granate.withOpacity(0.2);
+    final colorLinea = oscuro ? Colors.white24 : AppColors.negro.withOpacity(0.3);
     final colorEtiquetaBg = oscuro ? AppColors.granateOscuro : AppColors.granate;
 
     final n = estrofa.columnas.length;
-    final anchos = [for (int j = 0; j < n; j++) VisorNumerofonia.anchoCol(estrofa.columnas[j], e)];
+    
+    // Tabla estricta con Table
+    final tabla = Table(
+      columnWidths: {
+        0: FixedColumnWidth(24 * e), // Ancho fijo para la columna 7/6
+        for (int j = 0; j < n; j++)
+          j + 1: FixedColumnWidth(anchoCol(estrofa.columnas[j], e)),
+      },
+      border: TableBorder.all(color: colorLinea, width: 0.8),
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: [
+        TableRow(
+          children: [
+            _etiqueta('7', e, colorEtiquetaBg),
+            for (int j = 0; j < n; j++)
+              _celda(j, true, estrofa.columnas[j].nota7, e, colorNota, colorLinea),
+          ]
+        ),
+        TableRow(
+          children: [
+            _etiqueta('6', e, colorEtiquetaBg),
+            for (int j = 0; j < n; j++)
+              _celda(j, false, estrofa.columnas[j].nota6, e, colorNota, colorLinea),
+          ]
+        ),
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -136,53 +162,14 @@ class _TablaEstrofa extends StatelessWidget {
               ],
             ),
           ),
-        
-        // Usamos Column de Rows en lugar de Table para alineación perfecta
-        Container(
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: colorLinea, width: 1),
-              left: BorderSide(color: colorLinea, width: 1),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Fila 7
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _etiqueta('7', e, colorEtiquetaBg, colorLinea),
-                  for (int j = 0; j < n; j++) 
-                    _celda(j, true, estrofa.columnas[j].nota7, e, colorNota, colorLinea, anchos[j]),
-                ],
-              ),
-              // Fila 6
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _etiqueta('6', e, colorEtiquetaBg, colorLinea),
-                  for (int j = 0; j < n; j++) 
-                    _celda(j, false, estrofa.columnas[j].nota6, e, colorNota, colorLinea, anchos[j]),
-                ],
-              ),
-            ],
-          ),
-        ),
+        tabla,
       ],
     );
   }
 
-  Widget _etiqueta(String t, double e, Color bg, Color borderColor) => Container(
-        width: 24 * e,
+  Widget _etiqueta(String t, double e, Color bg) => Container(
         height: 30 * e,
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border(
-            right: BorderSide(color: borderColor, width: 1),
-            bottom: BorderSide(color: borderColor, width: 1),
-          ),
-        ),
+        color: bg,
         alignment: Alignment.center,
         child: Text(
           t,
@@ -190,7 +177,7 @@ class _TablaEstrofa extends StatelessWidget {
         ),
       );
 
-  Widget _celda(int j, bool esFila7, String valor, double e, Color color, Color borderColor, double ancho) {
+  Widget _celda(int j, bool esFila7, String valor, double e, Color color, Color borderColor) {
     final activa = celdaActiva != null && celdaActiva!.columna == j && celdaActiva!.esFila7 == esFila7;
 
     Widget contenido = FittedBox(
@@ -231,18 +218,13 @@ class _TablaEstrofa extends StatelessWidget {
     }
 
     return Container(
-      width: ancho,
       height: 30 * e,
       decoration: BoxDecoration(
         color: activa ? AppColors.dorado.withOpacity(0.1) : null,
-        border: Border(
-          right: BorderSide(color: borderColor, width: 1),
-          bottom: BorderSide(color: borderColor, width: 1),
-        ),
         boxShadow: activa ? [BoxShadow(color: AppColors.dorado.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)] : null,
       ),
       alignment: Alignment.center,
-      padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e),
+      padding: EdgeInsets.symmetric(horizontal: padH * e),
       child: contenido,
     );
   }
