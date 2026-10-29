@@ -28,7 +28,7 @@ class ModoEnsayoScreen extends StatefulWidget {
 class _EventoEnsayo {
   final int columna;
   final bool esFila7;
-  final String idNota; // <-- NUEVO: Guarda la nota exacta (ej: 'fila7_5')
+  final String idNota; 
   final int inicioMs;
   final int finMs;
   _EventoEnsayo({required this.columna, required this.esFila7, required this.idNota, required this.inicioMs, required this.finMs});
@@ -138,9 +138,10 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     }
 
     if (eventoActual != null) {
-      if (_celdaActiva?.columna != eventoActual.columna || _celdaActiva?.esFila7 != eventoActual.esFila7) {
+      // 🚀 CORREGIDO: Comparar el ID exacto de la nota, no solo si cambió la fila
+      if (_notaSonando != eventoActual.idNota) {
         _celdaActiva = CeldaActiva(estrofa: 0, columna: eventoActual.columna, esFila7: eventoActual.esFila7, notaIndex: 0);
-        _notaSonando = eventoActual.idNota; // <-- AHORA ILUMINA LA NOTA EXACTA
+        _notaSonando = eventoActual.idNota; 
         necesitaRedibujar = true;
       }
     } else {
@@ -192,7 +193,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       }
     }
 
-    // 🚀 FALLBACK PARA BIS: Si no tiene timing, busca el bloque anterior con la misma estrofa
     List<int> timingsToUse = bloque.timingsMs;
     if (timingsToUse.isEmpty) {
       final currentIndex = _bloques.indexOf(bloque);
