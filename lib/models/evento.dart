@@ -1,3 +1,4 @@
+// lib/models/evento.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Evento {
@@ -6,6 +7,8 @@ class Evento {
   final String descripcion;
   final String lugar;
   final DateTime fecha;
+  final double? lat; // <-- NUEVO
+  final double? lng; // <-- NUEVO
   final String creadoPor;
   final String creadorNombre;
   final DateTime? fechaCreacion;
@@ -17,6 +20,8 @@ class Evento {
     required this.descripcion,
     required this.lugar,
     required this.fecha,
+    this.lat,
+    this.lng,
     required this.creadoPor,
     required this.creadorNombre,
     this.fechaCreacion,
@@ -25,8 +30,6 @@ class Evento {
 
   bool get esFuturo => fecha.isAfter(DateTime.now());
 
-  /// Última modificación conocida del evento. Se usa para saber si
-  /// es "nuevo" desde la última visita del usuario.
   DateTime get ultimaModificacion =>
       fechaEdicion ?? fechaCreacion ?? DateTime(2000);
 
@@ -38,6 +41,8 @@ class Evento {
       descripcion: d['descripcion'] ?? '',
       lugar: d['lugar'] ?? '',
       fecha: (d['fecha'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lat: (d['lat'] as num?)?.toDouble(),
+      lng: (d['lng'] as num?)?.toDouble(),
       creadoPor: d['creadoPor'] ?? '',
       creadorNombre: d['creadorNombre'] ?? '',
       fechaCreacion: (d['fechaCreacion'] as Timestamp?)?.toDate(),
@@ -50,6 +55,8 @@ class Evento {
         'descripcion': descripcion,
         'lugar': lugar,
         'fecha': Timestamp.fromDate(fecha),
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
         'creadoPor': creadoPor,
         'creadorNombre': creadorNombre,
         'fechaCreacion': FieldValue.serverTimestamp(),
