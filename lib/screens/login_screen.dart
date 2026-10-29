@@ -70,44 +70,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0F0F0F), AppColors.granateOscuro, AppColors.granate],
-            stops: [0.0, 0.4, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(Sp.xxl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const LoginHero(),
-                  const SizedBox(height: Sp.xxxl),
-                  LoginForm(
-                    emailCtrl: _email,
-                    passCtrl: _pass,
-                    verPass: _verPassword,
-                    loading: _loading,
-                    loadingGoogle: _loadingGoogle,
-                    onVerPass: () => setState(() => _verPassword = !_verPassword),
-                    onLogin: _login,
-                    onGoogle: _loginGoogle,
-                    onRegistro: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegistroScreen())),
-                  ),
-                  const SizedBox(height: Sp.xxl),
-                  Text(
-                    'Hecho con ❤️ para el grupo',
-                    style: AppType.captionXs.copyWith(color: AppColors.dorado.withOpacity(0.4)),
-                  ),
-                ],
+    // Usamos AppScaffold para heredar el fondo Mesh Glow
+    return AppScaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(Sp.xxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const LoginHero(),
+              const SizedBox(height: Sp.xxxl),
+              LoginForm(
+                emailCtrl: _email,
+                passCtrl: _pass,
+                verPass: _verPassword,
+                loading: _loading,
+                loadingGoogle: _loadingGoogle,
+                onVerPass: () => setState(() => _verPassword = !_verPassword),
+                onLogin: _login,
+                onGoogle: _loginGoogle,
+                onRegistro: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegistroScreen())),
               ),
-            ),
+              const SizedBox(height: Sp.xxl),
+              Text(
+                'Hecho con ❤️ para el grupo',
+                style: AppType.captionXs.copyWith(color: AppColors.dorado.withOpacity(0.4)),
+              ),
+            ],
           ),
         ),
       ),
