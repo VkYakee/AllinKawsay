@@ -15,6 +15,7 @@ import '../widgets/setlist/setlist_reproductor.dart';
 import '../widgets/setlist/setlist_lista_bloques.dart';
 import '../widgets/setlist/configurar_bloque_modal.dart';
 import 'grabar_timing_bloque_screen.dart';
+import 'grabar_letra_karaoke_screen.dart'; // <-- NUEVO IMPORT
 
 class GrabarSetlistScreen extends StatefulWidget {
   final Cancion cancion;
@@ -46,8 +47,7 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
 
   @override
   void dispose() {
-    _subPos?.cancel();
-    _subDur?.cancel();
+    _subPos?.cancel(); _subDur?.cancel();
     _player.pause();
     _scrollCtrl.dispose();
     super.dispose();
@@ -88,11 +88,16 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
   }
 
   Future<void> _regrabarTiming(int index) async {
-    // 🚀 CORREGIDO: Recibe List<List<int>>
-    final res = await Navigator.push<List<List<int>>>(context, MaterialPageRoute(builder: (_) => GrabarTimingBloqueScreen(cancion: widget.cancion, bloque: _bloques[index])));
-    
-    if (res != null && mounted && res.length == 2) {
-      setState(() => _bloques[index] = _bloques[index].copyConTimings(res[0], res[1]));
+    final res = await Navigator.push<List<int>>(context, MaterialPageRoute(builder: (_) => GrabarTimingBloqueScreen(cancion: widget.cancion, bloque: _bloques[index])));
+    if (res != null && mounted) {
+      setState(() => _bloques[index] = _bloques[index].copyConTimings(res));
+    }
+  }
+
+  Future<void> _grabarKaraoke(int index) async {
+    final res = await Navigator.push<List<FragmentoKaraoke>>(context, MaterialPageRoute(builder: (_) => GrabarLetraKaraokeScreen(cancion: widget.cancion, bloque: _bloques[index])));
+    if (res != null && mounted) {
+      setState(() => _bloques[index] = _bloques[index].copyConKaraoke(res));
     }
   }
 
@@ -130,6 +135,7 @@ class _GrabarSetlistScreenState extends State<GrabarSetlistScreen> {
               bloques: _bloques, scrollCtrl: _scrollCtrl,
               onEditar: _editarBloque,
               onRegrabarTiming: _regrabarTiming,
+              onGrabarKaraoke: _grabarKaraoke, // <-- CONECTADO
               onEliminar: (i) => setState(() => _bloques.removeAt(i)),
             ),
           ),
