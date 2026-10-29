@@ -59,14 +59,9 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
     }
   }
 
-  // LÓGICA PARA IMPORTAR DESDE DRIVE/PHOTOS
   Future<void> _importarDesdeNube() async {
     try {
-      final res = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: FileType.media, // Permite tanto imágenes como videos
-      );
-
+      final res = await FilePicker.platform.pickFiles(allowMultiple: true, type: FileType.media);
       if (res != null && res.files.isNotEmpty) {
         setState(() {
           for (var file in res.files) {
@@ -81,9 +76,7 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al importar: $e')));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al importar: $e')));
     }
   }
 
@@ -117,7 +110,7 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
     return AppScaffold(
       title: widget.recuerdo == null ? 'Nuevo Recuerdo' : 'Editar Recuerdo',
       actions: [
-        IconButton(icon: const Icon(Icons.check), onPressed: _guardando ? null : _guardar),
+        IconButton(icon: const Icon(Icons.check, color: AppColors.dorado), onPressed: _guardando ? null : _guardar),
       ],
       body: _guardando
           ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -146,7 +139,7 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
                   RecuerdoFormMedia(
                     urlsFotos: _fotosUrls, urlsVideos: _videosUrls, fotosNuevas: _fotosNuevas, videosNuevos: _videosNuevos,
                     onAgregarFoto: _agregarFoto, onAgregarVideo: _agregarVideo,
-                    onImportarNube: _importarDesdeNube, // <-- AÑADIDO
+                    onImportarNube: _importarDesdeNube,
                     onEliminarFoto: (i, esNueva) => setState(() => esNueva ? _fotosNuevas.removeAt(i) : _fotosUrls.removeAt(i)),
                     onEliminarVideo: (i, esNuevo) => setState(() => esNuevo ? _videosNuevos.removeAt(i) : _videosUrls.removeAt(i)),
                   ),
