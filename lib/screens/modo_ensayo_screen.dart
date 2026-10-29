@@ -28,9 +28,10 @@ class ModoEnsayoScreen extends StatefulWidget {
 class _EventoEnsayo {
   final int columna;
   final bool esFila7;
+  final String idNota; // <-- NUEVO: Guarda la nota exacta (ej: 'fila7_5')
   final int inicioMs;
   final int finMs;
-  _EventoEnsayo({required this.columna, required this.esFila7, required this.inicioMs, required this.finMs});
+  _EventoEnsayo({required this.columna, required this.esFila7, required this.idNota, required this.inicioMs, required this.finMs});
 }
 
 class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
@@ -139,7 +140,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     if (eventoActual != null) {
       if (_celdaActiva?.columna != eventoActual.columna || _celdaActiva?.esFila7 != eventoActual.esFila7) {
         _celdaActiva = CeldaActiva(estrofa: 0, columna: eventoActual.columna, esFila7: eventoActual.esFila7, notaIndex: 0);
-        _notaSonando = eventoActual.esFila7 ? 'fila7_1' : 'fila6_1';
+        _notaSonando = eventoActual.idNota; // <-- AHORA ILUMINA LA NOTA EXACTA
         necesitaRedibujar = true;
       }
     } else {
@@ -172,32 +173,49 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
   void _calcularEventosDelBloque(BloqueAudio bloque) {
     _eventosDelBloque = [];
-    if (!bloque.tieneVisual || bloque.timingsMs.isEmpty) return;
+    if (!bloque.tieneVisual) return;
 
     final estrofas = widget.cancion.estrofas.where((e) => !e.vacia).toList();
     if (bloque.estrofaRef < 0 || bloque.estrofaRef >= estrofas.length) return;
     final estrofa = estrofas[bloque.estrofaRef];
 
-    List<MapEntry<int, bool>> secuenciaNotas = [];
+    List<MapEntry<int, String>> secuenciaNotas = []; 
     for (int c = 0; c < estrofa.columnas.length; c++) {
       final col = estrofa.columnas[c];
       for (int i = 0; i < col.nota7.trim().length; i++) {
-        secuenciaNotas.add(MapEntry(c, true));
+        final char = col.nota7.trim()[i];
+        secuenciaNotas.add(MapEntry(c, char == '.' ? 'fila7_.' : 'fila7_$char'));
       }
       for (int i = 0; i < col.nota6.trim().length; i++) {
-        secuenciaNotas.add(MapEntry(c, false));
+        final char = col.nota6.trim()[i];
+        secuenciaNotas.add(MapEntry(c, char == '.' ? 'fila6_.' : 'fila6_$char'));
       }
     }
 
+    // 🚀 FALLBACK PARA BIS: Si no tiene timing, busca el bloque anterior con la misma estrofa
+    List<int> timingsToUse = bloque.timingsMs;
+    if (timingsToUse.isEmpty) {
+      final currentIndex = _bloques.indexOf(bloque);
+      for (int i = currentIndex - 1; i >= 0; i--) {
+        if (_bloques[i].estrofaRef == bloque.estrofaRef && _bloques[i].timingsMs.isNotEmpty) {
+          timingsToUse = _bloques[i].timingsMs;
+          break;
+        }
+      }
+    }
+
+    if (timingsToUse.isEmpty) return;
+
     for (int i = 0; i < secuenciaNotas.length; i++) {
-      if (i >= bloque.timingsMs.length) break;
+      if (i >= timingsToUse.length) break;
       
-      final inicio = bloque.timingsMs[i];
-      final fin = (i + 1 < bloque.timingsMs.length) ? bloque.timingsMs[i + 1] : inicio + 400;
+      final inicio = timingsToUse[i];
+      final fin = (i + 1 < timingsToUse.length) ? timingsToUse[i + 1] : inicio + 400;
 
       _eventosDelBloque.add(_EventoEnsayo(
         columna: secuenciaNotas[i].key,
-        esFila7: secuenciaNotas[i].value,
+        esFila7: secuenciaNotas[i].value.startsWith('fila7'),
+        idNota: secuenciaNotas[i].value,
         inicioMs: inicio,
         finMs: fin,
       ));
