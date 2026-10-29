@@ -64,9 +64,8 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
     });
     
     _quickCtrl.clear();
-    widget.onCelda(); // Notificar al padre
+    widget.onCelda();
     
-    // Hacer scroll hasta el final para ver el resultado
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
@@ -79,27 +78,9 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final oscuro = Theme.of(context).brightness == Brightness.dark;
     final colorNota = oscuro ? const Color(0xFFE8E8E8) : AppColors.negro;
+    final colorLinea = AppColors.granate.withOpacity(0.3);
     final n = widget.estrofa.columnas.length;
-
-    final tabla = Table(
-      columnWidths: {
-        0: const FixedColumnWidth(32),
-        for (int j = 0; j < n; j++)
-          j + 1: FixedColumnWidth((widget.estrofa.columnas[j].maxLen.clamp(2, 10) * 18.0).clamp(48.0, 160.0)),
-      },
-      border: TableBorder.all(color: AppColors.granate.withOpacity(0.3), width: 1),
-      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children: [
-        TableRow(children: [
-          _etiqueta('7'),
-          for (int j = 0; j < n; j++) _celda(j, true, widget.estrofa.columnas[j].nota7, colorNota),
-        ]),
-        TableRow(children: [
-          _etiqueta('6'),
-          for (int j = 0; j < n; j++) _celda(j, false, widget.estrofa.columnas[j].nota6, colorNota),
-        ]),
-      ],
-    );
+    final anchos = [for (int j = 0; j < n; j++) (widget.estrofa.columnas[j].maxLen.clamp(2, 10) * 18.0).clamp(48.0, 160.0)];
 
     return AppCard(
       padding: const EdgeInsets.all(Sp.md),
@@ -121,22 +102,42 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
           ),
           const SizedBox(height: Sp.sm),
           
-          // TABLA
           Container(
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.granate.withOpacity(0.2)),
+              border: Border(top: BorderSide(color: colorLinea, width: 1), left: BorderSide(color: colorLinea, width: 1)),
               borderRadius: Rad.rSm,
             ),
             child: SingleChildScrollView(
               controller: _scrollCtrl,
               scrollDirection: Axis.horizontal,
-              child: tabla,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Fila 7
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _etiqueta('7', colorLinea),
+                      for (int j = 0; j < n; j++) 
+                        _celda(j, true, widget.estrofa.columnas[j].nota7, colorNota, colorLinea, anchos[j]),
+                    ],
+                  ),
+                  // Fila 6
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _etiqueta('6', colorLinea),
+                      for (int j = 0; j < n; j++) 
+                        _celda(j, false, widget.estrofa.columnas[j].nota6, colorNota, colorLinea, anchos[j]),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           
           const SizedBox(height: Sp.sm),
           
-          // BOTONES DE COLUMNAS
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -187,15 +188,23 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
     );
   }
 
-  Widget _etiqueta(String t) => Container(
+  Widget _etiqueta(String t, Color borderColor) => Container(
+        width: 32,
         height: 48,
-        color: AppColors.granate,
+        decoration: BoxDecoration(
+          color: AppColors.granate,
+          border: Border(right: BorderSide(color: borderColor, width: 1), bottom: BorderSide(color: borderColor, width: 1)),
+        ),
         alignment: Alignment.center,
         child: Text(t, style: const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.bold, fontSize: 14)),
       );
 
-  Widget _celda(int j, bool es7, String valor, Color color) => SizedBox(
+  Widget _celda(int j, bool es7, String valor, Color color, Color borderColor, double ancho) => Container(
+        width: ancho,
         height: 48,
+        decoration: BoxDecoration(
+          border: Border(right: BorderSide(color: borderColor, width: 1), bottom: BorderSide(color: borderColor, width: 1)),
+        ),
         child: TextFormField(
           key: ValueKey('cif-${identityHashCode(widget.estrofa)}-$j-${es7 ? 7 : 6}'),
           initialValue: valor,
