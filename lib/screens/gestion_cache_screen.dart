@@ -43,7 +43,7 @@ class _GestionCacheScreenState extends State<GestionCacheScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(titulo, style: AppType.h3),
+        title: Text(titulo, style: AppType.h3.copyWith(color: AppColors.granate)),
         content: Text(mensaje, style: AppType.body),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
@@ -61,9 +61,11 @@ class _GestionCacheScreenState extends State<GestionCacheScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return AppScaffold(
       title: 'Almacenamiento',
-      actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _cargando ? null : _cargar)],
+      actions: [IconButton(icon: const Icon(Icons.refresh, color: AppColors.dorado), onPressed: _cargando ? null : _cargar)],
       body: _cargando
           ? const Center(child: CircularProgressIndicator(color: AppColors.granate))
           : _limpiando
@@ -71,40 +73,56 @@ class _GestionCacheScreenState extends State<GestionCacheScreen> {
               : ListView(
                   padding: const EdgeInsets.all(Sp.lg),
                   children: [
+                    // Tarjeta de uso total
                     AppCard(
                       color: AppColors.granate,
                       child: Column(
                         children: [
-                          Text('USO TOTAL', style: AppType.eyebrow.copyWith(color: AppColors.dorado)),
+                          Text('USO TOTAL', style: AppType.label.copyWith(color: AppColors.dorado, letterSpacing: 2)),
+                          const SizedBox(height: Sp.sm),
+                          Text(_fmt(_audioBytes + _recuerdoBytes), style: AppType.h1.copyWith(color: AppColors.dorado, fontSize: 36)),
                           const SizedBox(height: Sp.xs),
-                          Text(_fmt(_audioBytes + _recuerdoBytes), style: AppType.h2.copyWith(color: AppColors.dorado)),
-                          Text('${_audioCantidad + _recuerdoCantidad} archivos guardados', style: AppType.captionXs.copyWith(color: AppColors.dorado.withOpacity(0.7))),
+                          Text('${_audioCantidad + _recuerdoCantidad} archivos guardados', style: AppType.caption.copyWith(color: AppColors.dorado.withOpacity(0.7))),
                         ],
                       ),
                     ),
                     const SizedBox(height: Sp.lg),
+                    
+                    // Tarjeta de Audios
                     AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SeccionHeader(title: 'Audios', icon: Icons.music_note, padding: EdgeInsets.zero),
                           const SizedBox(height: Sp.sm),
-                          Text('${_fmt(_audioBytes)} · $_audioCantidad canciones', style: AppType.subtitle),
+                          Text('${_fmt(_audioBytes)} · $_audioCantidad canciones', style: AppType.subtitle.copyWith(color: onSurface)),
                           const SizedBox(height: Sp.md),
-                          AppButton(label: 'LIMPIAR AUDIOS', variant: AppButtonVariant.secondary, onPressed: _audioCantidad == 0 ? null : () => _confirmar('Limpiar audios', 'Se borrarán los audios descargados.', () => AudioCacheService().limpiarTodo())),
+                          AppButton(
+                            label: 'LIMPIAR AUDIOS',
+                            variant: AppButtonVariant.secondary,
+                            fullWidth: true,
+                            onPressed: _audioCantidad == 0 ? null : () => _confirmar('Limpiar audios', 'Se borrarán los audios descargados. Se volverán a descargar cuando los reproduzcas.', () => AudioCacheService().limpiarTodo()),
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: Sp.md),
+                    
+                    // Tarjeta de Recuerdos
                     AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SeccionHeader(title: 'Recuerdos', icon: Icons.photo_library, padding: EdgeInsets.zero),
                           const SizedBox(height: Sp.sm),
-                          Text('${_fmt(_recuerdoBytes)} · $_recuerdoCantidad archivos', style: AppType.subtitle),
+                          Text('${_fmt(_recuerdoBytes)} · $_recuerdoCantidad archivos', style: AppType.subtitle.copyWith(color: onSurface)),
                           const SizedBox(height: Sp.md),
-                          AppButton(label: 'LIMPIAR RECUERDOS', variant: AppButtonVariant.secondary, onPressed: _recuerdoCantidad == 0 ? null : () => _confirmar('Limpiar recuerdos', 'Se borrarán las fotos y videos descargados.', () => RecuerdoCacheService().limpiarTodo())),
+                          AppButton(
+                            label: 'LIMPIAR RECUERDOS',
+                            variant: AppButtonVariant.secondary,
+                            fullWidth: true,
+                            onPressed: _recuerdoCantidad == 0 ? null : () => _confirmar('Limpiar recuerdos', 'Se borrarán las fotos y videos descargados.', () => RecuerdoCacheService().limpiarTodo()),
+                          ),
                         ],
                       ),
                     ),
