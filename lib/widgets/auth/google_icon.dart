@@ -1,5 +1,6 @@
 // lib/widgets/auth/google_icon.dart
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class GoogleIcon extends StatelessWidget {
   final double size;
@@ -23,9 +24,9 @@ class GoogleIcon extends StatelessWidget {
           ],
           stops: [0.2, 0.5, 0.75, 1.0],
         ).createShader(bounds),
-        child: const Icon(
-          Icons.g_mobiledata_rounded,
-          size: 40,
+        child: FaIcon(
+          FontAwesomeIcons.google,
+          size: size,
           color: Colors.white,
         ),
       ),
