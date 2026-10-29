@@ -145,7 +145,7 @@ class EstrofaNumerofonia {
     return cols;
   }
 
-  /// ⚡ INGRESO RÁPIDO (Nueva Lógica)
+  /// ⚡ INGRESO RÁPIDO
   /// 43653/2332 -> 43653 va abajo (6), 2332 va arriba (7).
   /// 43653\2332 -> 43653 va arriba (7), 2332 va abajo (6).
   static List<ColumnaNumerofonia> parsearTextoRapido(String input) {
