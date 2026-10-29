@@ -8,7 +8,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import '../design/design.dart';
 import '../models/bloque_audio.dart';
 import '../models/cancion.dart';
-import '../models/numerofonia.dart'; // <-- IMPORT AGREGADO
+import '../models/numerofonia.dart';
 import '../services/player_service.dart';
 import '../services/zampona_service.dart';
 import '../theme/colors.dart';
@@ -17,7 +17,6 @@ import '../widgets/ensayo/letra_sincronizada.dart';
 import '../widgets/ensayo/controles_ensayo.dart';
 import '../widgets/zampona/tool_scaffold.dart';
 import '../widgets/zampona/zampona_widget.dart';
-import 'zampona_practica_screen.dart';
 
 class ModoEnsayoScreen extends StatefulWidget {
   final Cancion cancion;
@@ -27,13 +26,12 @@ class ModoEnsayoScreen extends StatefulWidget {
   State<ModoEnsayoScreen> createState() => _ModoEnsayoScreenState();
 }
 
-class _NotaEnBloque {
-  final int estrofa;
+class _EventoEnsayo {
   final int columna;
   final bool esFila7;
-  final int notaIndex;
-  final int timingMs;
-  _NotaEnBloque({required this.estrofa, required this.columna, required this.esFila7, required this.notaIndex, required this.timingMs});
+  final int inicioMs;
+  final int finMs;
+  _EventoEnsayo({required this.columna, required this.esFila7, required this.inicioMs, required this.finMs});
 }
 
 class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
@@ -43,11 +41,13 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
   double _velocidad = 1.0;
   bool _bucle = true;
   int _bloqueActual = -1;
-  _NotaEnBloque? _notaActiva;
+  
+  CeldaActiva? _celdaActiva;
   String? _notaSonando;
+  int _lineaLetraActiva = 0;
   
   late List<BloqueAudio> _bloques;
-  late List<_NotaEnBloque> _notasDelBloqueActual;
+  List<_EventoEnsayo> _eventosDelBloque = [];
   Duration _pos = Duration.zero;
   Duration? _duracion;
   StreamSubscription<Duration>? _subPos;
@@ -71,7 +71,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
         
         _subPos = _player.positionStream.listen((p) {
           _pos = p;
-          _actualizarNotaActiva();
+          _actualizarEstado();
         });
         _player.durationStream.listen((d) { if (mounted) setState(() => _duracion = d); });
       }
@@ -102,7 +102,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     return -1;
   }
 
-  void _actualizarNotaActiva() {
+  void _actualizarEstado() {
     if (_bloques.isEmpty) return;
     final idx = _getBloqueIndex(_pos);
     
@@ -110,13 +110,14 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
     if (idx != _bloqueActual) {
       _bloqueActual = idx;
-      _notaActiva = null;
+      _celdaActiva = null;
       _notaSonando = null;
+      _lineaLetraActiva = 0;
       necesitaRedibujar = true;
       if (idx >= 0) {
-        _notasDelBloqueActual = _extraerNotasDeBloque(_bloques[idx]);
+        _calcularEventosDelBloque(_bloques[idx]);
       } else {
-        _notasDelBloqueActual = [];
+        _eventosDelBloque = [];
       }
     }
 
@@ -126,21 +127,43 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     }
 
     final bloque = _bloques[idx];
-    final elapsed = _pos.inMilliseconds - bloque.inicioMs;
-    int acumulado = 0;
-    _NotaEnBloque? encontrada;
-    for (final n in _notasDelBloqueActual) {
-      acumulado += n.timingMs;
-      if (acumulado >= elapsed) {
-        encontrada = n;
+    final msActual = _pos.inMilliseconds;
+
+    // 1. Detectar casilla activa
+    _EventoEnsayo? eventoActual;
+    for (final ev in _eventosDelBloque) {
+      if (msActual >= ev.inicioMs && msActual < ev.finMs) {
+        eventoActual = ev;
         break;
       }
     }
-    
-    if (encontrada != null) {
-      final igual = _notaActiva?.columna == encontrada.columna && _notaActiva?.esFila7 == encontrada.esFila7 && _notaActiva?.notaIndex == encontrada.notaIndex;
-      if (!igual) {
-        _notaActiva = encontrada;
+
+    if (eventoActual != null) {
+      if (_celdaActiva?.columna != eventoActual.columna || _celdaActiva?.esFila7 != eventoActual.esFila7) {
+        _celdaActiva = CeldaActiva(estrofa: 0, columna: eventoActual.columna, esFila7: eventoActual.esFila7, notaIndex: 0);
+        _notaSonando = eventoActual.esFila7 ? 'fila7_1' : 'fila6_1'; // Simulación visual
+        necesitaRedibujar = true;
+      }
+    } else {
+      if (_celdaActiva != null) {
+        _celdaActiva = null;
+        _notaSonando = null;
+        necesitaRedibujar = true;
+      }
+    }
+
+    // 2. Detectar línea de letra
+    if (bloque.conLetra && bloque.letraTimingsMs.isNotEmpty) {
+      int linea = 0;
+      for (int i = 0; i < bloque.letraTimingsMs.length; i++) {
+        if (msActual >= bloque.letraTimingsMs[i]) {
+          linea = i;
+        } else {
+          break;
+        }
+      }
+      if (linea != _lineaLetraActiva) {
+        _lineaLetraActiva = linea;
         necesitaRedibujar = true;
       }
     }
@@ -150,41 +173,50 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     }
   }
 
-  List<_NotaEnBloque> _extraerNotasDeBloque(BloqueAudio bloque) {
-    if (!bloque.tieneVisual) return [];
+  void _calcularEventosDelBloque(BloqueAudio bloque) {
+    _eventosDelBloque = [];
+    if (!bloque.tieneVisual || bloque.timingsMs.isEmpty) return;
+
     final estrofas = widget.cancion.estrofas.where((e) => !e.vacia).toList();
-    if (bloque.estrofaRef < 0 || bloque.estrofaRef >= estrofas.length) return [];
+    if (bloque.estrofaRef < 0 || bloque.estrofaRef >= estrofas.length) return;
     final estrofa = estrofas[bloque.estrofaRef];
-    final lista = <_NotaEnBloque>[];
+
+    // Creamos una lista plana de qué columna y fila toca cada nota
+    List<MapEntry<int, bool>> secuenciaNotas = []; // Key = Columna, Value = EsFila7
     for (int c = 0; c < estrofa.columnas.length; c++) {
       final col = estrofa.columnas[c];
       for (int i = 0; i < col.nota7.trim().length; i++) {
-        final t = i < col.timings7.length ? col.timings7[i] : 400;
-        lista.add(_NotaEnBloque(estrofa: bloque.estrofaRef, columna: c, esFila7: true, notaIndex: i, timingMs: t));
+        secuenciaNotas.add(MapEntry(c, true));
       }
       for (int i = 0; i < col.nota6.trim().length; i++) {
-        final t = i < col.timings6.length ? col.timings6[i] : 400;
-        lista.add(_NotaEnBloque(estrofa: bloque.estrofaRef, columna: c, esFila7: false, notaIndex: i, timingMs: t));
+        secuenciaNotas.add(MapEntry(c, false));
       }
     }
-    return lista;
-  }
 
-  double get _progreso {
-    if (_bloqueActual < 0 || _bloqueActual >= _bloques.length) return 0;
-    final bloque = _bloques[_bloqueActual];
-    final finMs = (_bloqueActual + 1 < _bloques.length) ? _bloques[_bloqueActual + 1].inicioMs : (_duracion?.inMilliseconds ?? bloque.inicioMs + 10000);
-    final total = finMs - bloque.inicioMs;
-    if (total <= 0) return 0;
-    final actual = (_pos.inMilliseconds - bloque.inicioMs).clamp(0, total);
-    return actual / total;
+    // Emparejamos la secuencia con los timings guardados
+    for (int i = 0; i < secuenciaNotas.length; i++) {
+      if (i >= bloque.timingsMs.length) break;
+      
+      final inicio = bloque.timingsMs[i];
+      final fin = (i + 1 < bloque.timingsMs.length) 
+          ? bloque.timingsMs[i + 1] 
+          : inicio + 400; // Si es la última nota, dura 400ms por defecto
+
+      _eventosDelBloque.add(_EventoEnsayo(
+        columna: secuenciaNotas[i].key,
+        esFila7: secuenciaNotas[i].value,
+        inicioMs: inicio,
+        finMs: fin,
+      ));
+    }
   }
 
   String get _letraActual {
-    if (_bloqueActual >= 0 && _bloques[_bloqueActual].conLetra && widget.cancion.tieneLetra) {
-      return widget.cancion.letras.first.texto;
-    }
-    return '';
+    final b = _bloqueActual >= 0 && _bloqueActual < _bloques.length ? _bloques[_bloqueActual] : null;
+    if (b == null || !b.conLetra || !widget.cancion.tieneLetra) return '';
+    final lineas = widget.cancion.letras.first.texto.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    if (lineas.isEmpty) return '';
+    return lineas[_lineaLetraActiva.clamp(0, lineas.length - 1)];
   }
 
   List<EstrofaNumerofonia> get _estrofasAMostrar {
@@ -204,16 +236,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       titulo: widget.cancion.titulo,
       subtitulo: 'Modo Ensayo con Audio',
       onCerrar: () { _player.pause(); Navigator.pop(context); },
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.tune, color: AppColors.dorado),
-          tooltip: 'Práctica Libre (Solo 6/7)',
-          onPressed: () {
-            _player.pause();
-            Navigator.push(context, MaterialPageRoute(builder: (_) => ZamponaPracticaScreen(estrofasGuia: widget.cancion.estrofas)));
-          },
-        ),
-      ],
       body: Column(
         children: [
           Expanded(
@@ -235,14 +257,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
                           estrofas: _estrofasAMostrar,
                           escala: 1.2,
                           fondoOscuro: true,
-                          celdaActiva: _notaActiva != null
-                              ? CeldaActiva(
-                                  estrofa: 0,
-                                  columna: _notaActiva!.columna,
-                                  esFila7: _notaActiva!.esFila7,
-                                  notaIndex: _notaActiva!.notaIndex,
-                                )
-                              : null,
+                          celdaActiva: _celdaActiva,
                         ),
                       ),
               ),
@@ -252,9 +267,16 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
           Container(
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
-            child: LetraSincronizada(
-              letra: _letraActual,
-              progreso: _progreso,
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  _letraActual.isEmpty ? '♪ (Sin letra en este bloque) ♪' : _letraActual,
+                  key: ValueKey(_letraActual),
+                  textAlign: TextAlign.center,
+                  style: AppType.body.copyWith(color: AppColors.dorado, fontSize: 18, fontStyle: FontStyle.italic),
+                ),
+              ),
             ),
           ),
 
