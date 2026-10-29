@@ -7,7 +7,7 @@ import 'audio_cache_service.dart';
 
 class EstadoPlayer {
   final String? cancionId;
-  final String? cancionTitulo; // <-- NUEVO
+  final String? cancionTitulo;
   final bool playing;
   final bool cargando;
   final bool modoBucle;
@@ -17,7 +17,7 @@ class EstadoPlayer {
 
   const EstadoPlayer({
     this.cancionId,
-    this.cancionTitulo, // <-- NUEVO
+    this.cancionTitulo,
     this.playing = false,
     this.cargando = false,
     this.modoBucle = false,
@@ -37,7 +37,7 @@ class PlayerService {
   final ValueNotifier<EstadoPlayer> estado = ValueNotifier(const EstadoPlayer());
 
   String? _cancionId;
-  String? _cancionTitulo; // <-- NUEVO
+  String? _cancionTitulo;
   bool _playing = false;
   bool _cargando = false;
   bool _bucle = false;
@@ -65,7 +65,7 @@ class PlayerService {
   void _notificar() {
     estado.value = EstadoPlayer(
       cancionId: _cancionId,
-      cancionTitulo: _cancionTitulo, // <-- NUEVO
+      cancionTitulo: _cancionTitulo,
       playing: _playing,
       cargando: _cargando,
       modoBucle: _bucle,
@@ -85,7 +85,7 @@ class PlayerService {
 
     try {
       _cancionId = c.id;
-      _cancionTitulo = c.titulo; // <-- NUEVO
+      _cancionTitulo = c.titulo;
       _cargando = true;
       _notificar();
 
@@ -94,12 +94,17 @@ class PlayerService {
       _puntoB = null;
       _bucle = false;
 
+      // 🚀 NOTIFICACIÓN PREMIUM: Usa la foto de la canción o el logo de la app
+      final artUri = c.imagenUrl.isNotEmpty 
+          ? Uri.parse(c.imagenUrl) 
+          : Uri.parse('https://raw.githubusercontent.com/VkYakee/AllinKawsay/main/assets/logo.png'); // Fallback al logo de GitHub
+
       final tag = MediaItem(
         id: c.id,
         album: 'Allin Kawsay',
         title: c.titulo,
         artist: c.autor.isNotEmpty ? c.autor : 'Anónimo',
-        artUri: c.imagenUrl.isNotEmpty ? Uri.parse(c.imagenUrl) : null,
+        artUri: artUri,
       );
 
       final rutaCache = await AudioCacheService().rutaDe(c.id);
