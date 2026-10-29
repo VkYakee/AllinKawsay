@@ -151,7 +151,6 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       }
     }
 
-    // 🚀 NUEVA LÓGICA DE KARAOKE POR FRAGMENTOS
     String textoNuevo = '';
     for (final frag in bloque.karaokeFragments) {
       if (msActual >= frag.inicioMs && msActual <= frag.finMs) {
@@ -204,10 +203,20 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
     if (timingsToUse.isEmpty) return;
 
+    // 🚀 NORMALIZACIÓN: El primer toque grabado se convierte en el inicio (0ms relativo)
+    final int offsetGrabacion = timingsToUse[0];
+
     for (int i = 0; i < secuenciaNotas.length; i++) {
       if (i >= timingsToUse.length) break;
-      final inicio = timingsToUse[i];
-      final fin = (i + 1 < timingsToUse.length) ? timingsToUse[i + 1] : inicio + 400;
+      
+      // Calculamos el inicio restando el offset y sumando el inicio del bloque
+      final inicio = bloque.inicioMs + (timingsToUse[i] - offsetGrabacion);
+      
+      // El fin es el inicio del siguiente, o 2 segundos extra para el último
+      final fin = (i + 1 < timingsToUse.length) 
+          ? bloque.inicioMs + (timingsToUse[i + 1] - offsetGrabacion)
+          : inicio + 2000;
+
       _eventosDelBloque.add(_EventoEnsayo(
         columna: secuenciaNotas[i].key,
         esFila7: secuenciaNotas[i].value.startsWith('fila7'),
