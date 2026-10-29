@@ -30,14 +30,11 @@ class GrabarTimingBloqueScreen extends StatefulWidget {
 class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
   final _player = PlayerService().player;
   late EstrofaNumerofonia _estrofa;
-  late List<String> _lineasLetra;
   bool _cargando = true;
   String _errorMsg = '';
   
   final List<int> _toquesMs = [];
-  final List<int> _letrasMs = [];
   int _indexEsperada = 0;
-  int _lineaActual = 0;
   final Set<String> _brillo = {};
   
   Duration _pos = Duration.zero;
@@ -50,11 +47,6 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
     super.initState();
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-    // Extraer las líneas de la letra
-    _lineasLetra = widget.cancion.tieneLetra
-        ? widget.cancion.letras.first.texto.split('\n').where((l) => l.trim().isNotEmpty).toList()
-        : [];
 
     final estrofas = widget.cancion.estrofas.where((e) => !e.vacia).toList();
     if (widget.bloque.estrofaRef < 0 || widget.bloque.estrofaRef >= estrofas.length) {
@@ -91,10 +83,6 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
         _toquesMs.addAll(widget.bloque.timingsMs);
         _indexEsperada = _toquesMs.length;
       }
-      if (widget.bloque.letraTimingsMs.isNotEmpty) {
-        _letrasMs.addAll(widget.bloque.letraTimingsMs);
-        _lineaActual = _letrasMs.length;
-      }
 
       await _player.seek(Duration(milliseconds: widget.bloque.inicioMs));
 
@@ -119,14 +107,6 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
     });
   }
 
-  void _marcarLetra() {
-    if (_lineaActual >= _lineasLetra.length) return;
-    setState(() {
-      _letrasMs.add(_pos.inMilliseconds);
-      _lineaActual++;
-    });
-  }
-
   int get _notasTotales {
     int count = 0;
     for (var c in _estrofa.columnas) {
@@ -138,7 +118,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
   void _terminar() {
     if (_toquesMs.isEmpty) return;
     final recortado = _toquesMs.length > _notasTotales ? _toquesMs.sublist(0, _notasTotales) : _toquesMs;
-    Navigator.pop(context, [recortado, _letrasMs]);
+    Navigator.pop(context, recortado);
   }
 
   @override
@@ -148,13 +128,10 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
 
     return ToolScaffold(
       titulo: 'Timing: ${widget.bloque.label}',
-      subtitulo: 'Toca al ritmo y marca las letras',
+      subtitulo: 'Toca al ritmo del audio',
       onCerrar: () => Navigator.pop(context),
       bottomBar: Row(
         children: [
-          if (widget.bloque.conLetra)
-            Expanded(child: AppButton(label: 'MARCAR LETRA', icon: Icons.text_fields, variant: AppButtonVariant.secondary, onPressed: _marcarLetra)),
-          if (widget.bloque.conLetra) const SizedBox(width: Sp.sm),
           Expanded(child: AppButton(label: 'DESHACER', icon: Icons.undo, variant: AppButtonVariant.secondary, onPressed: _toquesMs.isEmpty ? null : () {
             setState(() { _toquesMs.removeLast(); _indexEsperada = _toquesMs.length; });
           })),
@@ -173,26 +150,6 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
             onTogglePlay: () => _player.playing ? _player.pause() : _player.play(),
             onSeek: (v) => _player.seek(Duration(milliseconds: v.toInt())),
           ),
-          // VISUALIZADOR DE LA LETRA QUE ESTÁS GRABANDO
-          if (widget.bloque.conLetra)
-            Container(
-              height: 60,
-              margin: const EdgeInsets.symmetric(horizontal: Sp.sm),
-              padding: const EdgeInsets.all(Sp.sm),
-              decoration: BoxDecoration(
-                color: AppColors.granate.withOpacity(0.2),
-                borderRadius: Rad.rMd,
-                border: Border.all(color: AppColors.dorado.withOpacity(0.5)),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                _lineaActual < _lineasLetra.length
-                    ? 'Siguiente: "${_lineasLetra[_lineaActual]}"'
-                    : '✅ Letra completada',
-                style: AppType.subtitle.copyWith(color: AppColors.dorado),
-                textAlign: TextAlign.center,
-              ),
-            ),
           const SizedBox(height: Sp.sm),
           Expanded(
             child: Row(
