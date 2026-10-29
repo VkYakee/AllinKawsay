@@ -28,6 +28,7 @@ class _ZamponaPracticaScreenState extends State<ZamponaPracticaScreen> {
   @override
   void initState() {
     super.initState();
+    // Mantenemos horizontal porque venimos del modo ensayo
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _service.init().then((_) { if (mounted) setState(() => _cargando = false); });
@@ -35,8 +36,8 @@ class _ZamponaPracticaScreenState extends State<ZamponaPracticaScreen> {
 
   @override
   void dispose() {
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    // 🛑 DETENER EL AUDIO AL SALIR
+    _service.detener();
     super.dispose();
   }
 
@@ -74,31 +75,32 @@ class _ZamponaPracticaScreenState extends State<ZamponaPracticaScreen> {
           );
         }).toList(),
       ),
+      // Usamos Column para que no se superpongan
       body: Column(
         children: [
-          // Tabla de guía visual (si existe)
           if (tieneGuia)
             Container(
-              height: 100,
+              height: 90, // Altura fija para la guía
               width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: Sp.sm),
+              margin: const EdgeInsets.all(Sp.sm),
               padding: const EdgeInsets.all(Sp.sm),
               decoration: BoxDecoration(
                 color: const Color(0xFF14080A),
                 borderRadius: Rad.rMd,
                 border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
               ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: VisorNumerofonia(
-                  estrofas: widget.estrofasGuia!,
-                  escala: 1.1,
-                  fondoOscuro: true, // Forzamos texto blanco para este fondo
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: VisorNumerofonia(
+                    estrofas: widget.estrofasGuia!,
+                    escala: 1.0,
+                    fondoOscuro: true,
+                  ),
                 ),
               ),
             ),
-          const SizedBox(height: Sp.sm),
-          // Teclado
+          // La zampoña ocupa todo el espacio restante
           Expanded(
             child: ZamponaTeclado(brillando: _sonando, onTapNota: _tocar),
           ),
