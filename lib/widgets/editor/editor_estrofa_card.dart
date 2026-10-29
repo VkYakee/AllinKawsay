@@ -33,15 +33,40 @@ class EditorEstrofaCard extends StatefulWidget {
 
 class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
   final ScrollController _scrollCtrl = ScrollController();
+  final TextEditingController _quickCtrl = TextEditingController();
 
   @override
   void dispose() {
     _scrollCtrl.dispose();
+    _quickCtrl.dispose();
     super.dispose();
   }
 
   void _agregarColumna() {
     widget.onAgregarColumna();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      }
+    });
+  }
+
+  void _procesarTextoRapido() {
+    final texto = _quickCtrl.text.trim();
+    if (texto.isEmpty) return;
+
+    final nuevasColumnas = EstrofaNumerofonia.parsearTextoRapido(texto);
+    if (nuevasColumnas.isEmpty) return;
+
+    setState(() {
+      widget.estrofa.columnas.clear();
+      widget.estrofa.columnas.addAll(nuevasColumnas);
+    });
+    
+    _quickCtrl.clear();
+    widget.onCelda(); // Notificar al padre
+    
+    // Hacer scroll hasta el final para ver el resultado
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
@@ -96,6 +121,7 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
           ),
           const SizedBox(height: Sp.sm),
           
+          // TABLA
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.granate.withOpacity(0.2)),
@@ -109,6 +135,8 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
           ),
           
           const SizedBox(height: Sp.sm),
+          
+          // BOTONES DE COLUMNAS
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -125,6 +153,34 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
                 style: TextButton.styleFrom(foregroundColor: AppColors.granate),
               ),
             ],
+          ),
+
+          const SizedBox(height: Sp.md),
+          const Divider(height: 1),
+          const SizedBox(height: Sp.sm),
+
+          // 🪄 INGRESO RÁPIDO CON MAGIA
+          Row(
+            children: [
+              Expanded(
+                child: AppInput(
+                  controller: _quickCtrl,
+                  hint: 'Ej: 43335/66472862\\86272',
+                  prefixIcon: Icons.auto_fix_high,
+                ),
+              ),
+              const SizedBox(width: Sp.sm),
+              IconButton(
+                icon: const Icon(Icons.check_circle, color: AppColors.granate, size: 32),
+                onPressed: _procesarTextoRapido,
+                tooltip: 'Auto-acomodar',
+              ),
+            ],
+          ),
+          const SizedBox(height: Sp.xs),
+          Text(
+            'Usa / para subir a fila 7 y \\ para bajar a fila 6.',
+            style: AppType.captionXs.copyWith(color: onSurface.withOpacity(0.5), fontStyle: FontStyle.italic),
           ),
         ],
       ),
@@ -144,11 +200,9 @@ class _EditorEstrofaCardState extends State<EditorEstrofaCard> {
           key: ValueKey('cif-${identityHashCode(widget.estrofa)}-$j-${es7 ? 7 : 6}'),
           initialValue: valor,
           onChanged: (v) {
-            // Guardamos el valor SIN llamar al onCelda inmediatamente.
-            // Así evitamos que el widget padre se reconstruya y pierda el foco.
             if (es7) { widget.estrofa.columnas[j].nota7 = v; } else { widget.estrofa.columnas[j].nota6 = v; }
           },
-          onFieldSubmitted: (_) => widget.onCelda(), // Solo avisamos al terminar
+          onFieldSubmitted: (_) => widget.onCelda(),
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
