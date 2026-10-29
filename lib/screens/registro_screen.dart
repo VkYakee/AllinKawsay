@@ -98,43 +98,31 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0F0F0F), AppColors.granateOscuro, AppColors.granate],
-            stops: [0.0, 0.4, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(Sp.xxl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const LoginHero(),
-                  const SizedBox(height: Sp.xxxl),
-                  RegistroForm(
-                    nombreCtrl: _nombre,
-                    emailCtrl: _email,
-                    passCtrl: _pass,
-                    pass2Ctrl: _pass2,
-                    honeypotCtrl: _honeypot,
-                    verPass: _verPass,
-                    loading: _loading,
-                    loadingGoogle: _loadingGoogle,
-                    onVerPass: () => setState(() => _verPass = !_verPass),
-                    onRegistrar: _registrar,
-                    onGoogle: _registrarConGoogle,
-                    onVolver: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: Sp.xxl),
-                ],
+    return AppScaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(Sp.xxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const LoginHero(),
+              const SizedBox(height: Sp.xxxl),
+              RegistroForm(
+                nombreCtrl: _nombre,
+                emailCtrl: _email,
+                passCtrl: _pass,
+                pass2Ctrl: _pass2,
+                honeypotCtrl: _honeypot,
+                verPass: _verPass,
+                loading: _loading,
+                loadingGoogle: _loadingGoogle,
+                onVerPass: () => setState(() => _verPass = !_verPass),
+                onRegistrar: _registrar,
+                onGoogle: _registrarConGoogle,
+                onVolver: () => Navigator.pop(context),
               ),
-            ),
+              const SizedBox(height: Sp.xxl),
+            ],
           ),
         ),
       ),
