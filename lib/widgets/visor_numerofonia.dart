@@ -114,7 +114,7 @@ class _TablaEstrofa extends StatelessWidget {
       columnWidths: {
         0: FixedColumnWidth(24 * e), // Ancho fijo para la columna 7/6
         for (int j = 0; j < n; j++)
-          j + 1: FixedColumnWidth(anchoCol(estrofa.columnas[j], e)),
+          j + 1: FixedColumnWidth(VisorNumerofonia.anchoCol(estrofa.columnas[j], e)), // <-- CORREGIDO
       },
       border: TableBorder.all(color: colorLinea, width: 0.8),
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -123,14 +123,14 @@ class _TablaEstrofa extends StatelessWidget {
           children: [
             _etiqueta('7', e, colorEtiquetaBg),
             for (int j = 0; j < n; j++)
-              _celda(j, true, estrofa.columnas[j].nota7, e, colorNota, colorLinea),
+              _celda(j, true, estrofa.columnas[j].nota7, e, colorNota),
           ]
         ),
         TableRow(
           children: [
             _etiqueta('6', e, colorEtiquetaBg),
             for (int j = 0; j < n; j++)
-              _celda(j, false, estrofa.columnas[j].nota6, e, colorNota, colorLinea),
+              _celda(j, false, estrofa.columnas[j].nota6, e, colorNota),
           ]
         ),
       ],
@@ -177,7 +177,7 @@ class _TablaEstrofa extends StatelessWidget {
         ),
       );
 
-  Widget _celda(int j, bool esFila7, String valor, double e, Color color, Color borderColor) {
+  Widget _celda(int j, bool esFila7, String valor, double e, Color color) {
     final activa = celdaActiva != null && celdaActiva!.columna == j && celdaActiva!.esFila7 == esFila7;
 
     Widget contenido = FittedBox(
@@ -191,40 +191,33 @@ class _TablaEstrofa extends StatelessWidget {
     );
 
     if (activa && valor.trim().isNotEmpty) {
-      final textoLimpio = valor.trim();
-      final idx = celdaActiva!.notaIndex;
-      if (idx >= 0 && idx < textoLimpio.length) {
-        final antes = textoLimpio.substring(0, idx);
-        final letra = textoLimpio.substring(idx, idx + 1);
-        final despues = textoLimpio.substring(idx + 1);
-        contenido = FittedBox(
-          fit: BoxFit.scaleDown,
-          child: RichText(
-            maxLines: 1,
-            text: TextSpan(
-              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
-              children: [
-                if (antes.isNotEmpty) TextSpan(text: antes, style: TextStyle(color: color)),
-                TextSpan(
-                  text: letra,
-                  style: TextStyle(color: AppColors.dorado, shadows: [Shadow(color: AppColors.dorado, blurRadius: 10)]),
-                ),
-                if (despues.isNotEmpty) TextSpan(text: despues, style: TextStyle(color: color)),
-              ],
-            ),
+      // En lugar de resaltar un solo número, resaltamos toda la celda
+      contenido = FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          valor,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            color: AppColors.dorado, 
+            fontWeight: FontWeight.bold, 
+            fontFamily: 'monospace', 
+            fontSize: 14 * e, 
+            height: 1.0,
+            shadows: [Shadow(color: AppColors.dorado, blurRadius: 10)],
           ),
-        );
-      }
+        ),
+      );
     }
 
     return Container(
       height: 30 * e,
       decoration: BoxDecoration(
-        color: activa ? AppColors.dorado.withOpacity(0.1) : null,
-        boxShadow: activa ? [BoxShadow(color: AppColors.dorado.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)] : null,
+        color: activa ? AppColors.dorado.withOpacity(0.2) : null,
+        boxShadow: activa ? [BoxShadow(color: AppColors.dorado.withOpacity(0.4), blurRadius: 8, spreadRadius: 1)] : null,
       ),
       alignment: Alignment.center,
-      padding: EdgeInsets.symmetric(horizontal: padH * e),
+      padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e), // <-- CORREGIDO
       child: contenido,
     );
   }
