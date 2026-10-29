@@ -1,10 +1,12 @@
 // lib/screens/agregar_evento_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import '../design/design.dart';
 import '../models/evento.dart';
 import '../services/evento_service.dart';
 import '../theme/colors.dart';
+import 'seleccionar_ubicacion_screen.dart';
 
 class AgregarEventoScreen extends StatefulWidget {
   final Evento? evento;
@@ -23,6 +25,8 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
   DateTime _fecha = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _hora = const TimeOfDay(hour: 19, minute: 0);
   bool _guardando = false;
+  
+  LatLng? _ubicacion; // <-- NUEVO: Guarda lat y lng
 
   bool get _esEdicion => widget.evento != null;
 
@@ -36,6 +40,9 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
       _lugar.text = e.lugar;
       _fecha = e.fecha;
       _hora = TimeOfDay(hour: e.fecha.hour, minute: e.fecha.minute);
+      if (e.lat != null && e.lng != null) {
+        _ubicacion = LatLng(e.lat!, e.lng!);
+      }
     }
   }
 
@@ -77,6 +84,21 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
     if (h != null) setState(() => _hora = h);
   }
 
+  Future<void> _abrirMapa() async {
+    final res = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SeleccionarUbicacionScreen(
+          latInicial: _ubicacion?.latitude,
+          lngInicial: _ubicacion?.longitude,
+        ),
+      ),
+    );
+    if (res != null && mounted) {
+      setState(() => _ubicacion = res);
+    }
+  }
+
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _guardando = true);
@@ -91,6 +113,8 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
           'descripcion': _descripcion.text.trim(),
           'lugar': _lugar.text.trim(),
           'fecha': fechaFinal,
+          'lat': _ubicacion?.latitude,
+          'lng': _ubicacion?.longitude,
         });
       } else {
         await service.agregar(Evento(
@@ -99,6 +123,8 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
           descripcion: _descripcion.text.trim(),
           lugar: _lugar.text.trim(),
           fecha: fechaFinal,
+          lat: _ubicacion?.latitude,
+          lng: _ubicacion?.longitude,
           creadoPor: user.uid,
           creadorNombre: user.displayName ?? user.email ?? 'Anónimo',
         ));
@@ -111,10 +137,12 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return AppScaffold(
       title: _esEdicion ? 'Editar Evento' : 'Nuevo Evento',
       actions: [
-        IconButton(icon: const Icon(Icons.check), onPressed: _guardando ? null : _guardar),
+        IconButton(icon: const Icon(Icons.check, color: AppColors.dorado), onPressed: _guardando ? null : _guardar),
       ],
       body: Form(
         key: _formKey,
@@ -135,13 +163,41 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
                     validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
                   ),
                   const SizedBox(height: Sp.md),
-                  AppInput(controller: _lugar, label: 'Lugar', prefixIcon: Icons.place_outlined),
+                  AppInput(controller: _lugar, label: 'Lugar (Nombre)', prefixIcon: Icons.place_outlined),
                   const SizedBox(height: Sp.md),
                   AppInput(controller: _descripcion, label: 'Descripción', prefixIcon: Icons.notes, maxLines: 3),
                 ],
               ),
             ),
             const SizedBox(height: Sp.md),
+            
+            // SECCIÓN DEL MAPA
+            AppCard(
+              padding: const EdgeInsets.all(Sp.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SeccionHeader(title: 'Ubicación Exacta', icon: Icons.map, padding: EdgeInsets.zero),
+                  const SizedBox(height: Sp.sm),
+                  Text(
+                    _ubicacion != null 
+                      ? 'Ubicación seleccionada: ${_ubicacion!.latitude.toStringAsFixed(4)}, ${_ubicacion!.longitude.toStringAsFixed(4)}'
+                      : 'Aún no has seleccionado un punto en el mapa.',
+                    style: AppType.caption.copyWith(color: onSurface.withOpacity(0.6)),
+                  ),
+                  const SizedBox(height: Sp.md),
+                  AppButton(
+                    label: _ubicacion != null ? 'CAMBIAR UBICACIÓN EN MAPA' : 'SELECCIONAR EN MAPA',
+                    icon: Icons.pin_drop,
+                    variant: AppButtonVariant.secondary,
+                    fullWidth: true,
+                    onPressed: _abrirMapa,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Sp.md),
+
             AppCard(
               padding: const EdgeInsets.all(Sp.lg),
               child: Column(
