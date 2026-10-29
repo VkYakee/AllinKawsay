@@ -86,6 +86,15 @@ class _ModalContentState extends State<_ModalContent> {
                       AppChoiceChip(label: 'E${i + 1}', selected: _estrofaRef == i, onSelected: (_) => setState(() => _estrofaRef = i)),
                   ],
                 ),
+                // SWITCH PARA LA LETRA
+                const SizedBox(height: Sp.md),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Mostrar letra en este bloque', style: AppType.subtitle),
+                  value: _conLetra,
+                  activeColor: AppColors.granate,
+                  onChanged: (v) => setState(() => _conLetra = v),
+                ),
               ],
               const SizedBox(height: Sp.xl),
               AppButton(
@@ -94,7 +103,7 @@ class _ModalContentState extends State<_ModalContent> {
                   Navigator.pop(context, BloqueAudio(
                     inicioMs: widget.inicioMs,
                     estrofaRef: _requiereEstrofa ? _estrofaRef : -1,
-                    conLetra: _tipo == TipoBloque.estrofa && _conLetra,
+                    conLetra: _conLetra,
                     tipo: _tipo,
                     velocidad: 1.0,
                   ));
