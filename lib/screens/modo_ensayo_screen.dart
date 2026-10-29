@@ -68,11 +68,10 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
         final tag = MediaItem(id: 'ensayo_${widget.cancion.id}', title: 'Ensayo: ${widget.cancion.titulo}', artist: 'Allin Kawsay');
         await _player.setAudioSource(AudioSource.uri(Uri.parse(widget.cancion.audioUrl), tag: tag));
         
+        // 🚀 FIX LAG: No hacemos setState en cada tick. Solo actualizamos la posición internamente.
         _subPos = _player.positionStream.listen((p) {
-          if (mounted) {
-            setState(() => _pos = p);
-            _actualizarNotaActiva();
-          }
+          _pos = p;
+          _actualizarNotaActiva();
         });
         _player.durationStream.listen((d) { if (mounted) setState(() => _duracion = d); });
       }
@@ -84,9 +83,12 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
 
   @override
   void dispose() {
+    // 🚀 FIX ORIENTACIÓN: Volver a vertical al salir
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _subPos?.cancel();
     _player.pause();
-    _service.detener(); // Detener zampoña al salir
+    _service.detener();
     super.dispose();
   }
 
@@ -105,19 +107,24 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     if (_bloques.isEmpty) return;
     final idx = _getBloqueIndex(_pos);
     
+    bool necesitaRedibujar = false;
+
     if (idx != _bloqueActual) {
-      setState(() {
-        _bloqueActual = idx;
-        _notaActiva = null;
-        _notaSonando = null;
-        if (idx >= 0) {
-          _notasDelBloqueActual = _extraerNotasDeBloque(_bloques[idx]);
-        } else {
-          _notasDelBloqueActual = [];
-        }
-      });
+      _bloqueActual = idx;
+      _notaActiva = null;
+      _notaSonando = null;
+      necesitaRedibujar = true;
+      if (idx >= 0) {
+        _notasDelBloqueActual = _extraerNotasDeBloque(_bloques[idx]);
+      } else {
+        _notasDelBloqueActual = [];
+      }
     }
-    if (idx < 0) return;
+
+    if (idx < 0) {
+      if (necesitaRedibujar && mounted) setState(() {});
+      return;
+    }
 
     final bloque = _bloques[idx];
     final elapsed = _pos.inMilliseconds - bloque.inicioMs;
@@ -130,11 +137,18 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
         break;
       }
     }
+    
     if (encontrada != null) {
       final igual = _notaActiva?.columna == encontrada.columna && _notaActiva?.esFila7 == encontrada.esFila7 && _notaActiva?.notaIndex == encontrada.notaIndex;
       if (!igual) {
-        setState(() => _notaActiva = encontrada);
+        _notaActiva = encontrada;
+        necesitaRedibujar = true;
       }
+    }
+
+    // Solo redibujamos si REALMENTE cambió la nota o el bloque
+    if (necesitaRedibujar && mounted) {
+      setState(() {});
     }
   }
 
@@ -172,9 +186,17 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
     if (_bloqueActual >= 0 && _bloques[_bloqueActual].conLetra && widget.cancion.tieneLetra) {
       return widget.cancion.letras.first.texto;
     }
-    // Si no hay setlist configurado para esta canción, mostramos la letra general
-    if (widget.cancion.tieneLetra) return widget.cancion.letras.first.texto;
     return '';
+  }
+
+  // 🚀 SOLO MOSTRAMOS LA ESTROFA ACTIVA
+  List<EstrofaNumerofonia> get _estrofasAMostrar {
+    if (_bloqueActual < 0 || _bloqueActual >= _bloques.length) return [];
+    final bloque = _bloques[_bloqueActual];
+    if (!bloque.tieneVisual) return [];
+    final estrofas = widget.cancion.estrofas.where((e) => !e.vacia).toList();
+    if (bloque.estrofaRef < 0 || bloque.estrofaRef >= estrofas.length) return [];
+    return [estrofas[bloque.estrofaRef]];
   }
 
   @override
@@ -186,9 +208,8 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       subtitulo: 'Modo Ensayo con Audio',
       onCerrar: () { _player.pause(); Navigator.pop(context); },
       actions: [
-        // 🎹 CAMBIADO POR UN ÍCONO DE METRÓNOMO / HERRAMIENTAS
         IconButton(
-          icon: const Icon(Icons.av_timer, color: AppColors.dorado),
+          icon: const Icon(Icons.tune, color: AppColors.dorado), // Ícono cambiado a herramientas
           tooltip: 'Práctica Libre (Solo 6/7)',
           onPressed: () {
             _player.pause();
@@ -198,7 +219,7 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       ],
       body: Column(
         children: [
-          // 1. TABLA (Compacta y sin scroll)
+          // 1. TABLA (Ocupa todo el ancho disponible)
           Expanded(
             flex: 3,
             child: Container(
@@ -210,22 +231,25 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
                 border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
               ),
               child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: VisorNumerofonia(
-                    estrofas: widget.cancion.estrofas,
-                    escala: 1.0,
-                    fondoOscuro: true,
-                    celdaActiva: _notaActiva != null
-                        ? CeldaActiva(
-                            estrofa: _notaActiva!.estrofa,
-                            columna: _notaActiva!.columna,
-                            esFila7: _notaActiva!.esFila7,
-                            notaIndex: _notaActiva!.notaIndex,
-                          )
-                        : null,
-                  ),
-                ),
+                // Si hay estrofa activa, la muestra. Si no, un texto.
+                child: _estrofasAMostrar.isEmpty
+                    ? Text('Esperando estrofa...', style: AppType.caption.copyWith(color: AppColors.dorado.withOpacity(0.5)))
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: VisorNumerofonia(
+                          estrofas: _estrofasAMostrar, // SOLO LA ESTROFA ACTIVA
+                          escala: 1.2,
+                          fondoOscuro: true,
+                          celdaActiva: _notaActiva != null
+                              ? CeldaActiva(
+                                  estrofa: 0, // Es 0 porque solo hay 1 en la lista
+                                  columna: _notaActiva!.columna,
+                                  esFila7: _notaActiva!.esFila7,
+                                  notaIndex: _notaActiva!.notaIndex,
+                                )
+                              : null,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -240,20 +264,18 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
             ),
           ),
 
-          // 3. ZAMPOÑA (Protagonista abajo) + Controles
+          // 3. ZAMPOÑA (Protagonista) + Controles
           Expanded(
             flex: 5,
             child: Row(
               children: [
-                // Zampoña Grande
                 Expanded(
                   flex: 6,
                   child: ZamponaWidget(
                     brillando: _notaSonando != null ? {_notaSonando!} : {}, 
-                    onTapNota: null, // En modo ensayo se toca sola
+                    onTapNota: null,
                   ),
                 ),
-                // Controles Rediseñados
                 Expanded(
                   flex: 3,
                   child: Padding(
