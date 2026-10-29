@@ -31,7 +31,7 @@ class VisorNumerofonia extends StatelessWidget {
     this.fondoOscuro = false,
   });
 
-  static const double charW = 8.0; // Un poco más ancho
+  static const double charW = 8.0;
   static const double padH = 4.0;
 
   static double anchoCol(ColumnaNumerofonia c, double e) =>
@@ -56,7 +56,7 @@ class VisorNumerofonia extends StatelessWidget {
         
         double e = escala;
         if (maxBase > 0 && disponible > 0 && maxBase * e > disponible) {
-          e = (disponible / maxBase).clamp(0.3, escala); // Permite achicar más
+          e = (disponible / maxBase).clamp(0.3, escala);
         }
 
         return Column(
@@ -108,27 +108,7 @@ class _TablaEstrofa extends StatelessWidget {
     final colorEtiquetaBg = oscuro ? AppColors.granateOscuro : AppColors.granate;
 
     final n = estrofa.columnas.length;
-    final tabla = Table(
-      columnWidths: {
-        0: FixedColumnWidth(24 * e),
-        for (int j = 0; j < n; j++)
-          j + 1: FixedColumnWidth(VisorNumerofonia.anchoCol(estrofa.columnas[j], e)),
-      },
-      border: TableBorder.all(color: colorLinea, width: 1),
-      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children: [
-        TableRow(children: [
-          _etiqueta('7', e, colorEtiquetaBg),
-          for (int j = 0; j < n; j++)
-            _nota(columna: j, esFila7: true, valor: estrofa.columnas[j].nota7, e: e, color: colorNota),
-        ]),
-        TableRow(children: [
-          _etiqueta('6', e, colorEtiquetaBg),
-          for (int j = 0; j < n; j++)
-            _nota(columna: j, esFila7: false, valor: estrofa.columnas[j].nota6, e: e, color: colorNota),
-        ]),
-      ],
-    );
+    final anchos = [for (int j = 0; j < n; j++) VisorNumerofonia.anchoCol(estrofa.columnas[j], e)];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -156,14 +136,53 @@ class _TablaEstrofa extends StatelessWidget {
               ],
             ),
           ),
-        tabla,
+        
+        // Usamos Column de Rows en lugar de Table para alineación perfecta
+        Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: colorLinea, width: 1),
+              left: BorderSide(color: colorLinea, width: 1),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Fila 7
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _etiqueta('7', e, colorEtiquetaBg, colorLinea),
+                  for (int j = 0; j < n; j++) 
+                    _celda(j, true, estrofa.columnas[j].nota7, e, colorNota, colorLinea, anchos[j]),
+                ],
+              ),
+              // Fila 6
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _etiqueta('6', e, colorEtiquetaBg, colorLinea),
+                  for (int j = 0; j < n; j++) 
+                    _celda(j, false, estrofa.columnas[j].nota6, e, colorNota, colorLinea, anchos[j]),
+                ],
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _etiqueta(String t, double e, Color bg) => Container(
+  Widget _etiqueta(String t, double e, Color bg, Color borderColor) => Container(
+        width: 24 * e,
         height: 30 * e,
-        color: bg,
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border(
+            right: BorderSide(color: borderColor, width: 1),
+            bottom: BorderSide(color: borderColor, width: 1),
+          ),
+        ),
         alignment: Alignment.center,
         child: Text(
           t,
@@ -171,17 +190,10 @@ class _TablaEstrofa extends StatelessWidget {
         ),
       );
 
-  Widget _nota({
-    required int columna,
-    required bool esFila7,
-    required String valor,
-    required double e,
-    required Color color,
-  }) {
-    final activa = celdaActiva != null && celdaActiva!.columna == columna && celdaActiva!.esFila7 == esFila7;
+  Widget _celda(int j, bool esFila7, String valor, double e, Color color, Color borderColor, double ancho) {
+    final activa = celdaActiva != null && celdaActiva!.columna == j && celdaActiva!.esFila7 == esFila7;
 
-    // EL SECRETO PARA QUE NO SE APILEN: FittedBox con maxLines 1
-    Widget texto = FittedBox(
+    Widget contenido = FittedBox(
       fit: BoxFit.scaleDown,
       child: Text(
         valor,
@@ -191,47 +203,47 @@ class _TablaEstrofa extends StatelessWidget {
       ),
     );
 
-    if (!activa || valor.trim().isEmpty) {
-      return Container(height: 30 * e, alignment: Alignment.center, padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e), child: texto);
+    if (activa && valor.trim().isNotEmpty) {
+      final textoLimpio = valor.trim();
+      final idx = celdaActiva!.notaIndex;
+      if (idx >= 0 && idx < textoLimpio.length) {
+        final antes = textoLimpio.substring(0, idx);
+        final letra = textoLimpio.substring(idx, idx + 1);
+        final despues = textoLimpio.substring(idx + 1);
+        contenido = FittedBox(
+          fit: BoxFit.scaleDown,
+          child: RichText(
+            maxLines: 1,
+            text: TextSpan(
+              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
+              children: [
+                if (antes.isNotEmpty) TextSpan(text: antes, style: TextStyle(color: color)),
+                TextSpan(
+                  text: letra,
+                  style: TextStyle(color: AppColors.dorado, shadows: [Shadow(color: AppColors.dorado, blurRadius: 10)]),
+                ),
+                if (despues.isNotEmpty) TextSpan(text: despues, style: TextStyle(color: color)),
+              ],
+            ),
+          ),
+        );
+      }
     }
-
-    final textoLimpio = valor.trim();
-    final idx = celdaActiva!.notaIndex;
-    if (idx < 0 || idx >= textoLimpio.length) {
-       return Container(height: 30 * e, alignment: Alignment.center, padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e), child: texto);
-    }
-
-    final antes = textoLimpio.substring(0, idx);
-    final letra = textoLimpio.substring(idx, idx + 1);
-    final despues = textoLimpio.substring(idx + 1);
 
     return Container(
+      width: ancho,
       height: 30 * e,
-      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.dorado.withOpacity(0.1),
-        boxShadow: [BoxShadow(color: AppColors.dorado.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)],
-      ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: RichText(
-          maxLines: 1,
-          text: TextSpan(
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 14 * e, height: 1.0),
-            children: [
-              if (antes.isNotEmpty) TextSpan(text: antes, style: TextStyle(color: color)),
-              TextSpan(
-                text: letra,
-                style: TextStyle(
-                  color: AppColors.dorado,
-                  shadows: [Shadow(color: AppColors.dorado, blurRadius: 10)],
-                ),
-              ),
-              if (despues.isNotEmpty) TextSpan(text: despues, style: TextStyle(color: color)),
-            ],
-          ),
+        color: activa ? AppColors.dorado.withOpacity(0.1) : null,
+        border: Border(
+          right: BorderSide(color: borderColor, width: 1),
+          bottom: BorderSide(color: borderColor, width: 1),
         ),
+        boxShadow: activa ? [BoxShadow(color: AppColors.dorado.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)] : null,
       ),
+      alignment: Alignment.center,
+      padding: EdgeInsets.symmetric(horizontal: VisorNumerofonia.padH * e),
+      child: contenido,
     );
   }
 }
