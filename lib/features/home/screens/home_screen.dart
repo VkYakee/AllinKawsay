@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/design/colors.dart';
 import '../../../services/novedades_service.dart';
 import '../../inicio/screens/inicio_screen.dart';
-import '../../cancionero/screens/cancionero_screen.dart'; // <-- NUEVO IMPORT
+import '../../cancionero/screens/cancionero_screen.dart';
+import '../../perfil/screens/perfil_screen.dart'; // <-- NUEVO IMPORT
 import '../widgets/main_nav_bar.dart';
 import '../widgets/mini_player.dart';
 
@@ -28,10 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final pages = [
       InicioScreen(nombreUsuario: widget.nombreUsuario),
-      const CancioneroScreen(), // <-- NUEVA PANTALLA
+      const CancioneroScreen(),
       const Center(child: Text('Eventos (En construcción)', style: TextStyle(color: Colors.white))),
       const Center(child: Text('Recuerdos (En construcción)', style: TextStyle(color: Colors.white))),
-      const Center(child: Text('Perfil (En construcción)', style: TextStyle(color: Colors.white))),
+      const PerfilScreen(nombreUsuario: 'Usuario'), // <-- NUEVA PANTALLA
     ];
 
     return Scaffold(
