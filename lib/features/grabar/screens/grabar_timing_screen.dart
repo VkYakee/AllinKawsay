@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/widgets/zampona_canvas.dart';
 import '../../../data/zampona_catalogo.dart';
 import '../../../design/design.dart';
 import '../../../models/numerofonia.dart';
@@ -10,7 +11,6 @@ import '../../../services/zampona_service.dart';
 import '../../../theme/colors.dart';
 import '../../../widgets/visor_numerofonia.dart';
 import '../../../widgets/zampona/tool_scaffold.dart';
-import '../../../widgets/zampona/zampona_widget.dart';
 
 class GrabarTimingScreen extends StatefulWidget {
   final EstrofaNumerofonia estrofa;
@@ -115,7 +115,8 @@ class _GrabarTimingScreenState extends State<GrabarTimingScreen> {
     });
 
     if (_scrollCtrl.hasClients) {
-      final fraccion = _indexActual / (_notas.isEmpty ? 1 : _notas.length);
+      final fraccion =
+          _indexActual / (_notas.isEmpty ? 1 : _notas.length);
       _scrollCtrl.animateTo(
         _scrollCtrl.position.maxScrollExtent * fraccion,
         duration: const Duration(milliseconds: 220),
@@ -132,7 +133,9 @@ class _GrabarTimingScreenState extends State<GrabarTimingScreen> {
       col.timings6.clear();
     }
 
-    final maxLen = _deltas.length < _notas.length ? _deltas.length : _notas.length;
+    final maxLen = _deltas.length < _notas.length
+        ? _deltas.length
+        : _notas.length;
     for (int i = 0; i < maxLen; i++) {
       final nota = _notas[i];
       final col = resultado.columnas[nota.columna];
@@ -199,7 +202,9 @@ class _GrabarTimingScreenState extends State<GrabarTimingScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF14080A),
               borderRadius: Rad.rMd,
-              border: Border.all(color: AppColors.dorado.withOpacity(0.4)),
+              border: Border.all(
+                color: AppColors.dorado.withOpacity(0.4),
+              ),
             ),
             child: SingleChildScrollView(
               controller: _scrollCtrl,
@@ -220,7 +225,7 @@ class _GrabarTimingScreenState extends State<GrabarTimingScreen> {
           ),
           const SizedBox(height: Sp.sm),
           Expanded(
-            child: ZamponaWidget(
+            child: ZamponaCanvas(
               brillando: _sonando,
               onTapNota: _tocarCania,
             ),
