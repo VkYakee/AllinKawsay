@@ -4,7 +4,8 @@ import '../../../core/design/colors.dart';
 import '../../../services/novedades_service.dart';
 import '../../inicio/screens/inicio_screen.dart';
 import '../../cancionero/screens/cancionero_screen.dart';
-import '../../perfil/screens/perfil_screen.dart'; // <-- NUEVO IMPORT
+import '../../eventos/screens/eventos_screen.dart'; // <-- NUEVO IMPORT
+import '../../perfil/screens/perfil_screen.dart';
 import '../widgets/main_nav_bar.dart';
 import '../widgets/mini_player.dart';
 
@@ -30,9 +31,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final pages = [
       InicioScreen(nombreUsuario: widget.nombreUsuario),
       const CancioneroScreen(),
-      const Center(child: Text('Eventos (En construcción)', style: TextStyle(color: Colors.white))),
+      const EventosScreen(), // <-- NUEVA PANTALLA
       const Center(child: Text('Recuerdos (En construcción)', style: TextStyle(color: Colors.white))),
-      const PerfilScreen(nombreUsuario: 'Usuario'), // <-- NUEVA PANTALLA
+      const PerfilScreen(nombreUsuario: 'Usuario'),
     ];
 
     return Scaffold(
