@@ -1,7 +1,8 @@
 // lib/widgets/perfil/modal_ajustes.dart
 import 'package:flutter/material.dart';
+
 import '../../design/design.dart';
-import '../../screens/gestion_cache_screen.dart';
+import '../../features/perfil/screens/gestion_cache_screen.dart';
 import '../../theme/colors.dart';
 import '../../theme/theme_provider.dart';
 
