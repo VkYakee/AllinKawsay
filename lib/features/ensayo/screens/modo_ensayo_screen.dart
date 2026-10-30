@@ -6,13 +6,13 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/widgets/zampona_canvas.dart';
 
 import '../../../models/cancion.dart';
 import '../../../widgets/visor_numerofonia.dart';
 import '../../../widgets/zampona/tool_scaffold.dart';
 
 import '../controllers/ensayo_controller.dart';
-import '../widgets/zampona_3d.dart';
 import '../widgets/controles_ensayo.dart';
 
 class ModoEnsayoScreen extends StatefulWidget {
@@ -181,10 +181,12 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
       children: [
         Expanded(
           flex: 6,
-          child: Zampona3D(
+          child: ZamponaCanvas(
             brillando: _controller.notaSonando != null
                 ? {_controller.notaSonando!}
                 : {},
+            mostrarNumeros: true,
+            compacto: true,
           ),
         ),
         Expanded(
@@ -196,7 +198,8 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
               velocidad: _controller.velocidad,
               bucle: _controller.bucle,
               posMs: _controller.pos.inMilliseconds.toDouble(),
-              totalMs: (_controller.duracion?.inMilliseconds ?? 1).toDouble(),
+              totalMs:
+                  (_controller.duracion?.inMilliseconds ?? 1).toDouble(),
               onPlay: _controller.play,
               onPause: _controller.pause,
               onStop: _controller.stop,
