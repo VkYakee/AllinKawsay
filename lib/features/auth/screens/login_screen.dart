@@ -7,8 +7,7 @@ import '../../../core/design/typography.dart';
 import '../../../services/auth_service.dart';
 import '../widgets/login_form.dart';
 import '../widgets/login_hero.dart';
-// Importaremos RegistroScreen cuando lo creemos en el siguiente paso
-// import 'registro_screen.dart';
+import 'registro_screen.dart'; // <-- NUEVO IMPORT
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -104,8 +103,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     onLogin: _login,
                     onGoogle: _loginGoogle,
                     onRegistro: () {
-                      // TODO: Navegar a RegistroScreen (Fase 1.2)
-                      _snack('Pantalla de registro en construcción');
+                      // 🚀 NAVEGACIÓN AL NUEVO REGISTRO
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const RegistroScreen()));
                     },
                   ),
                   const SizedBox(height: Sp.xxl),
