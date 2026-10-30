@@ -13,10 +13,8 @@ import '../../../services/recuerdo_service.dart';
 
 /// Controlador único del Inicio.
 ///
-/// Antes: cada sección (próximo evento, últimas canciones, último
-/// recuerdo, historia) tenía su propio StreamBuilder independiente.
-/// Eso son 4 suscripciones + 4 rebuilds por cambio, más los builders
-/// internos de cada widget.
+/// Antes: cada sección tenía su propio StreamBuilder independiente
+/// (4 suscripciones + 4 rebuilds por cambio).
 ///
 /// Ahora: 4 suscripciones únicas, un ChangeNotifier, un rebuild.
 class InicioController extends ChangeNotifier {
@@ -94,17 +92,21 @@ class InicioController extends ChangeNotifier {
 
   void _maybeEndLoading() {
     if (!_loading) return;
-    // Consideramos cargado cuando las 4 secciones respondieron al menos una vez.
-    // El _historiaCargada es el último en llegar porque suele ser más lento.
-    if (_historiaCargada &&
-        _ultimasCanciones.isNotEmpty &&
-        _ultimoRecuerdo != null) {
-      _loading = false;
-    } else if (_historiaCargada) {
-      // Si historia ya cargó y los demás aún no, igual salimos del loading
-      // (para no bloquear la UI cuando no hay canciones/recuerdos todavía).
+    if (_historiaCargada) {
       _loading = false;
     }
+  }
+
+  /// Refresco real: cancela suscripciones y re-suscribe.
+  /// Disparado por el RefreshIndicator.
+  void refresh() {
+    _eventosSub?.cancel();
+    _cancionesSub?.cancel();
+    _recuerdosSub?.cancel();
+    _historiaSub?.cancel();
+    _historiaCargada = false;
+    _subscribe();
+    notifyListeners();
   }
 
   @override
