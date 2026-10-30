@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../design/design.dart';
 import '../../../models/categoria.dart';
 import '../../../services/categoria_service.dart';
-import '../../../widgets/admin/categoria_card.dart';
-import '../../../widgets/admin/categoria_modal.dart';
+import '../widgets/categoria_card.dart';
+import '../widgets/categoria_modal.dart';
 
 class GestionCategoriasScreen extends StatefulWidget {
   const GestionCategoriasScreen({super.key});
