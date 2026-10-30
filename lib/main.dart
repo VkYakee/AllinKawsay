@@ -23,7 +23,7 @@ import 'services/usuario_service.dart';
 import 'theme/theme_provider.dart'; // Lo mantenemos por ahora
 
 // Pantallas
-import 'screens/login_screen.dart';
+import 'features/auth/screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/verificacion_pendiente_screen.dart';
 import 'widgets/dialogo_actualizacion.dart';
