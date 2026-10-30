@@ -9,10 +9,10 @@ import '../../../services/player_service.dart';
 import '../../../services/reproduccion_service.dart';
 import '../../../services/usuario_service.dart';
 import '../../../screens/modo_ensayo_screen.dart'; // Se migrará después
-import '../../../widgets/cancion_detalle/cancion_partitura_fija.dart'; // Usamos el visor viejo por ahora
-import '../../../widgets/cancion_detalle/cancion_tab_comentarios.dart'; // Usamos el viejo por ahora
-import '../../../widgets/cancion_detalle/cancion_tab_info.dart'; // Usamos el viejo por ahora
+import '../../../widgets/cancion_detalle/cancion_partitura_fija.dart'; // Se migrará después
 import '../widgets/cancion_hero.dart';
+import '../widgets/cancion_tab_comentarios.dart';
+import '../widgets/cancion_tab_info.dart';
 import '../widgets/cancion_tab_letra.dart';
 
 class CancionDetalleScreen extends StatefulWidget {
