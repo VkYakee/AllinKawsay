@@ -2,9 +2,9 @@
 import 'package:flutter/material.dart';
 
 import '../design/design.dart';
-import '../models/numerofonia.dart';
+import '../features/cancion_detalle/screens/numerofonia_fullscreen_screen.dart';
 import '../features/grabar/screens/herramientas_grabacion_screen.dart';
-import '../screens/numerofonia_fullscreen_screen.dart';
+import '../models/numerofonia.dart';
 import 'editor/editor_estrofa_card.dart';
 
 class EditorNumerofonia extends StatefulWidget {
