@@ -16,9 +16,6 @@ import '../../../services/player_service.dart';
 import '../../../services/reproduccion_service.dart';
 import '../../../services/usuario_service.dart';
 
-import '../../../screens/presentacion_screen.dart';
-import '../../../screens/compartir_imagen_screen.dart';
-
 import '../../cancionero/screens/agregar_cancion_screen.dart';
 import '../../ensayo/screens/modo_ensayo_screen.dart';
 
@@ -27,6 +24,9 @@ import '../widgets/cancion_partitura_glow.dart';
 import '../widgets/cancion_tab_comentarios.dart';
 import '../widgets/cancion_tab_info.dart';
 import '../widgets/cancion_tab_letra.dart';
+
+import 'compartir_imagen_screen.dart';
+import 'presentacion_screen.dart';
 
 class CancionDetalleScreen extends StatefulWidget {
   final Cancion cancion;
@@ -186,7 +186,6 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen>
           body: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
-                // ─── APP BAR COLAPSABLE ───
                 SliverAppBar(
                   pinned: true,
                   floating: false,
@@ -195,7 +194,9 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen>
                   surfaceTintColor: Colors.transparent,
                   elevation: 0,
                   scrolledUnderElevation: 0,
-                  leading: _CircularBackButton(onTap: () => Navigator.pop(context)),
+                  leading: _CircularBackButton(
+                    onTap: () => Navigator.pop(context),
+                  ),
                   actions: [
                     _CircularIconButton(
                       icon: Icons.share_outlined,
@@ -207,10 +208,10 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen>
                   ],
                   flexibleSpace: FlexibleSpaceBar(
                     collapseMode: CollapseMode.parallax,
-                    titlePadding: const EdgeInsets.fromLTRB(56, 0, 56, 16),
+                    titlePadding:
+                        const EdgeInsets.fromLTRB(56, 0, 56, 16),
                     title: _TituloColapsado(
                       titulo: c.titulo,
-                      // Solo se muestra cuando el hero ya colapsó
                       mostrar: innerBoxIsScrolled,
                     ),
                     background: CancionHeroElite(
@@ -232,16 +233,12 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen>
                     ),
                   ),
                 ),
-
-                // ─── PARTITURA CON GLOW ───
                 SliverToBoxAdapter(
                   child: CancionPartituraGlow(
                     cancion: c,
                     sonando: reproduciendo,
                   ),
                 ),
-
-                // ─── TABS ───
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _TabBarDelegate(
@@ -287,7 +284,8 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen>
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => PresentacionScreen(cancion: widget.cancion),
+                builder: (_) =>
+                    PresentacionScreen(cancion: widget.cancion),
               ),
             );
             break;
@@ -367,7 +365,6 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen>
     );
   }
 }
-
 // ═══════════════════════════════════════════════════════════
 // TÍTULO QUE APARECE AL COLAPSAR
 // ═══════════════════════════════════════════════════════════
@@ -486,13 +483,10 @@ class _CustomTabBar extends StatelessWidget {
 
             return Stack(
               children: [
-                // Fondo
                 Container(
                   color: AppColors.fondoOscuro,
                   height: 48,
                 ),
-
-                // Fila de tabs
                 Row(
                   children: List.generate(tabs.length, (i) {
                     final activo = (pos.round() == i);
@@ -526,8 +520,6 @@ class _CustomTabBar extends StatelessWidget {
                     );
                   }),
                 ),
-
-                // Indicador sliding
                 Positioned(
                   bottom: 0,
                   left: 0,
