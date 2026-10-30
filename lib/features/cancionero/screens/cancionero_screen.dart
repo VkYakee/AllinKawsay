@@ -1,6 +1,5 @@
 // lib/features/cancionero/screens/cancionero_screen.dart
 import 'package:flutter/material.dart';
-import '../../../core/components/app_button.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
@@ -11,8 +10,8 @@ import '../../../services/cancion_service.dart';
 import '../../../services/player_service.dart';
 import '../../../services/reproduccion_service.dart';
 import '../../../services/usuario_service.dart';
-import '../../../screens/cancion_detalle_screen.dart'; // Se migrará después
-import '../../../screens/agregar_cancion_screen.dart'; // Se migrará después
+import '../../cancion_detalle/screens/cancion_detalle_screen.dart';
+import 'agregar_cancion_screen.dart';
 import '../widgets/cancionero_header.dart';
 import '../widgets/tarjeta_cancion.dart';
 
@@ -52,7 +51,12 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
   }
 
   void _abrir(Cancion c) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => CancionDetalleScreen(cancion: c)));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CancionDetalleScreen(cancion: c),
+      ),
+    );
   }
 
   List<Cancion> _filtrar(List<Cancion> lista) {
@@ -68,11 +72,16 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.fondoOscuro,
-      floatingActionButton: _esAdmin 
+      floatingActionButton: _esAdmin
           ? Padding(
               padding: const EdgeInsets.only(bottom: 90),
               child: FloatingActionButton.extended(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgregarCancionScreen())),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AgregarCancionScreen(),
+                  ),
+                ),
                 icon: const Icon(Icons.add),
                 label: const Text('Nueva'),
                 backgroundColor: AppColors.granate,
@@ -84,12 +93,19 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
         stream: _service.listar(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.dorado));
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.dorado),
+            );
           }
           if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}', style: AppText.body.copyWith(color: Colors.red)));
+            return Center(
+              child: Text(
+                'Error: ${snap.error}',
+                style: AppText.body.copyWith(color: Colors.red),
+              ),
+            );
           }
-          
+
           final todas = snap.data ?? [];
           final filtradas = _filtrar(todas);
 
@@ -106,17 +122,27 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
                   },
                 ),
               ),
-              
+
               if (filtradas.isEmpty)
                 SliverFillRemaining(
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.search_off, size: 64, color: AppColors.dorado.withOpacity(0.3)),
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: AppColors.dorado.withOpacity(0.3),
+                        ),
                         const SizedBox(height: Sp.lg),
-                        Text('Sin resultados', style: AppText.h3.copyWith(color: AppColors.dorado)),
-                        Text('Prueba con otros términos', style: AppText.body.copyWith(color: Colors.white54)),
+                        Text(
+                          'Sin resultados',
+                          style: AppText.h3.copyWith(color: AppColors.dorado),
+                        ),
+                        Text(
+                          'Prueba con otros términos',
+                          style: AppText.body.copyWith(color: Colors.white54),
+                        ),
                       ],
                     ),
                   ),
@@ -141,7 +167,8 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
                                   estado: estado,
                                   onTap: () => _abrir(c),
                                   onTogglePlay: () => _togglePlay(c),
-                                  onToggleFavorito: () => UsuarioService().toggleFavorito(c.id),
+                                  onToggleFavorito: () =>
+                                      UsuarioService().toggleFavorito(c.id),
                                 );
                               },
                             );
