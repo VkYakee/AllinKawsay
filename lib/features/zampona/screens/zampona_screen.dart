@@ -6,11 +6,11 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/widgets/zampona_canvas.dart';
+
 import '../../../models/zampona_nota.dart';
 import '../../../services/zampona_service.dart';
 import '../../../widgets/zampona/tool_scaffold.dart';
-
-import '../widgets/zampona_canvas.dart';
 
 class ZamponaScreen extends StatefulWidget {
   const ZamponaScreen({super.key});
@@ -44,8 +44,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
     super.dispose();
   }
 
-  Future<void> _tocar(ZamponaNota nota) async {
-    AppMotion.hapticSelection();
+  Future<void> _tocarDown(ZamponaNota nota) async {
     setState(() => _sonando.add(nota.id));
     await _service.tocar(nota.id);
     if (_service.modo == ZamponaModo.sostenido) {
@@ -73,7 +72,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
 
     return ToolScaffold(
       titulo: 'Zampoña',
-      subtitulo: 'Toca los tubos para sonar',
+      subtitulo: 'Instrumento virtual',
       onCerrar: () => Navigator.pop(context),
       bottomBar: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -85,7 +84,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
       ),
       body: ZamponaCanvas(
         brillando: _sonando,
-        onTapNota: _tocar,
+        onTapNota: _tocarDown,
         onReleaseNota: _soltar,
       ),
     );
@@ -94,7 +93,10 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
   Widget _chipModo(String label, ZamponaModo modo) {
     final activo = _service.modo == modo;
     return GestureDetector(
-      onTap: () => setState(() => _service.setModo(modo)),
+      onTap: () {
+        AppMotion.hapticSelection();
+        setState(() => _service.setModo(modo));
+      },
       child: AnimatedContainer(
         duration: AppMotion.fast,
         curve: AppMotion.easeOut,
