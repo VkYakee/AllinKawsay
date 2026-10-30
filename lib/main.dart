@@ -18,6 +18,7 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/verificacion_pendiente_screen.dart';
 import 'features/onboarding/screens/tutorial_screen.dart';
 import 'features/onboarding/widgets/permisos_dialog.dart';
+import 'features/home/screens/home_screen.dart';
 
 // Modelos y Servicios (Viejos, se irán migrando)
 import 'models/usuario.dart';
@@ -28,8 +29,7 @@ import 'services/update_service.dart';
 import 'services/usuario_service.dart';
 import 'theme/theme_provider.dart'; 
 
-// Pantallas viejas (se irán reemplazando)
-import 'screens/home_screen.dart';
+// Widgets viejos (se irán migrando)
 import 'widgets/dialogo_actualizacion.dart';
 
 void main() async {
@@ -225,7 +225,6 @@ class _AuthGateState extends State<_AuthGate> {
                     return const _CuentaSuspendidaScreen();
                   }
 
-                  // Lanzar el tutorial la primera vez que entra al Home
                   _mostrarOnboarding();
 
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -241,7 +240,7 @@ class _AuthGateState extends State<_AuthGate> {
 
             _syncOneSignal(null);
             ScreenSecurityService.disable();
-            _tutorialMostrado = false; // Resetear si cierra sesión
+            _tutorialMostrado = false;
             return const LoginScreen();
           },
         );
