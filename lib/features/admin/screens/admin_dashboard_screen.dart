@@ -7,13 +7,13 @@ import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/widgets/animated_list_item.dart';
 
-import '../../../screens/actividad_screen.dart';
-import '../../../screens/estadisticas_admin_screen.dart';
-import '../../../screens/exportar_respaldo_screen.dart';
-import '../../../screens/gestion_actualizaciones_screen.dart';
-import '../../../screens/gestion_categorias_screen.dart';
-import '../../../screens/gestion_usuarios_screen.dart';
-import '../../../screens/notificaciones_admin_screen.dart';
+import 'actividad_screen.dart';
+import 'estadisticas_admin_screen.dart';
+import 'exportar_respaldo_screen.dart';
+import 'gestion_actualizaciones_screen.dart';
+import 'gestion_categorias_screen.dart';
+import 'gestion_usuarios_screen.dart';
+import 'notificaciones_admin_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   final bool isDev;
@@ -26,7 +26,6 @@ class AdminDashboardScreen extends StatelessWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // App Bar
           SliverAppBar(
             pinned: true,
             expandedHeight: 120,
@@ -90,7 +89,6 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
           ),
 
-          // Banner dev
           if (isDev)
             SliverToBoxAdapter(
               child: AnimatedListItem(
@@ -147,62 +145,79 @@ class AdminDashboardScreen extends StatelessWidget {
               ),
             ),
 
-          // Sección: Resumen
-          _seccion(context, 'RESUMEN', Icons.insights, startIndex: isDev ? 1 : 0, items: [
-            _OpcionData(
-              icon: Icons.insights,
-              title: 'Estadísticas del grupo',
-              subtitle: 'Métricas, top canciones y usuarios',
-              onTap: () => _nav(context, const EstadisticasAdminScreen()),
-            ),
-          ]),
+          _seccion(
+            context,
+            'RESUMEN',
+            Icons.insights,
+            startIndex: isDev ? 1 : 0,
+            items: [
+              _OpcionData(
+                icon: Icons.insights,
+                title: 'Estadísticas del grupo',
+                subtitle: 'Métricas, top canciones y usuarios',
+                onTap: () =>
+                    _nav(context, const EstadisticasAdminScreen()),
+              ),
+            ],
+          ),
 
-          // Sección: Comunicación
-          _seccion(context, 'COMUNICACIÓN', Icons.campaign, startIndex: isDev ? 3 : 2, items: [
-            _OpcionData(
-              icon: Icons.notifications,
-              title: 'Notificaciones',
-              subtitle: 'Enviar avisos al grupo',
-              onTap: () => _nav(context, const NotificacionesAdminScreen()),
-            ),
-            _OpcionData(
-              icon: Icons.system_update,
-              title: 'Actualizaciones',
-              subtitle: isDev
-                  ? 'Ver releases y prereleases'
-                  : 'Aprobar versiones',
-              onTap: () =>
-                  _nav(context, const GestionActualizacionesScreen()),
-            ),
-          ]),
+          _seccion(
+            context,
+            'COMUNICACIÓN',
+            Icons.campaign,
+            startIndex: isDev ? 3 : 2,
+            items: [
+              _OpcionData(
+                icon: Icons.notifications,
+                title: 'Notificaciones',
+                subtitle: 'Enviar avisos al grupo',
+                onTap: () =>
+                    _nav(context, const NotificacionesAdminScreen()),
+              ),
+              _OpcionData(
+                icon: Icons.system_update,
+                title: 'Actualizaciones',
+                subtitle: isDev
+                    ? 'Ver releases y prereleases'
+                    : 'Aprobar versiones',
+                onTap: () =>
+                    _nav(context, const GestionActualizacionesScreen()),
+              ),
+            ],
+          ),
 
-          // Sección: Gestión
-          _seccion(context, 'GESTIÓN DE CONTENIDO', Icons.settings, startIndex: isDev ? 5 : 4, items: [
-            _OpcionData(
-              icon: Icons.people,
-              title: 'Usuarios y Roles',
-              subtitle: 'Gestionar miembros y administradores',
-              onTap: () => _nav(context, const GestionUsuariosScreen()),
-            ),
-            _OpcionData(
-              icon: Icons.category,
-              title: 'Categorías',
-              subtitle: 'Organizar el cancionero',
-              onTap: () => _nav(context, const GestionCategoriasScreen()),
-            ),
-            _OpcionData(
-              icon: Icons.history,
-              title: 'Historial de Actividad',
-              subtitle: 'Ver quién hizo qué en el grupo',
-              onTap: () => _nav(context, const ActividadScreen()),
-            ),
-            _OpcionData(
-              icon: Icons.backup,
-              title: 'Exportar respaldo',
-              subtitle: 'Descargar base de datos en JSON',
-              onTap: () => _nav(context, const ExportarRespaldoScreen()),
-            ),
-          ]),
+          _seccion(
+            context,
+            'GESTIÓN DE CONTENIDO',
+            Icons.settings,
+            startIndex: isDev ? 5 : 4,
+            items: [
+              _OpcionData(
+                icon: Icons.people,
+                title: 'Usuarios y Roles',
+                subtitle: 'Gestionar miembros y administradores',
+                onTap: () => _nav(context, const GestionUsuariosScreen()),
+              ),
+              _OpcionData(
+                icon: Icons.category,
+                title: 'Categorías',
+                subtitle: 'Organizar el cancionero',
+                onTap: () => _nav(context, const GestionCategoriasScreen()),
+              ),
+              _OpcionData(
+                icon: Icons.history,
+                title: 'Historial de Actividad',
+                subtitle: 'Ver quién hizo qué en el grupo',
+                onTap: () => _nav(context, const ActividadScreen()),
+              ),
+              _OpcionData(
+                icon: Icons.backup,
+                title: 'Exportar respaldo',
+                subtitle: 'Descargar base de datos en JSON',
+                onTap: () => _nav(context, const ExportarRespaldoScreen()),
+              ),
+            ],
+          ),
 
           const SliverToBoxAdapter(child: SizedBox(height: Sp.xxxl)),
         ],
