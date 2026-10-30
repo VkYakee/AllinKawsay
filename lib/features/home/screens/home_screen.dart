@@ -5,7 +5,7 @@ import '../../../services/novedades_service.dart';
 import '../../inicio/screens/inicio_screen.dart';
 import '../../cancionero/screens/cancionero_screen.dart';
 import '../../eventos/screens/eventos_screen.dart';
-import '../../recuerdos/screens/recuerdos_screen.dart'; // <-- NUEVO IMPORT
+import '../../recuerdos/screens/recuerdos_screen.dart';
 import '../../perfil/screens/perfil_screen.dart';
 import '../widgets/main_nav_bar.dart';
 import '../widgets/mini_player.dart';
@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
       InicioScreen(nombreUsuario: widget.nombreUsuario),
       const CancioneroScreen(),
       const EventosScreen(),
-      const RecuerdosScreen(), // <-- NUEVA PANTALLA
+      const RecuerdosScreen(),
       const PerfilScreen(nombreUsuario: 'Usuario'),
     ];
 
