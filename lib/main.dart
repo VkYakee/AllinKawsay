@@ -13,23 +13,23 @@ import 'core/design/motion.dart';
 import 'core/design/tokens.dart';
 import 'core/design/typography.dart';
 
-// Features (Nuevas)
+// Features
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/verificacion_pendiente_screen.dart';
+import 'features/home/screens/home_screen.dart';
 import 'features/onboarding/screens/tutorial_screen.dart';
 import 'features/onboarding/widgets/permisos_dialog.dart';
-import 'features/home/screens/home_screen.dart';
 
-// Modelos y Servicios (Viejos, se irán migrando)
+// Modelos y Servicios
 import 'models/usuario.dart';
 import 'services/auth_service.dart';
 import 'services/onesignal_service.dart';
 import 'services/screen_security_service.dart';
 import 'services/update_service.dart';
 import 'services/usuario_service.dart';
-import 'theme/theme_provider.dart'; 
+import 'theme/theme_provider.dart';
 
-// Widgets viejos (se irán migrando)
+// Widgets
 import 'widgets/dialogo_actualizacion.dart';
 
 void main() async {
@@ -104,7 +104,8 @@ class _AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<_AuthGate> {
-  static final DateTime _fechaCorteVerificacion = DateTime(2026, 10, 15, 0, 0, 0);
+  static final DateTime _fechaCorteVerificacion =
+      DateTime(2026, 10, 15, 0, 0, 0);
 
   StreamSubscription? _userSub;
   String? _ultimoRol;
@@ -158,7 +159,8 @@ class _AuthGateState extends State<_AuthGate> {
 
   bool _necesitaVerificar(User user, Usuario? usuarioFirestore) {
     if (user.emailVerified) return false;
-    final esGoogle = user.providerData.any((info) => info.providerId == 'google.com');
+    final esGoogle =
+        user.providerData.any((info) => info.providerId == 'google.com');
     if (esGoogle) return false;
 
     final creationTime = user.metadata.creationTime;
@@ -176,11 +178,14 @@ class _AuthGateState extends State<_AuthGate> {
   void _mostrarOnboarding() async {
     if (_tutorialMostrado) return;
     _tutorialMostrado = true;
-    
+
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorialScreen()));
-    
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TutorialScreen()),
+    );
+
     if (!mounted) return;
     await PermisosDialog.mostrar(context);
   }
@@ -196,7 +201,9 @@ class _AuthGateState extends State<_AuthGate> {
             if (authSnap.connectionState == ConnectionState.waiting) {
               return const Scaffold(
                 backgroundColor: AppColors.fondoOscuro,
-                body: Center(child: CircularProgressIndicator(color: AppColors.dorado)),
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.dorado),
+                ),
               );
             }
 
@@ -211,13 +218,20 @@ class _AuthGateState extends State<_AuthGate> {
 
                   if (_necesitaVerificar(authUser, u)) {
                     ScreenSecurityService.disable();
-                    return VerificacionPendienteScreen(email: authUser.email ?? 'tu correo');
+                    return VerificacionPendienteScreen(
+                      email: authUser.email ?? 'tu correo',
+                    );
                   }
 
-                  if (userSnap.connectionState == ConnectionState.waiting) {
+                  if (userSnap.connectionState ==
+                      ConnectionState.waiting) {
                     return const Scaffold(
                       backgroundColor: AppColors.fondoOscuro,
-                      body: Center(child: CircularProgressIndicator(color: AppColors.dorado)),
+                      body: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.dorado,
+                        ),
+                      ),
                     );
                   }
 
@@ -232,7 +246,9 @@ class _AuthGateState extends State<_AuthGate> {
                   });
 
                   return HomeScreen(
-                    nombreUsuario: authUser.displayName ?? authUser.email?.split('@').first ?? 'Usuario',
+                    nombreUsuario: authUser.displayName ??
+                        authUser.email?.split('@').first ??
+                        'Usuario',
                   );
                 },
               );
@@ -264,32 +280,52 @@ class _CuentaSuspendidaScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 120, height: 120,
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.red.withOpacity(0.15),
                     border: Border.all(color: Colors.red, width: 3),
                   ),
-                  child: const Icon(Icons.block, size: 60, color: Colors.red),
+                  child: const Icon(
+                    Icons.block,
+                    size: 60,
+                    color: Colors.red,
+                  ),
                 ),
                 const SizedBox(height: Sp.xxxl),
-                Text('Cuenta suspendida', style: AppText.h2.copyWith(color: AppColors.dorado)),
+                Text(
+                  'Cuenta suspendida',
+                  style: AppText.h2.copyWith(color: AppColors.dorado),
+                ),
                 const SizedBox(height: Sp.lg),
                 Text(
                   'Tu acceso a la app fue suspendido por un administrador del grupo.\n\nSi crees que es un error, contactate con la directiva.',
                   textAlign: TextAlign.center,
-                  style: AppText.body.copyWith(color: AppColors.textDarkSecundario, height: 1.6),
+                  style: AppText.body.copyWith(
+                    color: AppColors.textDarkSecundario,
+                    height: 1.6,
+                  ),
                 ),
                 const SizedBox(height: Sp.huge),
                 SizedBox(
-                  width: double.infinity, height: 52,
+                  width: double.infinity,
+                  height: 52,
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.logout),
-                    label: const Text('CERRAR SESIÓN', style: TextStyle(letterSpacing: 1.5)),
+                    label: const Text(
+                      'CERRAR SESIÓN',
+                      style: TextStyle(letterSpacing: 1.5),
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.dorado,
-                      side: const BorderSide(color: AppColors.dorado, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: Rad.rMd),
+                      side: const BorderSide(
+                        color: AppColors.dorado,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: Rad.rMd,
+                      ),
                     ),
                     onPressed: () async {
                       await AuthService().logout();
