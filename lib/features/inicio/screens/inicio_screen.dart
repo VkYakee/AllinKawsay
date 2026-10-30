@@ -13,10 +13,10 @@ import '../../../models/cancion.dart';
 import '../../../widgets/banner_novedades.dart';
 import '../../../widgets/social_buttons.dart';
 
-import '../../../screens/busqueda_global_screen.dart';
-import '../../../screens/compartir_app_screen.dart';
-import '../../../screens/historia_screen.dart';
-import '../../../screens/zampona_screen.dart';
+import '../../busqueda/screens/busqueda_global_screen.dart';
+import '../../compartir/screens/compartir_app_screen.dart';
+import '../../historia/screens/historia_screen.dart';
+import '../../zampona/screens/zampona_screen.dart';
 
 import '../../cancion_detalle/screens/cancion_detalle_screen.dart';
 import '../../eventos/screens/evento_detalle_screen.dart';
@@ -224,6 +224,7 @@ class _InicioScreenState extends State<InicioScreen> {
       ),
     );
   }
+
   Widget _buildProximoEvento() {
     final evento = _controller.proximoEvento;
     return SliverToBoxAdapter(
@@ -277,7 +278,6 @@ class _InicioScreenState extends State<InicioScreen> {
       ),
     );
   }
-
   Widget _buildAccionesRapidas() {
     return SliverToBoxAdapter(
       child: AnimatedListItem(
