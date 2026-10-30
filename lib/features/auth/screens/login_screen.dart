@@ -1,16 +1,21 @@
 // lib/features/auth/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../../core/design/colors.dart';
+import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+
 import '../../../services/auth_service.dart';
+
 import '../widgets/login_form.dart';
 import '../widgets/login_hero.dart';
-import 'registro_screen.dart'; // <-- NUEVO IMPORT
+import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -47,9 +52,13 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loadingGoogle = true);
     try {
       final user = await AuthService().loginConGoogle();
-      if (user == null && mounted) {} // Cancelado
+      if (user == null && mounted) {}
     } on FirebaseAuthException catch (e) {
-      _snack(e.code == 'network-request-failed' ? 'Sin conexión a internet' : 'Error con Google');
+      _snack(
+        e.code == 'network-request-failed'
+            ? 'Sin conexión a internet'
+            : 'Error con Google',
+      );
     } catch (e) {
       _snack('Error: $e');
     } finally {
@@ -59,7 +68,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          msg,
+          style: AppText.body.copyWith(color: AppColors.dorado),
+        ),
+        backgroundColor: AppColors.granateOscuro,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: Rad.rMd),
+      ),
+    );
   }
 
   @override
@@ -76,12 +95,13 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: const Alignment(0, -0.6),
-            radius: 1.2,
+            center: const Alignment(0, -0.7),
+            radius: 1.4,
             colors: [
-              AppColors.granate.withOpacity(0.4),
+              AppColors.granate.withOpacity(0.45),
               AppColors.fondoOscuro,
             ],
+            stops: const [0.0, 0.7],
           ),
         ),
         child: SafeArea(
@@ -92,25 +112,42 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const LoginHero(),
-                  const SizedBox(height: Sp.xxxl),
+                  const SizedBox(height: Sp.lg),
                   LoginForm(
                     emailCtrl: _email,
                     passCtrl: _pass,
                     verPass: _verPassword,
                     loading: _loading,
                     loadingGoogle: _loadingGoogle,
-                    onVerPass: () => setState(() => _verPassword = !_verPassword),
+                    onVerPass: () =>
+                        setState(() => _verPassword = !_verPassword),
                     onLogin: _login,
                     onGoogle: _loginGoogle,
                     onRegistro: () {
-                      // 🚀 NAVEGACIÓN AL NUEVO REGISTRO
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const RegistroScreen()));
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          transitionDuration: AppMotion.normal,
+                          pageBuilder: (_, __, ___) => const RegistroScreen(),
+                          transitionsBuilder: (_, anim, __, child) {
+                            return FadeTransition(
+                              opacity: CurvedAnimation(
+                                parent: anim,
+                                curve: AppMotion.easeOutQuart,
+                              ),
+                              child: child,
+                            );
+                          },
+                        ),
+                      );
                     },
                   ),
                   const SizedBox(height: Sp.xxl),
                   Text(
                     'Hecho con ❤️ para el grupo',
-                    style: AppText.captionXs.copyWith(color: AppColors.dorado.withOpacity(0.4)),
+                    style: AppText.captionXs.copyWith(
+                      color: AppColors.dorado.withOpacity(0.4),
+                    ),
                   ),
                 ],
               ),
