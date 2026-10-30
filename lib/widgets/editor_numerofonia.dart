@@ -1,8 +1,9 @@
 // lib/widgets/editor_numerofonia.dart
 import 'package:flutter/material.dart';
+
 import '../design/design.dart';
 import '../models/numerofonia.dart';
-import '../screens/herramientas_grabacion_screen.dart';
+import '../features/grabar/screens/herramientas_grabacion_screen.dart';
 import '../screens/numerofonia_fullscreen_screen.dart';
 import 'editor/editor_estrofa_card.dart';
 
@@ -42,7 +43,10 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
   Future<void> _abrirHerramientas() async {
     final res = await Navigator.push<List<EstrofaNumerofonia>>(
       context,
-      MaterialPageRoute(builder: (_) => HerramientasGrabacionScreen(estrofas: _estrofas)),
+      MaterialPageRoute(
+        builder: (_) =>
+            HerramientasGrabacionScreen(estrofas: _estrofas),
+      ),
     );
     if (res != null && mounted) {
       setState(() => _estrofas = res);
@@ -55,7 +59,6 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Barra de herramientas superior
         Padding(
           padding: const EdgeInsets.only(bottom: Sp.md),
           child: Row(
@@ -71,19 +74,39 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
             ],
           ),
         ),
-
         for (int i = 0; i < _estrofas.length; i++) ...[
           EditorEstrofaCard(
             key: ValueKey('est-${identityHashCode(_estrofas[i])}'),
             estrofa: _estrofas[i],
             indice: i,
             onCelda: _notify,
-            onToggleBis: () => setState(() { _estrofas[i].bis = !_estrofas[i].bis; _notify(); }),
-            onAgregarColumna: () => setState(() { _estrofas[i].columnas.add(ColumnaNumerofonia()); _notify(); }),
-            onQuitarColumna: () => setState(() { if (_estrofas[i].columnas.isNotEmpty) { _estrofas[i].columnas.removeLast(); _notify(); } }),
-            onEliminar: () => setState(() { _estrofas.removeAt(i); _notify(); }),
+            onToggleBis: () => setState(() {
+              _estrofas[i].bis = !_estrofas[i].bis;
+              _notify();
+            }),
+            onAgregarColumna: () => setState(() {
+              _estrofas[i].columnas.add(ColumnaNumerofonia());
+              _notify();
+            }),
+            onQuitarColumna: () => setState(() {
+              if (_estrofas[i].columnas.isNotEmpty) {
+                _estrofas[i].columnas.removeLast();
+                _notify();
+              }
+            }),
+            onEliminar: () => setState(() {
+              _estrofas.removeAt(i);
+              _notify();
+            }),
             onVerGlobal: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => NumerofoniaFullscreenScreen(estrofas: [_estrofas[i]])));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => NumerofoniaFullscreenScreen(
+                    estrofas: [_estrofas[i]],
+                  ),
+                ),
+              );
             },
           ),
           const SizedBox(height: Sp.lg),
@@ -92,7 +115,10 @@ class _EditorNumerofoniaState extends State<EditorNumerofonia> {
           label: 'AGREGAR NUEVA ESTROFA',
           icon: Icons.add,
           variant: AppButtonVariant.secondary,
-          onPressed: () => setState(() { _estrofas.add(EstrofaNumerofonia.nueva()); _notify(); }),
+          onPressed: () => setState(() {
+            _estrofas.add(EstrofaNumerofonia.nueva());
+            _notify();
+          }),
         ),
       ],
     );
