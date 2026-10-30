@@ -20,8 +20,7 @@ import '../../../widgets/social_buttons.dart';
 
 import '../../busqueda/screens/busqueda_global_screen.dart';
 import '../../../screens/compartir_app_screen.dart';
-import '../../../screens/zampona_screen.dart';
-
+import '../../zampona/screens/zampona_screen.dart';
 class InicioScreen extends StatefulWidget {
   final String nombreUsuario;
   const InicioScreen({super.key, required this.nombreUsuario});
