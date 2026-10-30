@@ -26,7 +26,7 @@ import '../../../widgets/editor_letras.dart';
 import '../../../widgets/editor_numerofonia.dart';
 import '../../../widgets/cancion_form/cancion_form_basico.dart';
 import '../../../widgets/cancion_form/cancion_form_media.dart';
-import '../../../screens/grabar_setlist_screen.dart';
+import '../../grabar/screens/grabar_setlist_screen.dart';
 
 class AgregarCancionScreen extends StatefulWidget {
   final Cancion? cancion;
@@ -234,7 +234,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
         child: ListView(
           padding: const EdgeInsets.all(Sp.lg),
           children: [
-            // Información básica — el widget viejo ya trae AppCard interno
             CancionFormBasico(
               tituloCtrl: _tituloCtrl,
               autorCtrl: _autorCtrl,
@@ -250,8 +249,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
                   setState(() => _categoriaId = v ?? ''),
             ),
             const SizedBox(height: Sp.md),
-
-            // Numerofonía — envuelta en AppCard(glass)
             AppCard(
               glass: true,
               padding: const EdgeInsets.all(Sp.lg),
@@ -274,8 +271,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               ),
             ),
             const SizedBox(height: Sp.md),
-
-            // Letras — envuelta en AppCard(glass)
             AppCard(
               glass: true,
               padding: const EdgeInsets.all(Sp.lg),
@@ -295,8 +290,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               ),
             ),
             const SizedBox(height: Sp.md),
-
-            // Multimedia — el widget viejo ya trae AppCard interno
             CancionFormMedia(
               imagenUrl: _imagenUrl,
               audioUrl: _audioUrl,
@@ -313,8 +306,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               videoCtrl: _videoCtrl,
             ),
             const SizedBox(height: Sp.md),
-
-            // Setlist
             AppButton(
               label: 'MARCAR SETLIST',
               icon: Icons.queue_music,
@@ -323,8 +314,6 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               onPressed: _audioUrl != null ? _abrirSetlist : null,
             ),
             const SizedBox(height: Sp.xxl),
-
-            // Guardar
             AppButton(
               label: _guardando ? 'GUARDANDO...' : 'GUARDAR CANCIÓN',
               fullWidth: true,
