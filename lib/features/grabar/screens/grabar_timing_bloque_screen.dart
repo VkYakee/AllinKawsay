@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
+import '../../../core/widgets/zampona_canvas.dart';
 import '../../../design/design.dart';
 import '../../../models/bloque_audio.dart';
 import '../../../models/cancion.dart';
@@ -14,7 +15,6 @@ import '../../../services/player_service.dart';
 import '../../../theme/colors.dart';
 import '../../../widgets/visor_numerofonia.dart';
 import '../../../widgets/zampona/tool_scaffold.dart';
-import '../../../widgets/zampona/zampona_widget.dart';
 import '../../../widgets/setlist/setlist_reproductor.dart';
 
 class GrabarTimingBloqueScreen extends StatefulWidget {
@@ -56,8 +56,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    final estrofas =
-        widget.cancion.estrofas.where((e) => !e.vacia).toList();
+    final estrofas = widget.cancion.estrofas.where((e) => !e.vacia).toList();
     if (widget.bloque.estrofaRef < 0 ||
         widget.bloque.estrofaRef >= estrofas.length) {
       _errorMsg = 'Este bloque no tiene una estrofa asignada.';
@@ -91,7 +90,10 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
 
       await _player
           .setAudioSource(
-            AudioSource.uri(Uri.parse(widget.cancion.audioUrl), tag: tag),
+            AudioSource.uri(
+              Uri.parse(widget.cancion.audioUrl),
+              tag: tag,
+            ),
           )
           .timeout(const Duration(seconds: 15));
 
@@ -164,7 +166,10 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
       return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Text(_errorMsg, style: const TextStyle(color: Colors.red)),
+          child: Text(
+            _errorMsg,
+            style: const TextStyle(color: Colors.red),
+          ),
         ),
       );
     }
@@ -194,7 +199,8 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
           Expanded(
             flex: 2,
             child: AppButton(
-              label: _indexEsperada >= _notasTotales ? 'GUARDAR' : 'TERMINAR',
+              label:
+                  _indexEsperada >= _notasTotales ? 'GUARDAR' : 'TERMINAR',
               icon: Icons.check,
               onPressed: _toquesMs.isEmpty ? null : _terminar,
             ),
@@ -241,7 +247,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
                 ),
                 Expanded(
                   flex: 4,
-                  child: ZamponaWidget(
+                  child: ZamponaCanvas(
                     brillando: _brillo,
                     onTapNota: _tocarCania,
                   ),
