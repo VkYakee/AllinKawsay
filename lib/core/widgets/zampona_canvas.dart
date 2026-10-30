@@ -212,3 +212,237 @@ class _ZamponaCanvasState extends State<ZamponaCanvas>
     return _ZamponaLayout(fila7: fila7, fila6: fila6, liston: listonRect);
   }
 }
+// ═══════════════════════════════════════════════════════════
+// LAYOUT INTERNO
+// ═══════════════════════════════════════════════════════════
+
+class _ZamponaLayout {
+  final List<_TuboLayout> fila7;
+  final List<_TuboLayout> fila6;
+  final Rect liston;
+
+  const _ZamponaLayout({
+    required this.fila7,
+    required this.fila6,
+    required this.liston,
+  });
+
+  ZamponaNota? hitTest(Offset p) {
+    for (final t in fila7) {
+      if ((p - t.centro).distance <= t.radio * 1.15) return t.nota;
+    }
+    for (final t in fila6) {
+      if ((p - t.centro).distance <= t.radio * 1.15) return t.nota;
+    }
+    return null;
+  }
+
+  _TuboLayout? tuboDe(String id) {
+    for (final t in fila7) {
+      if (t.nota.id == id) return t;
+    }
+    for (final t in fila6) {
+      if (t.nota.id == id) return t;
+    }
+    return null;
+  }
+}
+
+class _TuboLayout {
+  final ZamponaNota nota;
+  final Offset centro;
+  final double radio;
+
+  const _TuboLayout({
+    required this.nota,
+    required this.centro,
+    required this.radio,
+  });
+}
+
+class _Particula {
+  double x;
+  double y;
+  double vx;
+  double vy;
+  final double radio;
+  double vida;
+  final double vidaMax;
+  final Color color;
+
+  _Particula({
+    required this.x,
+    required this.y,
+    required this.vx,
+    required this.vy,
+    required this.radio,
+    required this.vida,
+    required this.vidaMax,
+    required this.color,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAINTER
+// ═══════════════════════════════════════════════════════════
+
+class _ZamponaPainter extends CustomPainter {
+  final _ZamponaLayout layout;
+  final Set<String> brillando;
+  final List<_Particula> particulas;
+  final bool mostrarNumeros;
+
+  _ZamponaPainter({
+    required this.layout,
+    required this.brillando,
+    required this.particulas,
+    required this.mostrarNumeros,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _dibujarListon(canvas);
+
+    for (final t in layout.fila7) {
+      _dibujarTubo(canvas, t);
+    }
+    for (final t in layout.fila6) {
+      _dibujarTubo(canvas, t);
+    }
+
+    for (final p in particulas) {
+      final vidaNorm = (p.vida / p.vidaMax).clamp(0.0, 1.0);
+      final paint = Paint()
+        ..color = p.color.withOpacity(vidaNorm * 0.75)
+        ..style = PaintingStyle.fill
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
+      canvas.drawCircle(Offset(p.x, p.y), p.radio, paint);
+    }
+  }
+
+  void _dibujarListon(Canvas canvas) {
+    final r = layout.liston;
+    final rr = RRect.fromRectAndRadius(r, const Radius.circular(5));
+
+    final paint = Paint()
+      ..shader = const LinearGradient(
+        colors: [
+          Color(0xFF1A0205),
+          Color(0xFF2A0308),
+          Color(0xFF1A0205),
+        ],
+        stops: [0.0, 0.5, 1.0],
+      ).createShader(r);
+    canvas.drawRRect(rr, paint);
+
+    final borde = Paint()
+      ..color = AppColors.dorado.withOpacity(0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+    canvas.drawRRect(rr, borde);
+  }
+
+  void _dibujarTubo(Canvas canvas, _TuboLayout tubo) {
+    final brillo = brillando.contains(tubo.nota.id);
+    final escala = brillo ? 1.12 : 1.0;
+    final radio = tubo.radio * escala;
+    final centro = tubo.centro;
+
+    // 1. Sombra externa
+    final sombraPaint = Paint()
+      ..color = Colors.black.withOpacity(0.55)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawCircle(centro + const Offset(0, 4), radio, sombraPaint);
+
+    // 2. Glow si brilla
+    if (brillo) {
+      final glowPaint = Paint()
+        ..color = AppColors.dorado.withOpacity(0.5)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      canvas.drawCircle(centro, radio * 1.4, glowPaint);
+    }
+
+    // 3. Cuerpo del tubo — gradiente radial para 3D
+    final rect = Rect.fromCircle(center: centro, radius: radio);
+    final bodyPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.4, -0.4),
+        radius: 1.0,
+        colors: brillo
+            ? const [
+                Color(0xFFFFF3B0),
+                Color(0xFFE8C86A),
+                AppColors.doradoOscuro,
+                Color(0xFF3A0810),
+              ]
+            : const [
+                Color(0xFF4A151E),
+                Color(0xFF2A0308),
+                Color(0xFF1A0205),
+                Color(0xFF0A0103),
+              ],
+        stops: const [0.0, 0.35, 0.75, 1.0],
+      ).createShader(rect);
+    canvas.drawCircle(centro, radio, bodyPaint);
+
+    // 4. Borde exterior
+    final bordePaint = Paint()
+      ..color = brillo
+          ? AppColors.doradoClaro
+          : AppColors.granateClaro.withOpacity(0.55)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = brillo ? 2.2 : 1.2;
+    canvas.drawCircle(centro, radio, bordePaint);
+
+    // 5. Aro interior (boca del tubo)
+    final aroPaint = Paint()
+      ..color = Colors.black.withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawCircle(centro, radio * 0.68, aroPaint);
+
+    // 6. Brillo especular superior
+    final highlightPaint = Paint()
+      ..color = Colors.white.withOpacity(brillo ? 0.5 : 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawCircle(
+      centro + Offset(-radio * 0.25, -radio * 0.3),
+      radio * 0.25,
+      highlightPaint,
+    );
+
+    // 7. Número
+    if (mostrarNumeros) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: '${tubo.nota.posicion}',
+          style: TextStyle(
+            color: brillo
+                ? AppColors.granateOscuro
+                : AppColors.dorado.withOpacity(0.75),
+            fontWeight: FontWeight.bold,
+            fontSize: radio * 0.8,
+            height: 1.0,
+            shadows: brillo
+                ? null
+                : [
+                    const Shadow(
+                      color: Colors.black87,
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, centro - Offset(tp.width / 2, tp.height / 2));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ZamponaPainter old) =>
+      old.brillando != brillando ||
+      old.particulas.length != particulas.length ||
+      old.mostrarNumeros != mostrarNumeros;
+}
