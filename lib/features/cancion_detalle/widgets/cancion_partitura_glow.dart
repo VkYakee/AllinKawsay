@@ -6,14 +6,11 @@ import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../models/cancion.dart';
-import '../../../screens/numerofonia_fullscreen_screen.dart';
 import '../../../widgets/visor_numerofonia.dart';
+import '../screens/numerofonia_fullscreen_screen.dart';
 
 /// Partitura del detalle con borde que pulsa al ritmo cuando el
 /// audio está reproduciendo.
-///
-/// Sin audio: borde estático dorado tenue.
-/// Con audio: borde dorado con glow que late.
 class CancionPartituraGlow extends StatefulWidget {
   final Cancion cancion;
   final bool sonando;
