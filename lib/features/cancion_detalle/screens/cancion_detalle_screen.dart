@@ -8,8 +8,9 @@ import '../../../models/usuario.dart';
 import '../../../services/player_service.dart';
 import '../../../services/reproduccion_service.dart';
 import '../../../services/usuario_service.dart';
-import '../../../screens/modo_ensayo_screen.dart'; // Se migrará después
-import '../../../widgets/cancion_detalle/cancion_partitura_fija.dart'; // Se migrará después
+// IMPORT CORREGIDO: Ahora apunta a la nueva carpeta features/ensayo
+import '../../ensayo/screens/modo_ensayo_screen.dart'; 
+import '../../../widgets/cancion_detalle/cancion_partitura_fija.dart'; 
 import '../widgets/cancion_hero.dart';
 import '../widgets/cancion_tab_comentarios.dart';
 import '../widgets/cancion_tab_info.dart';
@@ -102,6 +103,7 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen> {
                       },
                       onTogglePlay: _togglePlay,
                       onPracticar: () {
+                        // Ahora navega a la nueva pantalla de ensayo
                         Navigator.push(context, MaterialPageRoute(builder: (_) => ModoEnsayoScreen(cancion: c)));
                       },
                     ),
