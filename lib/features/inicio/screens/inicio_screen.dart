@@ -13,14 +13,14 @@ import '../../../models/cancion.dart';
 import '../../../widgets/banner_novedades.dart';
 import '../../../widgets/social_buttons.dart';
 
-import '../../busqueda/screens/busqueda_global_screen.dart';
+import '../../../screens/busqueda_global_screen.dart';
+import '../../../screens/compartir_app_screen.dart';
+import '../../../screens/historia_screen.dart';
+import '../../../screens/zampona_screen.dart';
+
 import '../../cancion_detalle/screens/cancion_detalle_screen.dart';
 import '../../eventos/screens/evento_detalle_screen.dart';
 import '../../recuerdos/screens/recuerdo_detalle_screen.dart';
-import '../../zampona/screens/zampona_screen.dart';
-
-import '../../../screens/compartir_app_screen.dart';
-import '../../../screens/historia_screen.dart';
 
 import '../controllers/inicio_controller.dart';
 import '../widgets/bento_cards.dart';
@@ -265,7 +265,8 @@ class _InicioScreenState extends State<InicioScreen> {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => EventoDetalleScreen(evento: evento),
+                            builder: (_) =>
+                                EventoDetalleScreen(evento: evento),
                           ),
                         ),
                       ),
