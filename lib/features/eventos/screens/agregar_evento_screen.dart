@@ -2,15 +2,19 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../core/design/colors.dart';
+import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_input.dart';
+
 import '../../../models/evento.dart';
 import '../../../services/evento_service.dart';
-import '../../../screens/seleccionar_ubicacion_screen.dart'; // Pantalla vieja que funciona bien
+
+import 'seleccionar_ubicacion_screen.dart';
 
 class AgregarEventoScreen extends StatefulWidget {
   final Evento? evento;
@@ -65,7 +69,9 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.granate),
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: AppColors.granate,
+              ),
         ),
         child: child!,
       ),
@@ -79,7 +85,9 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
       initialTime: _hora,
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.granate),
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: AppColors.granate,
+              ),
         ),
         child: child!,
       ),
@@ -107,7 +115,13 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
     setState(() => _guardando = true);
     try {
       final user = FirebaseAuth.instance.currentUser!;
-      final fechaFinal = DateTime(_fecha.year, _fecha.month, _fecha.day, _hora.hour, _hora.minute);
+      final fechaFinal = DateTime(
+        _fecha.year,
+        _fecha.month,
+        _fecha.day,
+        _hora.hour,
+        _hora.minute,
+      );
       final service = EventoService();
 
       if (_esEdicion) {
@@ -143,11 +157,17 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
     return Scaffold(
       backgroundColor: AppColors.fondoOscuro,
       appBar: AppBar(
-        title: Text(_esEdicion ? 'Editar Evento' : 'Nuevo Evento', style: AppText.h3.copyWith(color: AppColors.dorado)),
         backgroundColor: AppColors.fondoOscuro,
         iconTheme: const IconThemeData(color: AppColors.dorado),
+        title: Text(
+          _esEdicion ? 'Editar Evento' : 'Nuevo Evento',
+          style: AppText.h3.copyWith(color: AppColors.dorado),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.check, color: AppColors.dorado), onPressed: _guardando ? null : _guardar),
+          IconButton(
+            icon: const Icon(Icons.check, color: AppColors.dorado),
+            onPressed: _guardando ? null : _guardar,
+          ),
         ],
       ),
       body: Form(
@@ -165,34 +185,53 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
                     label: 'Título *',
                     prefixIcon: Icons.event,
                     textCapitalization: TextCapitalization.sentences,
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Requerido' : null,
                   ),
                   const SizedBox(height: Sp.md),
-                  AppInput(controller: _lugar, label: 'Lugar (Nombre)', prefixIcon: Icons.place_outlined),
+                  AppInput(
+                    controller: _lugar,
+                    label: 'Lugar (Nombre)',
+                    prefixIcon: Icons.place_outlined,
+                  ),
                   const SizedBox(height: Sp.md),
-                  AppInput(controller: _descripcion, label: 'Descripción', prefixIcon: Icons.notes, maxLines: 3),
+                  AppInput(
+                    controller: _descripcion,
+                    label: 'Descripción',
+                    prefixIcon: Icons.notes,
+                    maxLines: 3,
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: Sp.md),
-            
             AppCard(
               glass: true,
               padding: const EdgeInsets.all(Sp.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('UBICACIÓN EXACTA', style: AppText.label.copyWith(color: AppColors.dorado)),
+                  Text(
+                    'UBICACIÓN EXACTA',
+                    style: AppText.label.copyWith(
+                      color: AppColors.dorado,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
                   const SizedBox(height: Sp.sm),
                   Text(
-                    _ubicacion != null 
-                      ? 'Seleccionada: ${_ubicacion!.latitude.toStringAsFixed(4)}, ${_ubicacion!.longitude.toStringAsFixed(4)}'
-                      : 'Aún no has seleccionado un punto en el mapa.',
-                    style: AppText.caption.copyWith(color: AppColors.onSurfaceVariant(context)),
+                    _ubicacion != null
+                        ? 'Seleccionada: ${_ubicacion!.latitude.toStringAsFixed(4)}, ${_ubicacion!.longitude.toStringAsFixed(4)}'
+                        : 'Aún no has seleccionado un punto en el mapa.',
+                    style: AppText.caption.copyWith(
+                      color: AppColors.onSurfaceVariant(context),
+                    ),
                   ),
                   const SizedBox(height: Sp.md),
                   AppButton(
-                    label: _ubicacion != null ? 'CAMBIAR UBICACIÓN' : 'SELECCIONAR EN MAPA',
+                    label: _ubicacion != null
+                        ? 'CAMBIAR UBICACIÓN'
+                        : 'SELECCIONAR EN MAPA',
                     icon: Icons.pin_drop,
                     variant: AppButtonVariant.secondary,
                     fullWidth: true,
@@ -202,27 +241,49 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
               ),
             ),
             const SizedBox(height: Sp.md),
-
             AppCard(
               glass: true,
               padding: const EdgeInsets.all(Sp.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('FECHA Y HORA', style: AppText.label.copyWith(color: AppColors.dorado)),
+                  Text(
+                    'FECHA Y HORA',
+                    style: AppText.label.copyWith(
+                      color: AppColors.dorado,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
                   const SizedBox(height: Sp.md),
                   Row(
                     children: [
-                      Expanded(child: _botonFecha(Icons.calendar_today, '${_fecha.day}/${_fecha.month}/${_fecha.year}', _elegirFecha)),
+                      Expanded(
+                        child: _botonFecha(
+                          Icons.calendar_today,
+                          '${_fecha.day}/${_fecha.month}/${_fecha.year}',
+                          _elegirFecha,
+                        ),
+                      ),
                       const SizedBox(width: Sp.sm),
-                      Expanded(child: _botonFecha(Icons.access_time, _hora.format(context), _elegirHora)),
+                      Expanded(
+                        child: _botonFecha(
+                          Icons.access_time,
+                          _hora.format(context),
+                          _elegirHora,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: Sp.xxl),
-            AppButton(label: _esEdicion ? 'GUARDAR CAMBIOS' : 'CREAR EVENTO', fullWidth: true, loading: _guardando, onPressed: _guardar),
+            AppButton(
+              label: _esEdicion ? 'GUARDAR CAMBIOS' : 'CREAR EVENTO',
+              fullWidth: true,
+              loading: _guardando,
+              onPressed: _guardar,
+            ),
             const SizedBox(height: Sp.xxxl),
           ],
         ),
@@ -230,22 +291,40 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
     );
   }
 
-  Widget _botonFecha(IconData icono, String texto, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: Rad.rMd,
+  Widget _botonFecha(
+    IconData icono,
+    String texto,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        AppMotion.hapticSelection();
+        onTap();
+      },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: Sp.md, vertical: 14),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Sp.md,
+          vertical: 14,
+        ),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.05),
           borderRadius: Rad.rMd,
-          border: Border.all(color: AppColors.dorado.withOpacity(0.3)),
+          border: Border.all(
+            color: AppColors.dorado.withOpacity(0.3),
+          ),
         ),
         child: Row(
           children: [
             Icon(icono, color: AppColors.dorado, size: 18),
             const SizedBox(width: Sp.sm),
-            Expanded(child: Text(texto, style: AppText.subtitle.copyWith(color: AppColors.onSurface(context)))),
+            Expanded(
+              child: Text(
+                texto,
+                style: AppText.subtitle.copyWith(
+                  color: AppColors.onSurface(context),
+                ),
+              ),
+            ),
           ],
         ),
       ),
