@@ -5,7 +5,7 @@ import '../../../design/design.dart';
 import '../../../services/cancion_service.dart';
 import '../../../services/onesignal_service.dart';
 import '../../../theme/colors.dart';
-import '../../../widgets/admin/notificacion_modal.dart';
+import '../widgets/notificacion_modal.dart';
 
 class NotificacionesAdminScreen extends StatefulWidget {
   const NotificacionesAdminScreen({super.key});
