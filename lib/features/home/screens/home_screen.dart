@@ -1,15 +1,11 @@
 // lib/features/home/screens/home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/design/colors.dart';
+import '../../../services/novedades_service.dart';
 import '../../inicio/screens/inicio_screen.dart';
-// import '../../cancionero/screens/cancionero_screen.dart';
-// import '../../eventos/screens/eventos_screen.dart';
-// import '../../recuerdos/screens/recuerdos_screen.dart';
-// import '../../perfil/screens/perfil_screen.dart';
+import '../../cancionero/screens/cancionero_screen.dart'; // <-- NUEVO IMPORT
 import '../widgets/main_nav_bar.dart';
 import '../widgets/mini_player.dart';
-import '../../../services/novedades_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -30,10 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Pantallas temporales (se irán reemplazando en las siguientes fases)
     final pages = [
       InicioScreen(nombreUsuario: widget.nombreUsuario),
-      const Center(child: Text('Cancionero (En construcción)', style: TextStyle(color: Colors.white))),
+      const CancioneroScreen(), // <-- NUEVA PANTALLA
       const Center(child: Text('Eventos (En construcción)', style: TextStyle(color: Colors.white))),
       const Center(child: Text('Recuerdos (En construcción)', style: TextStyle(color: Colors.white))),
       const Center(child: Text('Perfil (En construcción)', style: TextStyle(color: Colors.white))),
