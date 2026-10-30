@@ -18,7 +18,7 @@ import '../../../widgets/inicio/ultimas_canciones.dart';
 import '../../../widgets/inicio/ultimo_recuerdo.dart';
 import '../../../widgets/social_buttons.dart';
 
-import '../../../screens/busqueda_global_screen.dart';
+import '../../busqueda/screens/busqueda_global_screen.dart';
 import '../../../screens/compartir_app_screen.dart';
 import '../../../screens/zampona_screen.dart';
 
