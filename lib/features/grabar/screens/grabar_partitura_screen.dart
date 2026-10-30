@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/widgets/zampona_canvas.dart';
 import '../../../data/zampona_catalogo.dart';
 import '../../../design/design.dart';
 import '../../../models/numerofonia.dart';
@@ -9,7 +10,6 @@ import '../../../models/zampona_nota.dart';
 import '../../../services/zampona_service.dart';
 import '../../../theme/colors.dart';
 import '../../../widgets/zampona/tool_scaffold.dart';
-import '../../../widgets/zampona/zampona_widget.dart';
 
 class GrabarPartituraScreen extends StatefulWidget {
   final EstrofaNumerofonia estrofaInicial;
@@ -176,7 +176,7 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
           _preview(),
           const SizedBox(height: Sp.sm),
           Expanded(
-            child: ZamponaWidget(
+            child: ZamponaCanvas(
               brillando: _sonando,
               onTapNota: _tocarCania,
             ),
@@ -193,7 +193,10 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
     return Container(
       height: 62,
       margin: const EdgeInsets.symmetric(horizontal: Sp.sm),
-      padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: Sp.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Sp.sm,
+        vertical: Sp.sm,
+      ),
       decoration: BoxDecoration(
         color: const Color(0xFF14080A),
         borderRadius: Rad.rMd,
@@ -248,7 +251,10 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
               ),
             ),
           ),
-          Container(height: 1, color: AppColors.dorado.withOpacity(0.25)),
+          Container(
+            height: 1,
+            color: AppColors.dorado.withOpacity(0.25),
+          ),
           Expanded(
             child: Center(
               child: Text(
