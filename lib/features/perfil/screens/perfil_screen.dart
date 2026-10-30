@@ -13,11 +13,11 @@ import '../../../services/auth_service.dart';
 import '../../../services/cancion_service.dart';
 import '../../../services/usuario_service.dart';
 
-import '../../../screens/compartir_app_screen.dart';
-import '../../../screens/gestion_cache_screen.dart';
-import '../../../widgets/perfil/modal_mis_subidas.dart';
-
 import '../../admin/screens/admin_dashboard_screen.dart';
+import '../../compartir/screens/compartir_app_screen.dart';
+import 'gestion_cache_screen.dart';
+
+import '../../../widgets/perfil/modal_mis_subidas.dart';
 
 import '../widgets/perfil_header.dart';
 import '../widgets/perfil_menu_item.dart';
@@ -53,7 +53,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 ),
               ),
 
-              // Stats animadas
               if (u != null)
                 SliverToBoxAdapter(
                   child: AnimatedListItem(
