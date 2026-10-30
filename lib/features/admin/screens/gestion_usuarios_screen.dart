@@ -5,8 +5,8 @@ import '../../../design/design.dart';
 import '../../../models/usuario.dart';
 import '../../../services/usuario_service.dart';
 import '../../../theme/colors.dart';
-import '../../../widgets/admin/usuario_baneado_card.dart';
-import '../../../widgets/admin/usuario_card.dart';
+import '../widgets/usuario_baneado_card.dart';
+import '../widgets/usuario_card.dart';
 
 class GestionUsuariosScreen extends StatefulWidget {
   const GestionUsuariosScreen({super.key});
