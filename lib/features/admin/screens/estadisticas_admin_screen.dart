@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../design/design.dart';
 import '../../../theme/colors.dart';
-import '../../../widgets/admin/stat_card.dart';
+import '../widgets/stat_card.dart';
 
 class EstadisticasAdminScreen extends StatefulWidget {
   const EstadisticasAdminScreen({super.key});
