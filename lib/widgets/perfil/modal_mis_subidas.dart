@@ -1,9 +1,10 @@
 // lib/widgets/perfil/modal_mis_subidas.dart
 import 'package:flutter/material.dart';
+
 import '../../design/design.dart';
+import '../../features/cancion_detalle/screens/cancion_detalle_screen.dart';
 import '../../models/cancion.dart';
 import '../../models/recuerdo.dart';
-import '../../screens/cancion_detalle_screen.dart';
 import '../../services/cancion_service.dart';
 import '../../services/recuerdo_service.dart';
 import '../../theme/colors.dart';
@@ -51,7 +52,8 @@ class ModalMisSubidas {
                           if (!canSnap.hasData || !recSnap.hasData) {
                             return const Center(
                               child: CircularProgressIndicator(
-                                  color: AppColors.granate),
+                                color: AppColors.granate,
+                              ),
                             );
                           }
                           final misCanciones = canSnap.data!
@@ -76,16 +78,19 @@ class ModalMisSubidas {
                             children: [
                               if (misCanciones.isNotEmpty) ...[
                                 const SeccionHeader(
-                                    title: 'Canciones',
-                                    icon: Icons.music_note,
-                                    padding: EdgeInsets.zero),
+                                  title: 'Canciones',
+                                  icon: Icons.music_note,
+                                  padding: EdgeInsets.zero,
+                                ),
                                 const SizedBox(height: Sp.sm),
                                 ...misCanciones.map((c) => Padding(
                                       padding: const EdgeInsets.only(
-                                          bottom: Sp.sm),
+                                        bottom: Sp.sm,
+                                      ),
                                       child: AppCard(
                                         padding: const EdgeInsets.all(
-                                            Sp.md),
+                                          Sp.md,
+                                        ),
                                         onTap: () {
                                           Navigator.pop(context);
                                           Navigator.push(
@@ -93,30 +98,38 @@ class ModalMisSubidas {
                                             MaterialPageRoute(
                                               builder: (_) =>
                                                   CancionDetalleScreen(
-                                                      cancion: c),
+                                                cancion: c,
+                                              ),
                                             ),
                                           );
                                         },
-                                        child: Text(c.titulo,
-                                            style: AppType.subtitle),
+                                        child: Text(
+                                          c.titulo,
+                                          style: AppType.subtitle,
+                                        ),
                                       ),
                                     )),
                               ],
                               if (misRecuerdos.isNotEmpty) ...[
                                 const SizedBox(height: Sp.lg),
                                 const SeccionHeader(
-                                    title: 'Recuerdos',
-                                    icon: Icons.photo_library,
-                                    padding: EdgeInsets.zero),
+                                  title: 'Recuerdos',
+                                  icon: Icons.photo_library,
+                                  padding: EdgeInsets.zero,
+                                ),
                                 const SizedBox(height: Sp.sm),
                                 ...misRecuerdos.map((r) => Padding(
                                       padding: const EdgeInsets.only(
-                                          bottom: Sp.sm),
+                                        bottom: Sp.sm,
+                                      ),
                                       child: AppCard(
                                         padding: const EdgeInsets.all(
-                                            Sp.md),
-                                        child: Text(r.titulo,
-                                            style: AppType.subtitle),
+                                          Sp.md,
+                                        ),
+                                        child: Text(
+                                          r.titulo,
+                                          style: AppType.subtitle,
+                                        ),
                                       ),
                                     )),
                               ],
