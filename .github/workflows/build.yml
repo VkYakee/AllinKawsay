@@ -1,12 +1,12 @@
 name: Build APK
 
 on:
-  push:
-    branches: [ main, redesign/v2 ]
+  # push:  <-- COMENTAMOS O BORRAMOS ESTA LÍNEA PARA QUE NO SE DISPARE SOLO
+  #   branches: [ main, redesign/v2 ]
   workflow_dispatch:
     inputs:
       motivo:
-        description: 'Motivo del lanzamiento (ej: nuevas features, fix importante)'
+        description: 'Motivo del lanzamiento'
         required: false
         default: ''
 
