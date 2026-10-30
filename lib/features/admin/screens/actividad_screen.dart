@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../design/design.dart';
 import '../../../services/actividad_service.dart';
 import '../../../theme/colors.dart';
-import '../../../widgets/admin/actividad_item.dart';
+import '../widgets/actividad_item.dart';
 
 class ActividadScreen extends StatelessWidget {
   const ActividadScreen({super.key});
