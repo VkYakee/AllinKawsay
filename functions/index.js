@@ -1,21 +1,15 @@
 // functions/index.js
 //
-// Cloud Function de Allin Kawsay.
+// Cloud Function de Allin Kawsay adaptada para MERCADO PAGO.
 //
 // Responsabilidades:
-//   1. webhookCulqi       → recibe pagos confirmados y activa planes.
+//   1. webhookMercadoPago → recibe avisos de pago y activa planes.
 //   2. sincronizarComunidad → mantiene la colección `comunidad` al día.
 //   3. recalcularMetaDonacion → suma donaciones verificadas a la meta.
-//
-// Deploy:
-//   firebase deploy --only functions
-//
-// Logs en vivo:
-//   firebase functions:log
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const fetch = require("node-fetch");
+const { MercadoPagoConfig, Payment } = require("mercadopago");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -25,122 +19,93 @@ const db = admin.firestore();
 // ═══════════════════════════════════════════════════════════
 
 // Se configuran con:
-//   firebase functions:config:set culqi.secret="sk_live_..." culqi.public="pk_live_..."
-//
-// En el código se leen con functions.config().culqi.secret
-// Si prefieres variables de entorno modernas, se cambia a process.env.CULQI_SECRET
-const CULQI_API = "https://api.culqi.com/v2";
-
-// Duración de cada plan en días.
+//   firebase functions:config:set mp.access_token="APP_USR-..."
 const DURACION = {
   sikurito: 30,
-  vip: 99999, // ~273 años = "para siempre"
+  vip: 99999,
 };
 
-// Metas y montos.
 const META_DONACION_CENTIMOS = 32000; // S/ 320.00
 
 // ═══════════════════════════════════════════════════════════
-// WEBHOOK DE CULQI
+// WEBHOOK DE MERCADO PAGO
 // ═══════════════════════════════════════════════════════════
 
-/**
- * Endpoint que Culqi llama cuando un pago se confirma.
- *
- * Configurarlo en el panel de Culqi → Webhooks con la URL:
- *   https://<region>-<project>.cloudfunctions.net/webhookCulqi
- *
- * Culqi envía un JSON con la forma:
- *   { "type": "charge.creation.succeeded", "data": { "id": "chr_xxx", ... } }
- */
-exports.webhookCulqi = functions
+exports.webhookMercadoPago = functions
   .region("us-central1")
   .https.onRequest(async (req, res) => {
-    // Solo POST.
     if (req.method !== "POST") {
       res.status(405).send("Method Not Allowed");
       return;
     }
 
     try {
-      const evento = req.body || {};
-      const tipo = evento.type || "";
-      const chargeId = evento.data && evento.data.id;
+      const body = req.body || {};
+      const tipo = body.type || body.topic;
+      const paymentId = body.data?.id || body.id;
 
-      functions.logger.info("Webhook recibido:", {
-        tipo,
-        chargeId,
-      });
+      functions.logger.info("Webhook MP recibido:", { tipo, paymentId });
 
-      // Solo nos interesan los cobros exitosos.
-      if (!tipo.startsWith("charge.creation") || tipo.includes("failed")) {
+      // Mercado Pago envía avisos de muchos tipos. Solo nos interesan los pagos.
+      if (tipo !== "payment" || !paymentId) {
         res.status(200).send({ ok: true, ignorado: true });
         return;
       }
 
-      if (!chargeId) {
-        res.status(400).send({ error: "Sin chargeId" });
-        return;
-      }
-
       // ═══════════════════════════════════════════════════════
-      // VERIFICACIÓN CONTRA LA API REAL DE CULQI
+      // VERIFICACIÓN CONTRA LA API DE MERCADO PAGO
       // ═══════════════════════════════════════════════════════
-      // No confiamos solo en el webhook: un atacante podría
-      // enviar un POST falso. Consultamos a Culqi para confirmar
-      // que el cobro existe y está aprobado.
-      const secretKey = functions.config().culqi?.secret;
-      if (!secretKey) {
-        functions.logger.error("Falta culqi.secret en la configuración.");
+      const accessToken = functions.config().mp?.access_token;
+      if (!accessToken) {
+        functions.logger.error("Falta mp.access_token en la configuración.");
         res.status(500).send({ error: "Sin configuración" });
         return;
       }
 
-      const verifyRes = await fetch(`${CULQI_API}/charges/${chargeId}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${secretKey}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const client = new MercadoPagoConfig({ accessToken });
+      const payment = new Payment(client);
 
-      if (!verifyRes.ok) {
-        functions.logger.error("Culqi no confirma el cargo:", verifyRes.status);
-        res.status(400).send({ error: "Cargo no verificado" });
+      let pago;
+      try {
+        pago = await payment.get({ id: paymentId });
+      } catch (e) {
+        functions.logger.error("Error consultando pago MP:", e);
+        res.status(400).send({ error: "Pago no verificado" });
         return;
       }
 
-      const cargo = await verifyRes.json();
-
-      // Verificar que el cargo está aprobado (outcome.type === 'venta_exitosa').
-      const outcome = cargo.outcome && cargo.outcome.type;
-      if (outcome !== "venta_exitosa" && cargo.outcome !== undefined) {
-        functions.logger.warn("Cargo no exitoso:", outcome);
+      // Verificar que el pago esté aprobado.
+      if (pago.status !== "approved") {
+        functions.logger.warn("Pago no aprobado:", pago.status);
         res.status(200).send({ ok: true, ignorado: true });
         return;
       }
 
-      const montoCentimos = cargo.amount || 0;
-      const email = (cargo.source && cargo.source.email) || "";
-      const metadata = cargo.metadata || {};
+      // ═══════════════════════════════════════════════════════
+      // EXTRAER DATOS DEL PAGO
+      // ═══════════════════════════════════════════════════════
+      const montoCentimos = Math.round((pago.transaction_amount || 0) * 100);
+      const email = pago.payer?.email || "";
+      const metadata = pago.metadata || {};
+      
+      // Si el link de pago no tiene metadata, inferimos por el monto.
       const tipoCompra = metadata.tipo || inferirTipoPorMonto(montoCentimos);
 
-      functions.logger.info("Cargo verificado:", {
+      functions.logger.info("Pago MP verificado:", {
         montoCentimos,
         email,
         tipoCompra,
+        status: pago.status,
       });
 
-      // ═══════════════════════════════════════════════════════
-      // REGISTRAR LOG DE AUDITORÍA
-      // ═══════════════════════════════════════════════════════
+      // Registrar log de auditoría
       await db.collection("pagos_log").add({
-        chargeId,
+        mpPaymentId: paymentId.toString(),
         montoCentimos,
         email,
         tipoCompra,
         metadata,
-        cargoCompleto: cargo,
+        pagoCompleto: pago,
         fecha: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -149,16 +114,16 @@ exports.webhookCulqi = functions
       // ═══════════════════════════════════════════════════════
 
       if (tipoCompra === "sikurito" || tipoCompra === "vip") {
-        await activarPlan(email, tipoCompra, cargo);
+        await activarPlan(email, tipoCompra, pago);
       } else if (tipoCompra === "cafe" || tipoCompra === "apoyo") {
-        await registrarDonacion(email, tipoCompra, montoCentimos, chargeId);
+        await registrarDonacion(email, tipoCompra, montoCentimos, paymentId);
       } else {
         functions.logger.warn("Tipo desconocido:", tipoCompra);
       }
 
       res.status(200).send({ ok: true });
     } catch (err) {
-      functions.logger.error("Error webhook:", err);
+      functions.logger.error("Error webhook MP:", err);
       res.status(500).send({ error: "Error interno" });
     }
   });
@@ -167,13 +132,13 @@ exports.webhookCulqi = functions
 // ACTIVAR PLAN
 // ═══════════════════════════════════════════════════════════
 
-async function activarPlan(email, tipo, cargo) {
+async function activarPlan(email, tipo, pago) {
   if (!email) {
-    functions.logger.warn("Cargo sin email, no se puede activar:", cargo.id);
+    functions.logger.warn("Pago sin email, no se puede activar:", pago.id);
     return;
   }
 
-  // Buscamos el usuario por email.
+  // Buscar usuario por email
   const usuariosSnap = await db
     .collection("usuarios")
     .where("email", "==", email)
@@ -194,13 +159,11 @@ async function activarPlan(email, tipo, cargo) {
     "suscripcion.plan": tipo,
     "suscripcion.activa": true,
     "suscripcion.hasta": admin.firestore.Timestamp.fromDate(hasta),
-    "suscripcion.aprobadaPor": "culqi_webhook",
-    "suscripcion.fechaActivacion":
-      admin.firestore.FieldValue.serverTimestamp(),
-    "suscripcion.ultimoCheck":
-      admin.firestore.FieldValue.serverTimestamp(),
-    "suscripcion.ultimoChargeId": cargo.id,
-    "suscripcion.ultimoMontoCentimos": cargo.amount || 0,
+    "suscripcion.aprobadaPor": "mercadopago_webhook",
+    "suscripcion.fechaActivacion": admin.firestore.FieldValue.serverTimestamp(),
+    "suscripcion.ultimoCheck": admin.firestore.FieldValue.serverTimestamp(),
+    "suscripcion.ultimoPagoId": pago.id.toString(),
+    "suscripcion.ultimoMontoCentimos": Math.round((pago.transaction_amount || 0) * 100),
   });
 
   functions.logger.info("Plan activado:", { email, tipo, hasta });
@@ -210,35 +173,26 @@ async function activarPlan(email, tipo, cargo) {
 // REGISTRAR DONACIÓN
 // ═══════════════════════════════════════════════════════════
 
-async function registrarDonacion(email, tipo, montoCentimos, chargeId) {
-  // Crear el documento de donación verificado.
+async function registrarDonacion(email, tipo, montoCentimos, paymentId) {
   await db.collection("donaciones").add({
     email: email || "anonimo",
     tipo,
     montoCentimos,
-    culqiChargeId: chargeId,
+    mpPaymentId: paymentId.toString(),
     verificada: true,
     fecha: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  functions.logger.info("Donación registrada:", {
-    email,
-    tipo,
-    montoCentimos,
-  });
-
-  // Actualizar la meta de recaudación (el trigger onWrite lo hace).
+  functions.logger.info("Donación registrada:", { email, tipo, montoCentimos });
 }
 
 // ═══════════════════════════════════════════════════════════
-// INFERIR TIPO POR MONTO (fallback si no viene metadata)
+// INFERIR TIPO POR MONTO
 // ═══════════════════════════════════════════════════════════
 
 function inferirTipoPorMonto(montoCentimos) {
-  // 2700 → sikurito, 8650 → vip.
   if (montoCentimos === 2700) return "sikurito";
   if (montoCentimos === 8650) return "vip";
-  // Si viene entre 1250 y 2000 → café; mayor → apoyo.
   if (montoCentimos >= 1250 && montoCentimos < 3000) return "cafe";
   return "apoyo";
 }
@@ -251,11 +205,9 @@ exports.recalcularMetaDonacion = functions
   .region("us-central1")
   .firestore.document("donaciones/{docId}")
   .onWrite(async (change, context) => {
-    // Solo procesar si la donación está verificada.
     const after = change.after.data();
     if (!after || after.verificada !== true) return;
 
-    // Sumar todas las donaciones verificadas.
     const snap = await db
       .collection("donaciones")
       .where("verificada", "==", true)
@@ -274,18 +226,12 @@ exports.recalcularMetaDonacion = functions
       },
       { merge: true }
     );
-
-    functions.logger.info("Meta actualizada:", total);
   });
 
 // ═══════════════════════════════════════════════════════════
 // TRIGGER: SINCRONIZAR COMUNIDAD
 // ═══════════════════════════════════════════════════════════
 
-/**
- * Cada vez que un usuario cambia (rol, suscripción, baneado, nombre),
- * sincroniza su documento público en la colección `comunidad`.
- */
 exports.sincronizarComunidad = functions
   .region("us-central1")
   .firestore.document("usuarios/{uid}")
@@ -293,7 +239,6 @@ exports.sincronizarComunidad = functions
     const uid = context.params.uid;
     const after = change.after.data();
 
-    // Si el doc se borró → borrar de comunidad.
     if (!after) {
       await db.collection("comunidad").doc(uid).delete().catch(() => {});
       return;
@@ -302,9 +247,7 @@ exports.sincronizarComunidad = functions
     const sus = after.suscripcion || {};
     const plan = sus.plan || "ninguno";
     const activa = sus.activa === true;
-    const hasta = sus.hasta && sus.hasta.toDate
-      ? sus.hasta.toDate()
-      : null;
+    const hasta = sus.hasta && sus.hasta.toDate ? sus.hasta.toDate() : null;
     const vigente = activa && hasta && hasta > new Date();
 
     const esSuscriptor = vigente && plan === "sikurito";
