@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Core
 import 'core/design/app_theme.dart';
@@ -17,6 +18,7 @@ import 'core/design/typography.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/verificacion_pendiente_screen.dart';
 import 'features/home/screens/home_screen.dart';
+import 'features/onboarding/screens/bienvenida_screen.dart'; // <-- NUEVO
 import 'features/onboarding/screens/tutorial_screen.dart';
 import 'features/onboarding/widgets/permisos_dialog.dart';
 
@@ -111,7 +113,7 @@ class _AuthGateState extends State<_AuthGate> {
   String? _ultimoRol;
   String? _ultimoUid;
   bool _chequeoUpdateYaHecho = false;
-  bool _tutorialMostrado = false;
+  bool _onboardingMostrado = false;
 
   @override
   void initState() {
@@ -176,18 +178,44 @@ class _AuthGateState extends State<_AuthGate> {
   }
 
   void _mostrarOnboarding() async {
-    if (_tutorialMostrado) return;
-    _tutorialMostrado = true;
+    if (_onboardingMostrado) return;
+    _onboardingMostrado = true;
 
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const TutorialScreen()),
-    );
+
+    final prefs = await SharedPreferences.getInstance();
+    final v3WelcomeVisto = prefs.getBool('welcome_v3_visto') ?? false;
+
+    // 1. Pantalla de Bienvenida v3.0 (solo la primera vez)
+    if (!v3WelcomeVisto) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
+      );
+      await prefs.setBool('welcome_v3_visto', true);
+    }
 
     if (!mounted) return;
-    await PermisosDialog.mostrar(context);
+
+    // 2. Tutorial (solo la primera vez)
+    final tutorialVisto = prefs.getBool('tutorial_visto') ?? false;
+    if (!tutorialVisto) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const TutorialScreen()),
+      );
+      await prefs.setBool('tutorial_visto', true);
+    }
+
+    if (!mounted) return;
+
+    // 3. Permisos (solo la primera vez)
+    final permisosVistos = prefs.getBool('permisos_vistos') ?? false;
+    if (!permisosVistos) {
+      await PermisosDialog.mostrar(context);
+      await prefs.setBool('permisos_vistos', true);
+    }
   }
 
   @override
@@ -256,7 +284,7 @@ class _AuthGateState extends State<_AuthGate> {
 
             _syncOneSignal(null);
             ScreenSecurityService.disable();
-            _tutorialMostrado = false;
+            _onboardingMostrado = false;
             return const LoginScreen();
           },
         );
