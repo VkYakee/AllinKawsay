@@ -4,20 +4,18 @@ import 'package:flutter/material.dart';
 /// Catálogo de planes y límites del sistema de monetización.
 ///
 /// IMPORTANTE: los precios de acá son los PVP (lo que ve el usuario).
-/// Ya incluyen la comisión de Culqi, redondeados para que al grupo
-/// le llegue el monto neto deseado.
+/// Ya incluyen la comisión de Mercado Pago, redondeados para que al
+/// grupo le llegue el monto neto deseado.
 ///
-/// Comisión Culqi Yape aplicada:
-///   3.44% + S/ 0.20 + IGV 18% ≈ S/ 0.81 fijo + 3.44% variable.
-///
-/// Dólar de referencia: S/ 3.46 (ajustar acá si cambia mucho).
+/// Comisión Mercado Pago aplicada (Cobro instantáneo):
+///   3.49% + S/ 1.00 + IGV 18% ≈ S/ 1.18 fijo + 3.49% variable.
 class PlanSuscripcion {
   final String id;
   final String nombre;
   final String descripcion;
   final int precioCentimos;
   final int duracionDias;
-  final String linkCulqi;
+  final String linkPago;
   final IconData icono;
   final bool recomendado;
   final bool esPagoUnico;
@@ -28,7 +26,7 @@ class PlanSuscripcion {
     required this.descripcion,
     required this.precioCentimos,
     required this.duracionDias,
-    required this.linkCulqi,
+    required this.linkPago,
     required this.icono,
     this.recomendado = false,
     this.esPagoUnico = false,
@@ -52,25 +50,17 @@ class PlanSuscripcion {
     return '$duracionDias días';
   }
 
-  /// Neto aproximado que recibe el grupo después de comisión Culqi.
-  String get netoFormateado {
-    final pvp = precioCentimos / 100;
-    final comision = 0.81 + (pvp * 0.0344);
-    final neto = pvp - comision;
-    return 'S/ ${neto.toStringAsFixed(2)}';
-  }
-
   // ═══════════════════════════════════════════════════════════
-  // PLANES ACTIVOS
+  // PLANES ACTIVOS (Mercado Pago)
   // ═══════════════════════════════════════════════════════════
 
   static const PlanSuscripcion sikurito = PlanSuscripcion(
     id: 'sikurito',
     nombre: 'Sikurito',
-    descripcion: 'Acceso total · renovación mensual',
-    precioCentimos: 2700, // S/ 27.00 → neto ~S/ 25.26
+    descripcion: 'Acceso total · pago manual mensual',
+    precioCentimos: 2700, // S/ 27.00
     duracionDias: 30,
-    linkCulqi: 'https://checkout.culqi.com/link-placeholder-sikurito',
+    linkPago: 'https://mpago.la/2iMQG2E',
     icono: Icons.workspace_premium,
     recomendado: true,
   );
@@ -79,9 +69,9 @@ class PlanSuscripcion {
     id: 'vip',
     nombre: 'VIP de por vida',
     descripcion: 'Pago único · acceso para siempre',
-    precioCentimos: 8650, // S/ 86.50 → neto ~S/ 80.00
+    precioCentimos: 8650, // S/ 86.50
     duracionDias: 99999,
-    linkCulqi: 'https://checkout.culqi.com/link-placeholder-vip',
+    linkPago: 'https://mpago.la/1snvMcd',
     icono: Icons.diamond,
     esPagoUnico: true,
   );
@@ -108,17 +98,17 @@ class PlanSuscripcion {
   // CONFIGURACIÓN DE DONACIONES
   // ═══════════════════════════════════════════════════════════
 
-  /// Monto mínimo para "Invítame un café" (S/ 12.50 → neto S/ 10+).
+  /// Monto mínimo para "Invítame un café" (S/ 12.50).
   static const int cafeMinimoCentimos = 1250;
 
   /// Meta de recaudación para lanzar a Google Play + servidores.
   static const int metaDonacionCentimos = 32000; // S/ 320.00
 
-  /// Link de pago para donaciones (mismo para ambas).
+  /// Link de pago para donaciones (Mercado Pago monto abierto).
   static const String linkDonacion =
-      'https://checkout.culqi.com/link-placeholder-donacion';
+      'https://link.mercadopago.com.pe/allinkawsay';
 
-  /// Montos sugeridos para el café (además del mínimo).
+  /// Montos sugeridos para el café.
   static const List<int> montosCafeSugeridos = [
     1250, // S/ 12.50
     2000, // S/ 20.00
