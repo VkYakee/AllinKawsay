@@ -31,9 +31,9 @@ class PerfilHeader extends StatelessWidget {
                   : AppColors.gradienteDorado,
               boxShadow: [
                 BoxShadow(
-                  color: (esDev ? Colors.cyanAccent : AppColors.dorado).withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 2,
+                  color: (esDev ? Colors.cyanAccent : AppColors.dorado).withOpacity(0.4),
+                  blurRadius: 30,
+                  spreadRadius: 5,
                 ),
               ],
             ),
@@ -50,16 +50,16 @@ class PerfilHeader extends StatelessWidget {
           ),
           const SizedBox(height: Sp.lg),
           
-          // Nombre y Email
+          // Nombre
           Text(
             usuario?.nombre ?? 'Usuario',
-            style: AppText.h2.copyWith(color: onSurface),
+            style: AppText.h2.copyWith(color: Colors.white),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: Sp.xs),
           Text(
             usuario?.email ?? '',
-            style: AppText.body.copyWith(color: onSurface.withOpacity(0.5)),
+            style: AppText.bodySm.copyWith(color: Colors.white54),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: Sp.md),
@@ -75,7 +75,7 @@ class PerfilHeader extends StatelessWidget {
               borderRadius: Rad.rPill,
               border: esDev
                   ? Border.all(color: Colors.cyanAccent.withOpacity(0.5))
-                  : (esPublico ? Border.all(color: Colors.white.withOpacity(0.2)) : null),
+                  : (esPublico ? Border.all(color: Colors.white24) : Border.all(color: AppColors.dorado.withOpacity(0.3))),
             ),
             child: Text(
               usuario?.rolNombre ?? 'PÚBLICO',
