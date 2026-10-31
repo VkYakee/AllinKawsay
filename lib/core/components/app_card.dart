@@ -11,7 +11,7 @@ class AppCard extends StatefulWidget {
   final VoidCallback? onTap;
   final Color? color;
   final Border? border;
-  final bool glass; // Efecto cristal esmerilado
+  final bool glass;
 
   const AppCard({
     super.key,
@@ -37,17 +37,19 @@ class _AppCardState extends State<AppCard> {
     Widget content = Container(
       padding: widget.padding ?? const EdgeInsets.all(Sp.lg),
       decoration: BoxDecoration(
+        // Si es glass, usamos el tinte vino. Si no, el color de superficie.
         color: widget.color ?? (widget.glass ? AppColors.glassFill(context) : AppColors.surface(context)),
         borderRadius: Rad.rLg,
+        // Borde brillante para el cristal, o sutil para las tarjetas normales
         border: widget.border ?? Border.all(
-          color: widget.glass ? AppColors.glassBorder(context) : AppColors.dorado.withOpacity(0.15),
-          width: 1,
+          color: widget.glass ? AppColors.glassBorder(context) : (isDark ? Colors.white10 : Colors.black12),
+          width: 1.5, // Borde un poco más grueso para que se note el cristal
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(isDark ? 0.5 : 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -55,11 +57,25 @@ class _AppCardState extends State<AppCard> {
     );
 
     if (widget.glass) {
+      // Para que el cristal se vea real, el blur debe ser alto y tener un gradiente interno
       content = ClipRRect(
         borderRadius: Rad.rLg,
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: content,
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: Rad.rLg,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(isDark ? 0.05 : 0.4),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+            child: content,
+          ),
         ),
       );
     }
