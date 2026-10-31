@@ -27,16 +27,17 @@ class MainNavBar extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
-            height: 68,
+            height: 72, // Un poco más alto
             padding: const EdgeInsets.symmetric(horizontal: Sp.sm),
             decoration: BoxDecoration(
-              color: AppColors.negroPuro.withOpacity(0.85),
+              // Fondo semi-transparente con un tinte vino
+              color: AppColors.granateOscuro.withOpacity(0.75),
               borderRadius: Rad.rPill,
-              border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+              border: Border.all(color: AppColors.dorado.withOpacity(0.3), width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 20,
+                  color: AppColors.dorado.withOpacity(0.1),
+                  blurRadius: 30,
                   offset: const Offset(0, 10),
                 ),
               ],
@@ -91,10 +92,14 @@ class _NavItem extends StatelessWidget {
           child: AnimatedContainer(
             duration: AppMotion.fast,
             curve: AppMotion.spring,
-            padding: const EdgeInsets.symmetric(horizontal: Sp.md, vertical: Sp.sm),
+            padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: Sp.sm),
             decoration: BoxDecoration(
+              // Solo la pestaña activa tiene un fondo brillante
               color: isSelected ? AppColors.granate : Colors.transparent,
               borderRadius: Rad.rPill,
+              boxShadow: isSelected ? [
+                BoxShadow(color: AppColors.granate.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 4))
+              ] : null,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -104,17 +109,17 @@ class _NavItem extends StatelessWidget {
                   children: [
                     Icon(
                       isSelected ? activeIcon : icon,
-                      color: isSelected ? AppColors.dorado : AppColors.dorado.withOpacity(0.4),
-                      size: 24,
+                      color: isSelected ? AppColors.dorado : Colors.white54,
+                      size: 26,
                     ),
                     if (badge > 0)
                       Positioned(
-                        top: -2,
-                        right: -4,
+                        top: -4,
+                        right: -6,
                         child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                          child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ),
                   ],
@@ -126,7 +131,7 @@ class _NavItem extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             label,
-                            style: AppText.captionXs.copyWith(color: AppColors.dorado, fontSize: 9),
+                            style: AppText.labelXs.copyWith(color: AppColors.dorado, fontSize: 10),
                           ),
                         )
                       : const SizedBox.shrink(),
