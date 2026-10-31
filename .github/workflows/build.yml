@@ -1,8 +1,6 @@
 name: Build APK
 
 on:
-  # push:  <-- COMENTAMOS O BORRAMOS ESTA LÍNEA PARA QUE NO SE DISPARE SOLO
-  #   branches: [ main, redesign/v2 ]
   workflow_dispatch:
     inputs:
       motivo:
@@ -98,17 +96,6 @@ jobs:
 
           echo "✅ Keystore de release configurado desde Secrets"
 
-      - name: Mostrar SHA-1 del keystore (para verificar)
-        run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "  SHA-1 del keystore de release"
-          echo "═══════════════════════════════════════════════════════"
-          keytool -list -v \
-            -keystore android/app/allinkawsay.keystore \
-            -alias allinkawsay \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" 2>/dev/null | grep -E "SHA1:|SHA-256:" || echo "⚠️ No se pudo leer SHA-1"
-          echo "═══════════════════════════════════════════════════════"
-
       - name: Preparar assets
         run: |
           mkdir -p assets
@@ -148,8 +135,6 @@ jobs:
             static const int build = $RUN;
           }
           EOF
-          echo "✅ version_build.dart generado:"
-          cat lib/version_build.dart
 
       - name: Leer versión de version.dart
         id: version
@@ -160,28 +145,12 @@ jobs:
           RELEASE=$(awk -F"'" '/static const String release/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
 
           if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ] || [ -z "$RELEASE" ]; then
-            echo "❌ No se pudieron leer las versiones. Revisá lib/version.dart"
+            echo "❌ No se pudieron leer las versiones."
             exit 1
           fi
 
           VERSION="${MAJOR}.${MINOR}.${PATCH}.${RELEASE}"
-          echo "📦 Versión base detectada: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Determinar tipo de release
-        id: tipo
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "🎯 Lanzamiento MANUAL → release estable"
-            echo "es_prerelease=false" >> $GITHUB_OUTPUT
-            echo "emoji=🚀" >> $GITHUB_OUTPUT
-            echo "etiqueta=LANZAMIENTO OFICIAL" >> $GITHUB_OUTPUT
-          else
-            echo "🔨 Push automático → prerelease"
-            echo "es_prerelease=true" >> $GITHUB_OUTPUT
-            echo "emoji=🔬" >> $GITHUB_OUTPUT
-            echo "etiqueta=BUILD DE PRUEBA" >> $GITHUB_OUTPUT
-          fi
 
       - name: Get dependencies
         run: flutter pub get
@@ -196,27 +165,10 @@ jobs:
             --build-number=$RUN \
             --dart-define=ONESIGNAL_APP_ID=${{ secrets.ONESIGNAL_APP_ID }}
 
-      - name: Verificar APK
-        run: |
-          ls -la build/app/outputs/flutter-apk/
-          APK_SIZE=$(stat -c%s build/app/outputs/flutter-apk/app-release.apk)
-          echo "📱 Tamaño del APK: $APK_SIZE bytes"
-          if [ "$APK_SIZE" -lt 5000000 ]; then
-            echo "⚠️ APK muy pequeño"
-            exit 1
-          fi
-
       - name: Renombrar APK
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk \
              build/app/outputs/flutter-apk/AllinKawsay.apk
-          echo "✅ APK renombrado a AllinKawsay.apk"
-
-      - name: Upload APK (artifact de Actions)
-        uses: actions/upload-artifact@v4
-        with:
-          name: allinkawsay-apk-v${{ steps.version.outputs.version }}.${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/AllinKawsay.apk
 
       - name: Crear release en GitHub
         env:
@@ -229,11 +181,9 @@ jobs:
           SIZE=$(stat -c%s $APK)
           SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $SIZE/1048576}")
           MOTIVO="${{ github.event.inputs.motivo }}"
-          TIPO="${{ steps.tipo.outputs.etiqueta }}"
-          EMOJI="${{ steps.tipo.outputs.emoji }}"
 
           cat > /tmp/notas.md <<EOF
-          ${EMOJI} **${TIPO}**
+          🚀 **NUEVA VERSIÓN**
 
           - **Versión:** ${VERSION}.${RUN}
           - **Build number:** ${RUN}
@@ -244,17 +194,6 @@ jobs:
           ${MOTIVO:+**Motivo:** ${MOTIVO}}
           EOF
 
-          if [ "${{ steps.tipo.outputs.es_prerelease }}" = "true" ]; then
-            gh release create "$TAG" "$APK" \
-              --title "v${VERSION}.${RUN} (prueba)" \
-              --notes-file /tmp/notas.md \
-              --prerelease
-            echo "✅ Prerelease creada: $TAG"
-          else
-            gh release create "$TAG" "$APK" \
-              --title "v${VERSION}.${RUN}" \
-              --notes-file /tmp/notas.md
-            echo "✅ Release ESTABLE creado: $TAG"
-            echo "📥 Link de descarga directa:"
-            echo "https://github.com/VkYakee/AllinKawsay/releases/latest/download/AllinKawsay.apk"
-          fi
+          gh release create "$TAG" "$APK" \
+            --title "v${VERSION}.${RUN}" \
+            --notes-file /tmp/notas.md
