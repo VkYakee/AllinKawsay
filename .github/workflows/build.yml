@@ -1,4 +1,4 @@
-name: Build APK
+name: Build Android APK
 
 on:
   workflow_dispatch:
@@ -7,6 +7,8 @@ on:
         description: 'Motivo del lanzamiento'
         required: false
         default: ''
+  push:
+    branches: [3.0]
 
 permissions:
   contents: write
@@ -14,9 +16,16 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -24,176 +33,125 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          flutter-version: '3.24.3'
-          channel: 'stable'
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
 
-      - name: Instalar ImageMagick
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
 
-      - name: Bootstrap Android project
-        run: |
-          rm -rf android/
-          flutter create . --org com.allinkawsay --platforms android --project-name allinkawsay_app
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Aplicar config Android con Firebase
-        run: |
-          cp android_config/settings.gradle android/settings.gradle
-          cp android_config/build.gradle android/build.gradle
-          cp android_config/app/build.gradle android/app/build.gradle
-          cp android_config/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
-          cp firebase/google-services.json android/app/google-services.json
+      - name: Setup NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
 
-          mkdir -p android/app/src/main/res/xml
-          cp android_config/file_paths.xml android/app/src/main/res/xml/file_paths.xml
+      - name: Expose NDK
+        run: echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
 
-          mkdir -p android/app/src/main/res/drawable-mdpi
-          mkdir -p android/app/src/main/res/drawable-hdpi
-          mkdir -p android/app/src/main/res/drawable-xhdpi
-          mkdir -p android/app/src/main/res/drawable-xxhdpi
-          mkdir -p android/app/src/main/res/drawable-xxxhdpi
-          cp android_config/res/drawable-mdpi/ic_stat_notify.png android/app/src/main/res/drawable-mdpi/
-          cp android_config/res/drawable-hdpi/ic_stat_notify.png android/app/src/main/res/drawable-hdpi/
-          cp android_config/res/drawable-xhdpi/ic_stat_notify.png android/app/src/main/res/drawable-xhdpi/
-          cp android_config/res/drawable-xxhdpi/ic_stat_notify.png android/app/src/main/res/drawable-xxhdpi/
-          cp android_config/res/drawable-xxxhdpi/ic_stat_notify.png android/app/src/main/res/drawable-xxxhdpi/
-          cp android_config/res/drawable-mdpi/ic_notify_large.png android/app/src/main/res/drawable-mdpi/
-          cp android_config/res/drawable-hdpi/ic_notify_large.png android/app/src/main/res/drawable-hdpi/
-          cp android_config/res/drawable-xhdpi/ic_notify_large.png android/app/src/main/res/drawable-xhdpi/
-          cp android_config/res/drawable-xxhdpi/ic_notify_large.png android/app/src/main/res/drawable-xxhdpi/
-          cp android_config/res/drawable-xxxhdpi/ic_notify_large.png android/app/src/main/res/drawable-xxxhdpi/
+      - name: Install JS deps
+        run: npm ci
 
-      - name: Aplicar MainActivity custom
-        run: |
-          if [ -f "android_config/MainActivity.kt" ]; then
-            find android/app/src/main -name "MainActivity.java" -delete || true
-            find android/app/src/main -name "MainActivity.kt" -delete || true
-            mkdir -p android/app/src/main/kotlin/com/allinkawsay/app
-            cp android_config/MainActivity.kt \
-              android/app/src/main/kotlin/com/allinkawsay/app/MainActivity.kt
-            echo "✅ MainActivity custom copiado"
-          fi
+      - name: Init Tauri Android
+        run: npm run tauri android init
 
-      - name: Configurar keystore de release desde Secrets
+      - name: Apply signing
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/allinkawsay.keystore
-
-          cat > android/keystore.properties << EOF
+          set -e
+          echo "$KEYSTORE_BASE64" | base64 -d > src-tauri/gen/android/app/allinkawsay.keystore
+          cat > src-tauri/gen/android/keystore.properties <<EOF
           storeFile=allinkawsay.keystore
           storePassword=$KEYSTORE_PASSWORD
           keyAlias=$KEY_ALIAS
           keyPassword=$KEY_PASSWORD
           EOF
 
-          echo "✅ Keystore de release configurado desde Secrets"
+          python3 <<'PYEOF'
+          import re
+          path = 'src-tauri/gen/android/app/build.gradle.kts'
+          with open(path, 'r') as f:
+              content = f.read()
 
-      - name: Preparar assets
-        run: |
-          mkdir -p assets
-          if [ -f "android_config/icono.png" ]; then
-            cp android_config/icono.png assets/logo.png
-          fi
+          header = '''import java.util.Properties
+          import java.io.FileInputStream
 
-      - name: Generar íconos del lanzador
-        run: |
-          if [ -f "android_config/icono.png" ]; then
-            if command -v magick &> /dev/null; then
-              CONVERT="magick"
-            else
-              CONVERT="convert"
-            fi
-            $CONVERT android_config/icono.png -resize 48x48 \
-              android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            $CONVERT android_config/icono.png -resize 72x72 \
-              android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            $CONVERT android_config/icono.png -resize 96x96 \
-              android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            $CONVERT android_config/icono.png -resize 144x144 \
-              android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            $CONVERT android_config/icono.png -resize 192x192 \
-              android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          fi
-
-      - name: Generar archivo de versión
-        run: |
-          RUN=${{ github.run_number }}
-          echo "🔢 Build number: $RUN"
-          cat > lib/version_build.dart << EOF
-          // ⚠️ Este archivo es generado automáticamente por GitHub Actions.
-          // NO EDITAR MANUALMENTE.
-
-          class VersionBuild {
-            static const int build = $RUN;
+          val keystorePropertiesFile = rootProject.file("keystore.properties")
+          val keystoreProperties = Properties().apply {
+              if (keystorePropertiesFile.exists()) {
+                  load(FileInputStream(keystorePropertiesFile))
+              }
           }
-          EOF
 
-      - name: Leer versión de version.dart
-        id: version
-        run: |
-          MAJOR=$(awk -F"'" '/static const String major/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
-          MINOR=$(awk -F"'" '/static const String minor/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
-          PATCH=$(awk -F"'" '/static const String patch/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
-          RELEASE=$(awk -F"'" '/static const String release/ {print $2; exit}' lib/version.dart | tr -d '[:space:]')
+          '''
+          content = header + content
 
-          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ] || [ -z "$RELEASE" ]; then
-            echo "❌ No se pudieron leer las versiones."
-            exit 1
-          fi
+          signing = '''    signingConfigs {
+                  create("release") {
+                      if (keystorePropertiesFile.exists()) {
+                          keyAlias = keystoreProperties["keyAlias"] as String
+                          keyPassword = keystoreProperties["keyPassword"] as String
+                          storeFile = file("allinkawsay.keystore")
+                          storePassword = keystoreProperties["storePassword"] as String
+                      }
+                  }
+              }
+          '''
+          content = re.sub(r'(android\s*\{)', r'\1\n' + signing, content, count=1)
 
-          VERSION="${MAJOR}.${MINOR}.${PATCH}.${RELEASE}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          content = re.sub(
+              r'(getByName\("release"\)\s*\{)',
+              r'\1\n                signingConfig = signingConfigs.getByName("release")',
+              content, count=1
+          )
 
-      - name: Get dependencies
-        run: flutter pub get
+          with open(path, 'w') as f:
+              f.write(content)
+          PYEOF
 
       - name: Build APK
-        run: |
-          RUN=${{ github.run_number }}
-          VERSION=${{ steps.version.outputs.version }}
-          echo "🔨 Compilando ${VERSION}.${RUN}"
-          flutter build apk --release \
-            --build-name=${VERSION}.${RUN} \
-            --build-number=$RUN \
-            --dart-define=ONESIGNAL_APP_ID=${{ secrets.ONESIGNAL_APP_ID }}
+        run: npm run tauri android build -- --apk
 
-      - name: Renombrar APK
+      - name: Locate APK
+        id: apk
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk \
-             build/app/outputs/flutter-apk/AllinKawsay.apk
-
-      - name: Crear release en GitHub
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RUN=${{ github.run_number }}
-          VERSION=${{ steps.version.outputs.version }}
-          TAG="v${VERSION}.${RUN}"
-          APK="build/app/outputs/flutter-apk/AllinKawsay.apk"
-          SIZE=$(stat -c%s $APK)
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK" ]; then echo "❌ No APK encontrado"; exit 1; fi
+          echo "path=$APK" >> $GITHUB_OUTPUT
+          SIZE=$(stat -c%s "$APK")
           SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $SIZE/1048576}")
-          MOTIVO="${{ github.event.inputs.motivo }}"
+          echo "size_mb=$SIZE_MB" >> $GITHUB_OUTPUT
 
-          cat > /tmp/notas.md <<EOF
-          🚀 **NUEVA VERSIÓN**
+      - name: Package APK
+        run: |
+          mkdir -p dist-apk
+          cp "${{ steps.apk.outputs.path }}" dist-apk/AllinKawsay.apk
 
-          - **Versión:** ${VERSION}.${RUN}
-          - **Build number:** ${RUN}
-          - **Tamaño:** ${SIZE_MB} MB
-          - **Commit:** ${{ github.sha }}
-          - **Fecha:** $(date +'%Y-%m-%d %H:%M UTC')
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.0.0-rust-${{ github.run_number }}
+          name: v3.0.0-rust-${{ github.run_number }}
+          body: |
+            🚀 Nueva versión Rust/Tauri
 
-          ${MOTIVO:+**Motivo:** ${MOTIVO}}
-          EOF
+            - **Build:** ${{ github.run_number }}
+            - **Tamaño:** ${{ steps.apk.outputs.size_mb }} MB
+            - **Commit:** ${{ github.sha }}
+            - **Fecha:** $(date +'%Y-%m-%d %H:%M UTC')
 
-          gh release create "$TAG" "$APK" \
-            --title "v${VERSION}.${RUN}" \
-            --notes-file /tmp/notas.md
+            ${{ github.event.inputs.motivo }}
+          files: dist-apk/AllinKawsay.apk
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
