@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
   push:
-    branches: 
+    branches: [3.0]
 
 permissions:
   contents: write
