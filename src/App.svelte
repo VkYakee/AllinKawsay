@@ -6,7 +6,8 @@
   import LoginScreen from './lib/features/auth/LoginScreen.svelte';
   import HomeScreen from './lib/features/home/HomeScreen.svelte';
 
-  function onSplashComplete() {
+  async function onSplashComplete() {
+    await session.restore();
     router.replace(session.isLogged ? 'home' : 'login');
   }
 </script>
