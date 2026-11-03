@@ -3,6 +3,8 @@ mod commands;
 mod domain;
 mod infra;
 
+use commands::auth::SessionState;
+use std::sync::Mutex;
 use tracing_subscriber::EnvFilter;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -18,9 +20,13 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
+        .manage(SessionState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             commands::system::ping,
             commands::system::app_version,
+            commands::auth::login,
+            commands::auth::logout,
+            commands::auth::current_user,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar Allin Kawsay");
