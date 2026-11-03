@@ -1,25 +1,32 @@
-# Dart/Flutter
-.dart_tool/
-.packages
-build/
-.flutter-plugins
-.flutter-plugins-dependencies
+# Node
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+.tauri/
 
 # IDE
-*.iml
 .idea/
 .vscode/
+*.iml
 
-# Logs
-*.log
+# Builds
+*.apk
+*.aab
+*.ipa
+*.dmg
+*.msi
+*.exe
 
-# Archivos sensibles — NUNCA subir al repo
+# Secrets
+.env
+.env.*
 *.keystore
 *.jks
 keystore.properties
-firebase/google-services.json
-.env
-.env.*
-key.properties
-*.p12
 *.pem
+*.p12
