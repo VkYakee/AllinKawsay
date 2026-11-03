@@ -4,6 +4,7 @@ mod domain;
 mod infra;
 
 use commands::auth::SessionState;
+use commands::canciones::CancionesState;
 use std::sync::Mutex;
 use tracing_subscriber::EnvFilter;
 
@@ -21,12 +22,16 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .manage(SessionState(Mutex::new(None)))
+        .manage(CancionesState::new())
         .invoke_handler(tauri::generate_handler![
             commands::system::ping,
             commands::system::app_version,
             commands::auth::login,
             commands::auth::logout,
             commands::auth::current_user,
+            commands::canciones::listar_canciones,
+            commands::canciones::obtener_cancion,
+            commands::canciones::incrementar_reproduccion,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar Allin Kawsay");
