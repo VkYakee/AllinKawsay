@@ -1,5 +1,6 @@
 /* src/app.css */
 @import "tailwindcss";
+@import "./lib/design/glass.css";
 
 @theme {
   --color-granate: #8B1A2B;
@@ -35,6 +36,8 @@ html, body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 input, textarea {
