@@ -2,6 +2,7 @@
 <script lang="ts">
   import BottomTabs from '../../components/ui/BottomTabs.svelte';
   import type { TabItem } from '../../components/ui/BottomTabs.svelte';
+  import MiniPlayer from '../../components/ui/MiniPlayer.svelte';
   import Icon from '../../components/ui/Icon.svelte';
   import InicioTab from './tabs/InicioTab.svelte';
 
@@ -39,6 +40,8 @@
       <p class="text-white/40 text-sm mt-2">Próximamente</p>
     </div>
   {/if}
+
+  <MiniPlayer />
 
   <BottomTabs
     {tabs}
