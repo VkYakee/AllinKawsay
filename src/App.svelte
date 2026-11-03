@@ -1,33 +1,102 @@
 <!-- src/App.svelte -->
 <script lang="ts">
-  let count = $state(0);
+  import {
+    GlassCard,
+    GlassButton,
+    GlassInput,
+    GlassChip,
+    GlassIconButton,
+    GlassAppBar,
+    Icon
+  } from './lib/components/ui';
+
+  let email = $state('');
+  let password = $state('');
+  let taps = $state(0);
+
+  const chips = ['Huayño', 'Carnaval', 'Qhapaq Qolla'];
+  let selectedChip = $state('Huayño');
 </script>
 
-<div class="app-background flex flex-col items-center justify-center p-6">
-  <!-- Logo flotante con glow -->
-  <div class="relative mb-8">
-    <div class="absolute inset-0 rounded-full bg-dorado blur-3xl opacity-40"></div>
-    <div class="glass glass-gold relative w-32 h-32 rounded-full flex items-center justify-center">
-      <span class="text-4xl font-black text-dorado tracking-tighter">AK</span>
-    </div>
-  </div>
-
-  <h1 class="text-3xl font-black text-dorado tracking-[0.4em]">ALLIN KAWSAY</h1>
-  <p class="text-white/40 mt-3 text-[10px] tracking-[0.4em] font-semibold">LIQUID GLASS · v3.0</p>
-
-  <div class="glass glass-strong mt-12 px-8 py-6 rounded-3xl w-full max-w-sm">
-    <p class="text-white/70 text-sm text-center leading-relaxed">
-      Esta tarjeta usa <span class="text-dorado font-bold">Liquid Glass</span> real:
-      blur, saturación, especularidad y bordes internos de luz.
-    </p>
-  </div>
-
-  <button
-    onclick={() => count++}
-    class="glass glass-granate glass-button mt-8 px-10 py-4 rounded-full text-dorado font-bold tracking-[0.2em]"
+<div class="app-background min-h-dvh pb-10">
+  <GlassAppBar
+    title="Allin Kawsay"
+    subtitle="LIQUID GLASS · v3.0"
   >
-    TOCAR · {count}
-  </button>
+    {#snippet actions()}
+      <GlassIconButton icon="bell" size="sm" />
+      <GlassIconButton icon="settings" size="sm" />
+    {/snippet}
+  </GlassAppBar>
 
-  <p class="mt-8 text-[10px] text-white/30 tracking-wider">Svelte 5 · Tailwind 4 · Tauri 2 · Rust</p>
+  <div class="px-5 py-6 space-y-5">
+    <GlassCard variant="granate" padding="xl">
+      <div class="flex items-center gap-4">
+        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-dorado to-dorado-dark flex items-center justify-center shadow-lg shadow-dorado/40">
+          <Icon name="piano" size={28} class="text-granate-dark" />
+        </div>
+        <div class="flex-1">
+          <p class="text-[10px] text-dorado/70 tracking-[0.2em] font-bold">INSTRUMENTO</p>
+          <p class="text-2xl font-black text-white tracking-tight">Zampoña</p>
+          <p class="text-xs text-white/50 mt-0.5">13 cañas · 2 filas</p>
+        </div>
+      </div>
+    </GlassCard>
+
+    <GlassCard variant="gold" padding="lg">
+      <p class="text-[10px] text-dorado tracking-[0.2em] font-bold mb-1">NUEVO</p>
+      <p class="text-lg font-bold text-white">Aprende tu primera canción</p>
+      <p class="text-xs text-white/50 mt-1">Modo ensayo guiado paso a paso</p>
+    </GlassCard>
+
+    <div class="flex flex-wrap gap-2">
+      {#each chips as chip}
+        <GlassChip
+          selected={selectedChip === chip}
+          variant="granate"
+          icon={selectedChip === chip ? 'check' : 'music'}
+          onTap={() => selectedChip = chip}
+        >
+          {chip}
+        </GlassChip>
+      {/each}
+    </div>
+
+    <GlassInput
+      bind:value={email}
+      label="Email"
+      placeholder="tu@email.com"
+      icon="mail"
+      type="email"
+    />
+
+    <GlassInput
+      bind:value={password}
+      label="Contraseña"
+      placeholder="••••••••"
+      icon="lock"
+      type="password"
+    />
+
+    <GlassButton
+      variant="primary"
+      fullWidth
+      icon="log-in"
+      onTap={() => taps++}
+    >
+      Ingresar
+    </GlassButton>
+
+    <GlassButton variant="secondary" fullWidth icon="google">
+      Continuar con Google
+    </GlassButton>
+
+    <div class="grid grid-cols-3 gap-2 pt-2">
+      <div class="flex justify-center"><GlassIconButton icon="home" variant="gold" size="lg" /></div>
+      <div class="flex justify-center"><GlassIconButton icon="heart" variant="granate" size="lg" /></div>
+      <div class="flex justify-center"><GlassIconButton icon="share" size="lg" /></div>
+    </div>
+
+    <p class="text-center text-xs text-white/30 pt-4">Taps en Ingresar: {taps}</p>
+  </div>
 </div>
