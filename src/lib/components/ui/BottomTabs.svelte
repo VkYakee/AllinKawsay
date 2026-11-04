@@ -22,14 +22,13 @@
 </script>
 
 <nav
-  class="fixed bottom-0 left-0 right-0 z-50 px-4 pb-5 pt-2 pointer-events-none"
-  style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));"
+  class="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pointer-events-none"
+  style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
 >
   <div
-    class="glass glass-strong rounded-full h-[70px] p-1.5 pointer-events-auto shadow-2xl shadow-black/60"
+    class="glass glass-strong rounded-full h-[68px] p-1.5 pointer-events-auto shadow-2xl shadow-black/70"
   >
     <div class="relative w-full h-full">
-      <!-- Indicador con spring -->
       <div
         class="absolute top-0 bottom-0 pointer-events-none"
         style="
@@ -43,7 +42,6 @@
         ></div>
       </div>
 
-      <!-- Botones -->
       <div class="relative flex h-full">
         {#each tabs as tab}
           {@const isActive = tab.id === active}
@@ -56,11 +54,11 @@
               <Icon
                 name={isActive ? tab.activeIcon : tab.icon}
                 size={22}
-                class={isActive ? 'text-dorado' : 'text-white/45'}
+                class={isActive ? 'text-dorado' : 'text-white/50'}
               />
               {#if tab.badge && tab.badge > 0}
                 <span
-                  class="absolute -top-1 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-[#0A0A0A]"
+                  class="absolute -top-1 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-[#12100F]"
                 >
                   {tab.badge > 9 ? '9+' : tab.badge}
                 </span>
@@ -69,7 +67,7 @@
             <span
               class="text-[9px] font-bold tracking-[0.12em] uppercase transition-colors {isActive
                 ? 'text-dorado'
-                : 'text-white/40'}"
+                : 'text-white/45'}"
             >
               {tab.label}
             </span>
