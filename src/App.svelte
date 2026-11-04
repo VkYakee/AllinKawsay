@@ -6,6 +6,7 @@
   import LoginScreen from './lib/features/auth/LoginScreen.svelte';
   import HomeScreen from './lib/features/home/HomeScreen.svelte';
   import CancionDetalle from './lib/features/cancionero/CancionDetalle.svelte';
+  import ZamponaScreen from './lib/features/zampona/ZamponaScreen.svelte';
 
   async function onSplashComplete() {
     await session.restore();
@@ -21,6 +22,8 @@
   <HomeScreen />
 {:else if router.current === 'cancion'}
   <CancionDetalle id={router.params.id as string} />
+{:else if router.current === 'zampona'}
+  <ZamponaScreen />
 {:else}
   <div class="app-background min-h-dvh flex items-center justify-center">
     <p class="text-white/40 text-sm tracking-wider">404</p>
