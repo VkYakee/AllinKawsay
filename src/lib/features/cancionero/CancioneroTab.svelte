@@ -1,12 +1,11 @@
 <!-- src/lib/features/cancionero/CancioneroTab.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import GlassCard from '../../components/ui/GlassCard.svelte';
   import GlassChip from '../../components/ui/GlassChip.svelte';
-  import GlassIconButton from '../../components/ui/GlassIconButton.svelte';
   import Icon from '../../components/ui/Icon.svelte';
   import CancionCard from './CancionCard.svelte';
   import { canciones } from '../../stores/canciones.svelte';
+  import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
 
   let query = $state('');
@@ -36,23 +35,29 @@
 </script>
 
 <div class="px-5 py-6 pb-40 space-y-4">
-  <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <p class="text-[11px] text-dorado/60 tracking-[0.25em] font-bold uppercase">
-        Biblioteca
-      </p>
-      <h2 class="text-3xl font-black text-white tracking-tight mt-1">
-        Cancionero
-      </h2>
+      <p class="text-[11px] text-dorado/60 tracking-[0.25em] font-bold uppercase">Biblioteca</p>
+      <h2 class="text-3xl font-black text-white tracking-tight mt-1">Cancionero</h2>
     </div>
-    <GlassIconButton icon="filter" variant="gold" />
+    {#if session.isAdmin}
+      <button
+        type="button"
+        onclick={() => router.go('agregar-cancion')}
+        class="w-11 h-11 rounded-full bg-gradient-to-br from-dorado to-dorado-dark flex items-center justify-center shadow-lg shadow-dorado/40 active:scale-90 transition-transform"
+      >
+        <Icon name="plus" size={22} class="text-granate-dark" />
+      </button>
+    {:else}
+      <div class="glass w-11 h-11 rounded-full flex items-center justify-center">
+        <Icon name="filter" size={18} class="text-dorado" />
+      </div>
+    {/if}
   </div>
 
-  <!-- Buscador -->
-  <div class="glass rounded-2xl border border-white/10 focus-within:border-dorado/50 transition-colors">
+  <div class="glass rounded-2xl border border-white/10 focus-within:border-dorado/60 transition-colors">
     <div class="flex items-center gap-2 px-4 h-14">
-      <Icon name="search" size={18} class="text-dorado/60" />
+      <Icon name="search" size={18} class="text-dorado/70" />
       <input
         bind:value={query}
         type="text"
@@ -62,8 +67,8 @@
       {#if query}
         <button
           type="button"
-          onclick={() => query = ''}
-          class="text-white/40 active:scale-90 transition-transform"
+          onclick={() => (query = '')}
+          class="text-white/50 active:scale-90 transition-transform"
         >
           <Icon name="x" size={16} />
         </button>
@@ -71,7 +76,6 @@
     </div>
   </div>
 
-  <!-- Filtros por ritmo -->
   {#if canciones.ritmos.length > 0}
     <div class="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 scrollbar-hide">
       <GlassChip
@@ -93,11 +97,9 @@
     </div>
   {/if}
 
-  <!-- Contador -->
   <div class="flex items-center justify-between px-1">
     <p class="text-[10px] text-white/40 tracking-[0.2em] font-semibold uppercase">
-      {filtradas.length}
-      {filtradas.length === 1 ? 'canción' : 'canciones'}
+      {filtradas.length} {filtradas.length === 1 ? 'canción' : 'canciones'}
     </p>
     {#if ritmoActivo}
       <button
@@ -110,23 +112,26 @@
     {/if}
   </div>
 
-  <!-- Lista -->
-  {#if canciones.loading}
+  {#if canciones.loading && !canciones.loaded}
     <div class="space-y-2">
       {#each Array(4) as _}
         <div class="glass rounded-2xl h-[84px] animate-pulse"></div>
       {/each}
     </div>
   {:else if filtradas.length === 0}
-    <GlassCard padding="xl">
-      <div class="flex flex-col items-center text-center py-6">
-        <div class="w-16 h-16 rounded-full bg-dorado/10 flex items-center justify-center mb-3">
-          <Icon name="search" size={26} class="text-dorado/60" />
-        </div>
-        <p class="text-base font-bold text-white">Sin resultados</p>
-        <p class="text-xs text-white/50 mt-1">Prueba con otro término</p>
+    <div class="glass rounded-2xl p-8 flex flex-col items-center text-center">
+      <div class="w-16 h-16 rounded-full bg-dorado/15 flex items-center justify-center mb-3">
+        <Icon name="search" size={26} class="text-dorado/60" />
       </div>
-    </GlassCard>
+      <p class="text-base font-bold text-white">
+        {canciones.all.length === 0 ? 'Cancionero vacío' : 'Sin resultados'}
+      </p>
+      <p class="text-xs text-white/50 mt-1">
+        {canciones.all.length === 0
+          ? session.isAdmin ? 'Toca + para agregar la primera' : 'Aún no hay canciones'
+          : 'Prueba con otro término'}
+      </p>
+    </div>
   {:else}
     <div class="space-y-2">
       {#each filtradas as cancion (cancion.id)}
