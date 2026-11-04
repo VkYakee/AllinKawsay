@@ -15,18 +15,33 @@
     lugar: 'Plaza de Armas, Juliaca'
   };
 
-  const ultimasCanciones = [
+  let ultimas = $state([
     { id: 'c1', titulo: 'Adiós Conima', autor: 'Anónimo', ritmo: 'Huayño' },
     { id: 'c2', titulo: 'Aguila Negra', autor: 'Anónimo', ritmo: 'Huayño' },
     { id: 'c3', titulo: 'Fiesta de mi Pueblo', autor: 'Anónimo', ritmo: 'Carnaval' }
-  ];
+  ]);
 
-  function tocarCancion(c: (typeof ultimasCanciones)[number]) {
+  async function cargar() {
+    if (canciones.all.length === 0) await canciones.cargar();
+    if (canciones.all.length > 0) {
+      ultimas = canciones.all.slice(0, 3).map((c) => ({
+        id: c.id,
+        titulo: c.titulo,
+        autor: c.autor,
+        ritmo: c.ritmo
+      }));
+    }
+  }
+  cargar();
+
+  async function tocarCancion(c: (typeof ultimas)[number]) {
+    const full = canciones.buscar(c.id);
     player.play({
       id: c.id,
       titulo: c.titulo,
       autor: c.autor,
-      imagenUrl: ''
+      imagenUrl: full?.imagen_url ?? '',
+      audioUrl: full?.audio_url ?? ''
     });
   }
 
@@ -99,7 +114,7 @@
       </button>
     </div>
 
-    {#each ultimasCanciones as cancion}
+    {#each ultimas as cancion}
       <GlassCard padding="md" onTap={() => tocarCancion(cancion)}>
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-granate to-granate-dark flex items-center justify-center shadow-md shadow-granate/30">
