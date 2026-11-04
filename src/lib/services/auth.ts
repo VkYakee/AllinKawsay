@@ -3,9 +3,14 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  updateProfile,
   type User as FirebaseUser
 } from 'firebase/auth';
-import { getFirebaseAuth } from '../config/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirebaseAuth, getFirebaseDb } from '../config/firebase';
 import { getDocById } from './firestore';
 
 export interface AuthUser {
@@ -15,6 +20,7 @@ export interface AuthUser {
   rol: 'publico' | 'miembro' | 'admin' | 'dev';
   foto_url: string;
   baneado: boolean;
+  email_verified: boolean;
 }
 
 interface UsuarioFirestore {
@@ -25,14 +31,20 @@ interface UsuarioFirestore {
   baneado?: boolean;
 }
 
-function mapUsuario(uid: string, data: UsuarioFirestore, emailAuth: string): AuthUser {
+function mapUsuario(
+  uid: string,
+  data: UsuarioFirestore,
+  emailAuth: string,
+  emailVerified: boolean
+): AuthUser {
   return {
     uid,
     nombre: data.nombre ?? emailAuth.split('@')[0] ?? 'Usuario',
     email: data.email ?? emailAuth,
     rol: (data.rol as AuthUser['rol']) ?? 'publico',
     foto_url: data.fotoUrl ?? '',
-    baneado: data.baneado === true
+    baneado: data.baneado === true,
+    email_verified: emailVerified
   };
 }
 
@@ -44,18 +56,18 @@ async function cargarUsuarioFirestore(user: FirebaseUser): Promise<AuthUser> {
   );
 
   if (!data) {
-    // Primera vez que entra: crea doc mínimo si permitido por reglas.
     return {
       uid: user.uid,
       nombre: user.displayName ?? user.email?.split('@')[0] ?? 'Usuario',
       email: user.email ?? '',
       rol: 'publico',
       foto_url: user.photoURL ?? '',
-      baneado: false
+      baneado: false,
+      email_verified: user.emailVerified
     };
   }
 
-  return mapUsuario(user.uid, data, user.email ?? '');
+  return mapUsuario(user.uid, data, user.email ?? '', user.emailVerified);
 }
 
 export const authService = {
@@ -63,6 +75,72 @@ export const authService = {
     const auth = getFirebaseAuth();
     const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
     return cargarUsuarioFirestore(cred.user);
+  },
+
+  async registrar(
+    email: string,
+    password: string,
+    nombre: string
+  ): Promise<AuthUser> {
+    const auth = getFirebaseAuth();
+    const cred = await createUserWithEmailAndPassword(
+      auth,
+      email.trim(),
+      password
+    );
+
+    await updateProfile(cred.user, { displayName: nombre });
+
+    // Crear documento en Firestore
+    const db = getFirebaseDb();
+    await setDoc(doc(db, 'usuarios', cred.user.uid), {
+      nombre: nombre.trim(),
+      email: email.trim(),
+      rol: 'publico',
+      fotoUrl: '',
+      baneado: false,
+      favoritos: [],
+      notasPorCancion: {},
+      notasPorEvento: {},
+      notasPorRecuerdo: {},
+      fechaRegistro: serverTimestamp()
+    });
+
+    // Enviar email de verificación (usa el SMTP de Resend que configuraste
+    // o el genérico de Firebase)
+    try {
+      await sendEmailVerification(cred.user);
+    } catch (e) {
+      console.warn('No se pudo enviar verificación:', e);
+    }
+
+    return {
+      uid: cred.user.uid,
+      nombre: nombre.trim(),
+      email: email.trim(),
+      rol: 'publico',
+      foto_url: '',
+      baneado: false,
+      email_verified: false
+    };
+  },
+
+  async reenviarVerificacion(): Promise<void> {
+    const auth = getFirebaseAuth();
+    if (!auth.currentUser) throw new Error('No hay sesión activa');
+    await sendEmailVerification(auth.currentUser);
+  },
+
+  async recargarUsuario(): Promise<boolean> {
+    const auth = getFirebaseAuth();
+    if (!auth.currentUser) return false;
+    await auth.currentUser.reload();
+    return auth.currentUser.emailVerified;
+  },
+
+  async resetPassword(email: string): Promise<void> {
+    const auth = getFirebaseAuth();
+    await sendPasswordResetEmail(auth, email.trim());
   },
 
   async logout(): Promise<void> {
@@ -92,3 +170,30 @@ export const authService = {
     return onAuthStateChanged(getFirebaseAuth(), cb);
   }
 };
+
+export function traducirErrorAuth(e: unknown): string {
+  const code =
+    typeof e === 'object' && e !== null && 'code' in e
+      ? String((e as { code: unknown }).code)
+      : '';
+
+  switch (code) {
+    case 'auth/invalid-email':
+      return 'El email no es válido';
+    case 'auth/user-not-found':
+      return 'No existe una cuenta con ese email';
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Email o contraseña incorrectos';
+    case 'auth/email-already-in-use':
+      return 'Ese email ya está registrado';
+    case 'auth/weak-password':
+      return 'La contraseña debe tener al menos 6 caracteres';
+    case 'auth/too-many-requests':
+      return 'Demasiados intentos. Espera unos minutos';
+    case 'auth/network-request-failed':
+      return 'Sin conexión a internet';
+    default:
+      return 'Error al autenticar. Intenta de nuevo';
+  }
+}
