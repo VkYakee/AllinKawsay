@@ -1,6 +1,8 @@
 <!-- src/lib/features/eventos/EventoDetalle.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import L from 'leaflet';
+  import 'leaflet/dist/leaflet.css';
   import GlassCard from '../../components/ui/GlassCard.svelte';
   import GlassButton from '../../components/ui/GlassButton.svelte';
   import GlassIconButton from '../../components/ui/GlassIconButton.svelte';
@@ -12,6 +14,7 @@
     esFuturo,
     type Evento
   } from '../../services/eventos';
+  import { obtenerClima, type Clima } from '../../services/clima';
   import { eventos } from '../../stores/eventos.svelte';
   import { router } from '../../stores/router.svelte';
 
@@ -23,11 +26,46 @@
 
   let evento = $state<Evento | null>(null);
   let loading = $state(true);
+  let clima = $state<Clima | null>(null);
+
+  let mapEl: HTMLDivElement | undefined = $state(undefined);
+  let map: L.Map | null = null;
 
   onMount(async () => {
     evento = eventos.buscar(id) ?? (await eventosService.obtener(id));
     loading = false;
+
+    if (evento && evento.lat !== null && evento.lng !== null) {
+      setTimeout(() => initMap(evento!.lat!, evento!.lng!), 60);
+      obtenerClima(evento.lat, evento.lng).then((c) => (clima = c));
+    }
   });
+
+  onDestroy(() => {
+    map?.remove();
+  });
+
+  function initMap(lat: number, lng: number) {
+    if (!mapEl || map) return;
+    map = L.map(mapEl, {
+      center: [lat, lng],
+      zoom: 15,
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      touchZoom: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false
+    });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="width:36px;height:36px;background:#8B1A2B;border:3px solid #F5D061;border-radius:50%;box-shadow:0 4px 20px rgba(0,0,0,0.6);"></div>',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18]
+    });
+    L.marker([lat, lng], { icon }).addTo(map);
+  }
 
   const futuro = $derived(evento ? esFuturo(evento.fecha) : false);
   const tieneMapa = $derived(evento?.lat != null && evento?.lng != null);
@@ -40,18 +78,15 @@
 </script>
 
 <div class="app-background min-h-dvh">
-  <header class="sticky top-0 z-30 px-5 pt-3 pb-3 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/5">
+  <header class="sticky top-0 z-30 px-5 pt-3 pb-3 bg-[#12100F]/85 backdrop-blur-xl border-b border-white/5">
     <div class="flex items-center gap-3">
       <GlassIconButton icon="chevron-left" onTap={() => router.back()} />
       <div class="flex-1 min-w-0">
-        <p class="text-[10px] text-dorado/60 tracking-[0.25em] font-bold uppercase">
-          Evento
-        </p>
+        <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">Evento</p>
         <p class="text-sm font-bold text-white truncate mt-0.5">
           {evento?.titulo ?? '...'}
         </p>
       </div>
-      <GlassIconButton icon="share" size="sm" />
     </div>
   </header>
 
@@ -67,10 +102,9 @@
     </div>
   {:else}
     <div class="px-5 py-6 space-y-5 pb-40">
-      <!-- Hero -->
       <GlassCard variant={futuro ? 'granate' : 'default'} padding="xl">
         <div class="flex items-center gap-2 mb-3">
-          <div class="w-7 h-7 rounded-full bg-dorado/20 flex items-center justify-center">
+          <div class="w-7 h-7 rounded-full bg-dorado/25 flex items-center justify-center">
             <Icon name={futuro ? 'calendar' : 'clock'} size={14} class="text-dorado" />
           </div>
           <p class="text-[10px] text-dorado tracking-[0.25em] font-bold uppercase">
@@ -85,23 +119,27 @@
         <div class="mt-4 space-y-2">
           <div class="flex items-center gap-2">
             <Icon name="calendar" size={14} class="text-dorado/80 shrink-0" />
-            <span class="text-sm text-white/80 font-medium">
-              {fechaLarga(evento.fecha)}
-            </span>
+            <span class="text-sm text-white/80 font-medium">{fechaLarga(evento.fecha)}</span>
           </div>
           <div class="flex items-center gap-2">
             <Icon name="clock" size={14} class="text-dorado/80 shrink-0" />
-            <span class="text-sm text-white/80 font-medium">
-              {hora(evento.fecha)}
-            </span>
+            <span class="text-sm text-white/80 font-medium">{hora(evento.fecha)}</span>
           </div>
           <div class="flex items-center gap-2">
             <Icon name="map-pin" size={14} class="text-dorado/80 shrink-0" />
-            <span class="text-sm text-white/80 font-medium">
-              {evento.lugar}
-            </span>
+            <span class="text-sm text-white/80 font-medium">{evento.lugar}</span>
           </div>
         </div>
+
+        {#if clima}
+          <div class="mt-4 glass rounded-2xl px-3 py-2 flex items-center gap-2 border border-white/10">
+            <span class="text-2xl leading-none">{clima.icono}</span>
+            <div class="flex-1">
+              <p class="text-[11px] text-white/50 uppercase tracking-wider font-bold">Clima actual</p>
+              <p class="text-sm text-white font-bold">{clima.temp}°C · {clima.descripcion}</p>
+            </div>
+          </div>
+        {/if}
       </GlassCard>
 
       {#if evento.descripcion}
@@ -121,52 +159,15 @@
             <h3 class="text-[10px] font-bold text-dorado/70 tracking-[0.25em] uppercase">
               Ubicación
             </h3>
-            <span class="text-[10px] text-white/40 font-mono">
+            <span class="text-[10px] text-white/40 font-mono tabular-nums">
               {evento.lat?.toFixed(4)}, {evento.lng?.toFixed(4)}
             </span>
           </div>
 
-          <!-- Mini-mapa decorativo con pin animado -->
-          <div class="relative w-full h-[180px] rounded-2xl overflow-hidden bg-[#0F0F0F] border border-white/5">
-            <svg viewBox="0 0 400 200" class="absolute inset-0 w-full h-full">
-              <!-- Grid de calles -->
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
-                </pattern>
-              </defs>
-              <rect width="400" height="200" fill="url(#grid)" />
-              <!-- Avenidas principales -->
-              <path d="M 0 80 L 400 80" stroke="rgba(245,208,97,0.15)" stroke-width="6" />
-              <path d="M 180 0 L 180 200" stroke="rgba(245,208,97,0.15)" stroke-width="6" />
-              <path d="M 0 140 Q 200 120 400 160" stroke="rgba(245,208,97,0.10)" stroke-width="4" fill="none" />
-
-              <!-- Pin -->
-              <g transform="translate(200, 100)">
-                <circle r="30" fill="rgba(245, 208, 97, 0.12)">
-                  <animate attributeName="r" values="20;36;20" dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite" />
-                </circle>
-                <circle r="18" fill="rgba(139, 26, 43, 0.4)" />
-                <circle r="12" fill="#8B1A2B" stroke="#F5D061" stroke-width="2" />
-                <circle cx="-4" cy="-4" r="3" fill="rgba(255,255,255,0.5)" />
-              </g>
-            </svg>
-
-            <!-- Overlay de coordenadas -->
-            <div class="absolute bottom-3 left-3 glass rounded-xl px-3 py-1.5 flex items-center gap-1.5">
-              <Icon name="map-pin" size={11} class="text-dorado" />
-              <span class="text-[10px] text-white/80 font-semibold">Ubicación exacta</span>
-            </div>
-          </div>
+          <div bind:this={mapEl} class="relative w-full h-[200px] rounded-2xl overflow-hidden border border-white/5 bg-[#171412]"></div>
 
           <div class="mt-3">
-            <GlassButton
-              variant="primary"
-              fullWidth
-              icon="external-link"
-              onTap={abrirMaps}
-            >
+            <GlassButton variant="primary" fullWidth icon="external-link" onTap={abrirMaps}>
               Cómo llegar
             </GlassButton>
           </div>
@@ -175,11 +176,11 @@
 
       <GlassCard padding="lg">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-dorado/15 flex items-center justify-center shrink-0">
+          <div class="w-10 h-10 rounded-full bg-dorado/20 flex items-center justify-center shrink-0">
             <Icon name="user" size={18} class="text-dorado" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-[10px] text-dorado/60 tracking-[0.2em] font-bold uppercase">
+            <p class="text-[10px] text-dorado/70 tracking-[0.2em] font-bold uppercase">
               Organizado por
             </p>
             <p class="text-sm font-bold text-white truncate mt-0.5">
