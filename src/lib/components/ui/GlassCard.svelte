@@ -32,13 +32,18 @@
     lg: 'p-5',
     xl: 'p-6'
   };
+
+  const baseClass = $derived(
+    `glass ${variantClass[variant]} ${paddingClass[padding]} rounded-3xl ${onTap ? 'glass-button text-left w-full' : ''} ${className}`
+  );
 </script>
 
-<div
-  class="glass {variantClass[variant]} {paddingClass[padding]} rounded-3xl {onTap ? 'glass-button' : ''} {className}"
-  onclick={onTap}
-  role={onTap ? 'button' : undefined}
-  tabindex={onTap ? 0 : undefined}
->
-  {@render children()}
-</div>
+{#if onTap}
+  <button type="button" onclick={onTap} class={baseClass}>
+    {@render children()}
+  </button>
+{:else}
+  <div class={baseClass}>
+    {@render children()}
+  </div>
+{/if}
