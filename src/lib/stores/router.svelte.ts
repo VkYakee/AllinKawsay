@@ -3,6 +3,9 @@
 export type Route =
   | 'splash'
   | 'login'
+  | 'registro'
+  | 'recuperar'
+  | 'verificacion'
   | 'home'
   | 'cancion'
   | 'zampona'
