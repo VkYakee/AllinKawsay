@@ -1,6 +1,13 @@
 // src/lib/services/recuerdos.ts
-import { Timestamp } from 'firebase/firestore';
-import { getCol, streamCol, getDocById, type FirestoreData } from './firestore';
+import { Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { getFirebaseDb } from '../config/firebase';
+import {
+  getCol,
+  streamCol,
+  getDocById,
+  addDocument,
+  type FirestoreData
+} from './firestore';
 
 export interface Recuerdo {
   id: string;
@@ -11,6 +18,14 @@ export interface Recuerdo {
   fecha: string;
   creado_por: string;
   creador_nombre: string;
+}
+
+export interface RecuerdoInput {
+  titulo: string;
+  descripcion: string;
+  fotos: string[];
+  videos: string[];
+  fecha: Date;
 }
 
 function timestampToIso(ts: unknown): string {
@@ -47,14 +62,47 @@ export const recuerdosService = {
     onData: (items: Recuerdo[]) => void,
     onError: (err: Error) => void
   ): () => void {
-    return streamCol('recuerdos', mapRecuerdo, (items) => {
-      items.sort((a, b) => b.fecha.localeCompare(a.fecha));
-      onData(items);
-    }, onError);
+    return streamCol(
+      'recuerdos',
+      mapRecuerdo,
+      (items) => {
+        items.sort((a, b) => b.fecha.localeCompare(a.fecha));
+        onData(items);
+      },
+      onError
+    );
   },
 
   async obtener(id: string): Promise<Recuerdo | null> {
     return getDocById('recuerdos', id, mapRecuerdo);
+  },
+
+  async crear(input: RecuerdoInput, autorUid: string, autorNombre: string): Promise<string> {
+    return addDocument('recuerdos', {
+      titulo: input.titulo.trim(),
+      descripcion: input.descripcion.trim(),
+      fotos: input.fotos,
+      videos: input.videos,
+      fecha: Timestamp.fromDate(input.fecha),
+      creadoPor: autorUid,
+      creadorNombre: autorNombre,
+      fechaCreacion: Timestamp.now()
+    });
+  },
+
+  async actualizar(id: string, input: RecuerdoInput): Promise<void> {
+    await updateDoc(doc(getFirebaseDb(), 'recuerdos', id), {
+      titulo: input.titulo.trim(),
+      descripcion: input.descripcion.trim(),
+      fotos: input.fotos,
+      videos: input.videos,
+      fecha: Timestamp.fromDate(input.fecha),
+      fechaEdicion: Timestamp.now()
+    });
+  },
+
+  async eliminar(id: string): Promise<void> {
+    await deleteDoc(doc(getFirebaseDb(), 'recuerdos', id));
   }
 };
 
