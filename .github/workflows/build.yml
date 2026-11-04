@@ -25,7 +25,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -56,7 +55,21 @@ jobs:
         run: echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
 
       - name: Install JS deps
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "🔒 Lockfile encontrado → npm ci"
+            npm ci
+          else
+            echo "📦 Sin lockfile → npm install (genera node_modules)"
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Generate app icons
+        run: |
+          set -e
+          mkdir -p src-tauri/icons
+          echo "🎨 Generando iconos desde assets/logo.png"
+          npm run tauri icon assets/logo.png
 
       - name: Init Tauri Android
         run: npm run tauri android init
