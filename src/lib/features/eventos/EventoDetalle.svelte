@@ -16,6 +16,7 @@
   } from '../../services/eventos';
   import { obtenerClima, type Clima } from '../../services/clima';
   import { notasService } from '../../services/notas';
+  import { actividadService } from '../../services/actividad';
   import { eventos } from '../../stores/eventos.svelte';
   import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
@@ -43,7 +44,6 @@
   onMount(async () => {
     evento = eventos.buscar(id) ?? (await eventosService.obtener(id));
     loading = false;
-
     if (evento && evento.lat !== null && evento.lng !== null) {
       setTimeout(() => initMap(evento!.lat!, evento!.lng!), 60);
       obtenerClima(evento.lat, evento.lng).then((c) => (clima = c));
@@ -92,6 +92,24 @@
       notaEditando = false;
     } catch {}
   }
+
+  async function eliminar() {
+    if (!evento) return;
+    if (!confirm(`¿Eliminar "${evento.titulo}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await eventosService.eliminar(evento.id);
+      await actividadService.registrar(
+        'eliminar_evento',
+        `Eliminó el evento "${evento.titulo}"`,
+        session.user?.uid ?? '',
+        session.displayName
+      );
+      eventos.refrescar();
+      router.back();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al eliminar');
+    }
+  }
 </script>
 
 <div class="app-background min-h-dvh">
@@ -102,6 +120,10 @@
         <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">Evento</p>
         <p class="text-sm font-bold text-white truncate mt-0.5">{evento?.titulo ?? '...'}</p>
       </div>
+      {#if session.isAdmin && evento}
+        <GlassIconButton icon="edit" size="sm" onTap={() => router.go('editar-evento', { id: evento!.id })} />
+        <GlassIconButton icon="trash" size="sm" onTap={eliminar} />
+      {/if}
     </div>
   </header>
 
@@ -175,7 +197,6 @@
         </GlassCard>
       {/if}
 
-      <!-- Nota personal -->
       {#if session.user}
         <div class="space-y-2">
           <div class="flex items-center gap-2 px-1">
