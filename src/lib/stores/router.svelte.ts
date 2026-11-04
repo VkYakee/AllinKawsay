@@ -9,7 +9,13 @@ export type Route =
   | 'ensayo'
   | 'evento'
   | 'recuerdo'
-  | 'admin';
+  | 'admin'
+  | 'agregar-evento'
+  | 'editar-evento'
+  | 'agregar-cancion'
+  | 'editar-cancion'
+  | 'agregar-recuerdo'
+  | 'editar-recuerdo';
 
 type Snapshot = { route: Route; params: Record<string, unknown> };
 
