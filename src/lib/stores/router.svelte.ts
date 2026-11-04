@@ -27,7 +27,9 @@ export type Route =
   | 'gestion-usuarios'
   | 'gestion-categorias'
   | 'actividad'
-  | 'exportar-respaldo';
+  | 'exportar-respaldo'
+  | 'modo-presentacion'
+  | 'gestion-cache';
 
 type Snapshot = { route: Route; params: Record<string, unknown> };
 
