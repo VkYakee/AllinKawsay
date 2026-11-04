@@ -5,6 +5,9 @@ class CancionesStore {
   all = $state<Cancion[]>([]);
   loading = $state(false);
   loaded = $state(false);
+  error = $state<string | null>(null);
+
+  private unsubscribe: (() => void) | null = null;
 
   get ritmos(): string[] {
     const set = new Set<string>();
@@ -14,24 +17,36 @@ class CancionesStore {
     return Array.from(set).sort();
   }
 
-  async cargar() {
-    if (this.loading || this.loaded) return;
+  cargar() {
+    if (this.loaded || this.loading) return;
     this.loading = true;
-    try {
-      this.all = await cancionesService.listar();
-      this.loaded = true;
-    } finally {
-      this.loading = false;
-    }
+    this.error = null;
+    this.unsubscribe = cancionesService.stream(
+      (items) => {
+        this.all = items;
+        this.loaded = true;
+        this.loading = false;
+      },
+      (err) => {
+        this.error = err.message;
+        this.loading = false;
+      }
+    );
   }
 
   buscar(id: string): Cancion | undefined {
     return this.all.find((c) => c.id === id);
   }
 
-  async refrescar() {
+  refrescar() {
+    this.detener();
     this.loaded = false;
-    await this.cargar();
+    this.cargar();
+  }
+
+  detener() {
+    this.unsubscribe?.();
+    this.unsubscribe = null;
   }
 }
 
