@@ -22,6 +22,10 @@
   import AgregarEvento from './lib/features/admin/AgregarEvento.svelte';
   import AgregarCancion from './lib/features/admin/AgregarCancion.svelte';
   import AgregarRecuerdo from './lib/features/admin/AgregarRecuerdo.svelte';
+  import GestionUsuarios from './lib/features/admin/GestionUsuarios.svelte';
+  import GestionCategorias from './lib/features/admin/GestionCategorias.svelte';
+  import ActividadScreen from './lib/features/admin/ActividadScreen.svelte';
+  import ExportarRespaldo from './lib/features/admin/ExportarRespaldo.svelte';
   import BusquedaScreen from './lib/features/busqueda/BusquedaScreen.svelte';
   import HistoriaScreen from './lib/features/historia/HistoriaScreen.svelte';
   import EditarHistoriaScreen from './lib/features/historia/EditarHistoriaScreen.svelte';
@@ -111,6 +115,14 @@
   <EditarHistoriaScreen />
 {:else if router.current === 'compartir-app'}
   <CompartirAppScreen />
+{:else if router.current === 'gestion-usuarios'}
+  <GestionUsuarios />
+{:else if router.current === 'gestion-categorias'}
+  <GestionCategorias />
+{:else if router.current === 'actividad'}
+  <ActividadScreen />
+{:else if router.current === 'exportar-respaldo'}
+  <ExportarRespaldo />
 {:else}
   <div class="app-background min-h-dvh flex items-center justify-center">
     <p class="text-white/40 text-sm tracking-wider">404</p>
