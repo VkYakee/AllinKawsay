@@ -5,20 +5,40 @@ class RecuerdosStore {
   all = $state<Recuerdo[]>([]);
   loading = $state(false);
   loaded = $state(false);
+  error = $state<string | null>(null);
 
-  async cargar() {
-    if (this.loading || this.loaded) return;
+  private unsubscribe: (() => void) | null = null;
+
+  cargar() {
+    if (this.loaded || this.loading) return;
     this.loading = true;
-    try {
-      this.all = await recuerdosService.listar();
-      this.loaded = true;
-    } finally {
-      this.loading = false;
-    }
+    this.error = null;
+    this.unsubscribe = recuerdosService.stream(
+      (items) => {
+        this.all = items;
+        this.loaded = true;
+        this.loading = false;
+      },
+      (err) => {
+        this.error = err.message;
+        this.loading = false;
+      }
+    );
   }
 
   buscar(id: string): Recuerdo | undefined {
     return this.all.find((r) => r.id === id);
+  }
+
+  refrescar() {
+    this.detener();
+    this.loaded = false;
+    this.cargar();
+  }
+
+  detener() {
+    this.unsubscribe?.();
+    this.unsubscribe = null;
   }
 }
 
