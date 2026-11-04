@@ -18,10 +18,17 @@
 
   let { id }: Props = $props();
 
-  onMount(async () => {
-    await zampona.cargar();
-    await canciones.cargar();
-    await ensayo.preparar(id);
+  onMount(() => {
+    zampona.cargar();
+    canciones.cargar();
+  });
+
+  // Cuando las canciones estén listas, prepara el ensayo
+  $effect(() => {
+    const c = canciones.buscar(id);
+    if (c && !ensayo.preparado && !ensayo.cargando) {
+      ensayo.preparar(c.estrofas);
+    }
   });
 
   onDestroy(() => {
@@ -72,11 +79,19 @@
   </header>
 
   <div class="flex-1 flex flex-col px-4 gap-3 pb-6 overflow-y-auto">
-    {#if ensayo.cargando || !ensayo.preparado}
+    {#if canciones.loading && !cancion}
       <div class="flex-1 flex items-center justify-center">
         <div class="w-8 h-8 border-2 border-dorado/60 border-t-transparent rounded-full animate-spin"></div>
       </div>
-    {:else if ensayo.preparado.eventos.length === 0}
+    {:else if !cancion}
+      <div class="flex-1 flex flex-col items-center justify-center text-center px-6">
+        <div class="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-3">
+          <Icon name="alert-circle" size={26} class="text-red-400/70" />
+        </div>
+        <p class="text-base font-bold text-white">Canción no encontrada</p>
+        <p class="text-xs text-white/50 mt-1">Puede que se haya eliminado</p>
+      </div>
+    {:else if !ensayo.preparado || ensayo.preparado.eventos.length === 0}
       <div class="flex-1 flex flex-col items-center justify-center text-center px-6">
         <div class="w-16 h-16 rounded-full bg-dorado/10 flex items-center justify-center mb-3">
           <Icon name="info" size={26} class="text-dorado/60" />
