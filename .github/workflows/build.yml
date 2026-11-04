@@ -102,38 +102,36 @@ jobs:
           EOF
 
           python3 <<'PYEOF'
-          import re, pathlib
+          import pathlib
 
           path = pathlib.Path('src-tauri/gen/android/app/build.gradle.kts')
           content = path.read_text()
 
-          # 1. Asegurar import de FileInputStream una sola vez.
+          # 1. Asegurar import de FileInputStream al inicio (una sola vez)
           if 'import java.io.FileInputStream' not in content:
               content = 'import java.io.FileInputStream\n' + content
 
-          # 2. Insertar variables DESPUÉS de la última línea import.
-          header = '''
+          # 2. Cargar keystoreProperties FUERA del bloque android,
+          #    justo antes de la línea "android {"
+          if 'val keystoreProperties' not in content:
+              header = '''
           val keystorePropertiesFile = rootProject.file("keystore.properties")
           val keystoreProperties = java.util.Properties().apply {
               if (keystorePropertiesFile.exists()) {
                   load(java.io.FileInputStream(keystorePropertiesFile))
               }
           }
+
           '''
+              idx = content.find('android {')
+              if idx == -1:
+                  raise SystemExit('No se encontró "android {" en build.gradle.kts')
+              content = content[:idx] + header + content[idx:]
 
-          lines = content.split('\n')
-          last_import = max(
-              (i for i, l in enumerate(lines) if l.strip().startswith('import ')),
-              default=-1
-          )
-          if last_import >= 0:
-              lines.insert(last_import + 1, header)
-              content = '\n'.join(lines)
-          else:
-              content = header + '\n' + content
-
-          # 3. Insertar signingConfigs antes de buildTypes.
-          signing = '''
+          # 3. Insertar signingConfigs JUSTO ANTES de "buildTypes {".
+          #    Usamos la indentación exacta (4 espacios, porque buildTypes está dentro de android).
+          if 'signingConfigs {' not in content:
+              signing = '''
               signingConfigs {
                   create("release") {
                       if (keystorePropertiesFile.exists()) {
@@ -145,27 +143,28 @@ jobs:
                   }
               }
           '''
+              marker = 'buildTypes {'
+              idx = content.find(marker)
+              if idx == -1:
+                  raise SystemExit('No se encontró "buildTypes {" en build.gradle.kts')
+              content = content[:idx] + signing + content[idx:]
 
-          if 'signingConfigs' not in content:
-              content = re.sub(
-                  r'(\n\s*buildTypes\s*\{)',
-                  signing + r'\1',
-                  content,
-                  count=1
-              )
-
-          # 4. Activar signing en release.
+          # 4. Activar signing dentro del bloque release
           if 'signingConfig = signingConfigs.getByName("release")' not in content:
-              content = re.sub(
-                  r'(getByName\("release"\)\s*\{)',
-                  r'\1\n                signingConfig = signingConfigs.getByName("release")',
-                  content,
-                  count=1
-              )
+              marker = 'getByName("release") {'
+              idx = content.find(marker)
+              if idx != -1:
+                  insert_at = idx + len(marker)
+                  content = (
+                      content[:insert_at]
+                      + '\n                signingConfig = signingConfigs.getByName("release")'
+                      + content[insert_at:]
+                  )
 
           path.write_text(content)
-          print('✅ build.gradle.kts parcheado')
-          print('\n'.join(content.splitlines()[:25]))
+          print('✅ build.gradle.kts parcheado correctamente')
+          print('--- Primeras 30 líneas ---')
+          print('\n'.join(content.splitlines()[:30]))
           PYEOF
 
       - name: Build APK
