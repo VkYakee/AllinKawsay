@@ -46,6 +46,7 @@ export interface CancionInput {
   video_url: string;
   letra: string;
   tags: string[];
+  estrofas: Estrofa[];
 }
 
 function mapColumna(raw: unknown): Columna {
@@ -145,7 +146,7 @@ export const cancionesService = {
         ? [{ titulo: '', texto: input.letra.trim() }]
         : [],
       tags: input.tags,
-      estrofas: [],
+      estrofas: input.estrofas,
       reproducciones: 0,
       creadoPor: autorUid,
       creadorNombre: autorNombre,
@@ -168,6 +169,7 @@ export const cancionesService = {
         ? [{ titulo: '', texto: input.letra.trim() }]
         : [],
       tags: input.tags,
+      estrofas: input.estrofas,
       fechaEdicion: Timestamp.now()
     });
   },
