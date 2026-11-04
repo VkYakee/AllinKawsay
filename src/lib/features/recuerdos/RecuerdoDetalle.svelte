@@ -8,6 +8,7 @@
   import Lightbox from './Lightbox.svelte';
   import { recuerdosService, fechaLarga, type Recuerdo } from '../../services/recuerdos';
   import { notasService } from '../../services/notas';
+  import { actividadService } from '../../services/actividad';
   import { recuerdos } from '../../stores/recuerdos.svelte';
   import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
@@ -47,6 +48,24 @@
       notaEditando = false;
     } catch {}
   }
+
+  async function eliminar() {
+    if (!recuerdo) return;
+    if (!confirm(`¿Eliminar "${recuerdo.titulo}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await recuerdosService.eliminar(recuerdo.id);
+      await actividadService.registrar(
+        'eliminar_recuerdo',
+        `Eliminó el recuerdo "${recuerdo.titulo}"`,
+        session.user?.uid ?? '',
+        session.displayName
+      );
+      recuerdos.refrescar();
+      router.back();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al eliminar');
+    }
+  }
 </script>
 
 <div class="app-background min-h-dvh">
@@ -57,6 +76,10 @@
         <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">Recuerdo</p>
         <p class="text-sm font-bold text-white truncate mt-0.5">{recuerdo?.titulo ?? '...'}</p>
       </div>
+      {#if session.isAdmin && recuerdo}
+        <GlassIconButton icon="edit" size="sm" onTap={() => router.go('editar-recuerdo', { id: recuerdo!.id })} />
+        <GlassIconButton icon="trash" size="sm" onTap={eliminar} />
+      {/if}
     </div>
   </header>
 
