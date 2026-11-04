@@ -15,7 +15,9 @@
     type Evento
   } from '../../services/eventos';
   import { obtenerClima, type Clima } from '../../services/clima';
+  import { notasService } from '../../services/notas';
   import { eventos } from '../../stores/eventos.svelte';
+  import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
 
   interface Props {
@@ -30,6 +32,13 @@
 
   let mapEl: HTMLDivElement | undefined = $state(undefined);
   let map: L.Map | null = null;
+
+  let notaEditando = $state(false);
+  let notaTexto = $state('');
+
+  const notaGuardada = $derived(
+    (session.user as any)?.notasPorEvento?.[id] ?? ''
+  );
 
   onMount(async () => {
     evento = eventos.buscar(id) ?? (await eventosService.obtener(id));
@@ -75,6 +84,14 @@
     const url = `https://www.google.com/maps/dir/?api=1&destination=${evento.lat},${evento.lng}`;
     window.open(url, '_blank');
   }
+
+  async function guardarNota() {
+    if (!session.user) return;
+    try {
+      await notasService.guardar(session.user.uid, 'evento', id, notaTexto);
+      notaEditando = false;
+    } catch {}
+  }
 </script>
 
 <div class="app-background min-h-dvh">
@@ -83,9 +100,7 @@
       <GlassIconButton icon="chevron-left" onTap={() => router.back()} />
       <div class="flex-1 min-w-0">
         <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">Evento</p>
-        <p class="text-sm font-bold text-white truncate mt-0.5">
-          {evento?.titulo ?? '...'}
-        </p>
+        <p class="text-sm font-bold text-white truncate mt-0.5">{evento?.titulo ?? '...'}</p>
       </div>
     </div>
   </header>
@@ -101,7 +116,7 @@
       <p class="text-white/60 mt-4">Evento no encontrado</p>
     </div>
   {:else}
-    <div class="px-5 py-6 space-y-5 pb-40">
+    <div class="px-5 py-6 space-y-4 pb-40">
       <GlassCard variant={futuro ? 'granate' : 'default'} padding="xl">
         <div class="flex items-center gap-2 mb-3">
           <div class="w-7 h-7 rounded-full bg-dorado/25 flex items-center justify-center">
@@ -111,11 +126,7 @@
             {futuro ? 'Próximo evento' : 'Evento pasado'}
           </p>
         </div>
-
-        <h1 class="text-2xl font-black text-white tracking-tight leading-tight">
-          {evento.titulo}
-        </h1>
-
+        <h1 class="text-2xl font-black text-white tracking-tight leading-tight">{evento.titulo}</h1>
         <div class="mt-4 space-y-2">
           <div class="flex items-center gap-2">
             <Icon name="calendar" size={14} class="text-dorado/80 shrink-0" />
@@ -144,34 +155,61 @@
 
       {#if evento.descripcion}
         <GlassCard padding="xl">
-          <h3 class="text-[10px] font-bold text-dorado/70 tracking-[0.25em] uppercase mb-3">
-            Descripción
-          </h3>
-          <p class="text-sm text-white/80 leading-relaxed whitespace-pre-line">
-            {evento.descripcion}
-          </p>
+          <h3 class="text-[10px] font-bold text-dorado/70 tracking-[0.25em] uppercase mb-3">Descripción</h3>
+          <p class="text-sm text-white/80 leading-relaxed whitespace-pre-line">{evento.descripcion}</p>
         </GlassCard>
       {/if}
 
       {#if tieneMapa}
         <GlassCard padding="lg">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="text-[10px] font-bold text-dorado/70 tracking-[0.25em] uppercase">
-              Ubicación
-            </h3>
+            <h3 class="text-[10px] font-bold text-dorado/70 tracking-[0.25em] uppercase">Ubicación</h3>
             <span class="text-[10px] text-white/40 font-mono tabular-nums">
               {evento.lat?.toFixed(4)}, {evento.lng?.toFixed(4)}
             </span>
           </div>
-
           <div bind:this={mapEl} class="relative w-full h-[200px] rounded-2xl overflow-hidden border border-white/5 bg-[#171412]"></div>
-
           <div class="mt-3">
-            <GlassButton variant="primary" fullWidth icon="external-link" onTap={abrirMaps}>
-              Cómo llegar
-            </GlassButton>
+            <GlassButton variant="primary" fullWidth icon="external-link" onTap={abrirMaps}>Cómo llegar</GlassButton>
           </div>
         </GlassCard>
+      {/if}
+
+      <!-- Nota personal -->
+      {#if session.user}
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 px-1">
+            <div class="w-7 h-7 rounded-full bg-dorado/15 flex items-center justify-center">
+              <Icon name="edit" size={14} class="text-dorado" />
+            </div>
+            <h3 class="text-[11px] font-bold text-dorado tracking-[0.25em] uppercase flex-1">Mi nota personal</h3>
+            {#if !notaEditando}
+              <button type="button" onclick={() => { notaTexto = notaGuardada; notaEditando = true; }} class="text-[10px] text-dorado/80 font-bold uppercase tracking-wider">
+                Editar
+              </button>
+            {/if}
+          </div>
+          {#if notaEditando}
+            <div class="glass rounded-2xl border border-white/10">
+              <textarea
+                bind:value={notaTexto}
+                rows="3"
+                placeholder="Ej: llevar uniforme nuevo..."
+                class="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/30 p-4 resize-none"
+              ></textarea>
+            </div>
+            <div class="flex gap-2">
+              <div class="flex-1"><GlassButton variant="secondary" fullWidth onTap={() => (notaEditando = false)}>Cancelar</GlassButton></div>
+              <div class="flex-1"><GlassButton variant="primary" fullWidth icon="check" onTap={guardarNota}>Guardar</GlassButton></div>
+            </div>
+          {:else}
+            <GlassCard padding="md">
+              <p class="text-sm text-white/85 whitespace-pre-line leading-relaxed">
+                {notaGuardada || 'Sin nota personal. Toca Editar para añadir una.'}
+              </p>
+            </GlassCard>
+          {/if}
+        </div>
       {/if}
 
       <GlassCard padding="lg">
@@ -180,12 +218,8 @@
             <Icon name="user" size={18} class="text-dorado" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-[10px] text-dorado/70 tracking-[0.2em] font-bold uppercase">
-              Organizado por
-            </p>
-            <p class="text-sm font-bold text-white truncate mt-0.5">
-              {evento.creador_nombre || 'Admin'}
-            </p>
+            <p class="text-[10px] text-dorado/70 tracking-[0.2em] font-bold uppercase">Organizado por</p>
+            <p class="text-sm font-bold text-white truncate mt-0.5">{evento.creador_nombre || 'Admin'}</p>
           </div>
         </div>
       </GlassCard>
