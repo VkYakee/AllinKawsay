@@ -68,30 +68,17 @@ jobs:
         run: |
           set -e
           mkdir -p src-tauri/icons assets
-          echo "Buscando logo..."
           LOGO=""
           for candidate in assets/logo.png android_config/icono.png docs/logo.png; do
-            if [ -f "$candidate" ]; then
-              LOGO="$candidate"
-              echo "Encontrado: $candidate"
-              break
-            fi
+            if [ -f "$candidate" ]; then LOGO="$candidate"; break; fi
           done
           if [ -z "$LOGO" ]; then
-            echo "No se encontro logo. Generando uno por defecto."
             sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
             convert -size 512x512 xc:'#8B1A2B' -fill '#F5D061' -pointsize 240 -gravity center -annotate 0 'AK' assets/logo.png
             LOGO="assets/logo.png"
-            echo "Logo generado: assets/logo.png"
           fi
-          if [ "$LOGO" != "assets/logo.png" ]; then
-            cp "$LOGO" assets/logo.png
-            echo "Copiado a assets/logo.png"
-          fi
-          echo "Generando iconos con tauri..."
+          [ "$LOGO" != "assets/logo.png" ] && cp "$LOGO" assets/logo.png
           npm run tauri icon assets/logo.png
-          echo "Iconos generados:"
-          ls -la src-tauri/icons/
 
       - name: Init Tauri Android
         run: npm run tauri android init
@@ -104,47 +91,48 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -e
-          echo "$KEYSTORE_BASE64" | base64 -d > src-tauri/gen/android/app/allinkawsay.keystore
+
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/allinkawsay.keystore"
+
           cat > src-tauri/gen/android/keystore.properties <<EOF
-          storeFile=app/allinkawsay.keystore
+          storeFile=$RUNNER_TEMP/allinkawsay.keystore
           storePassword=$KEYSTORE_PASSWORD
           keyAlias=$KEY_ALIAS
           keyPassword=$KEY_PASSWORD
           EOF
 
           python3 <<'PYEOF'
-          import re
+          import re, pathlib
 
-          path = 'src-tauri/gen/android/app/build.gradle.kts'
-          with open(path, 'r') as f:
-              content = f.read()
+          path = pathlib.Path('src-tauri/gen/android/app/build.gradle.kts')
+          content = path.read_text()
 
-          # 1. Insertar imports y variables DESPUES de los imports existentes
+          # 1. Asegurar import de FileInputStream una sola vez.
+          if 'import java.io.FileInputStream' not in content:
+              content = 'import java.io.FileInputStream\n' + content
+
+          # 2. Insertar variables DESPUÉS de la última línea import.
           header = '''
-          import java.io.FileInputStream
-          import java.util.Properties
-
           val keystorePropertiesFile = rootProject.file("keystore.properties")
-          val keystoreProperties = Properties().apply {
+          val keystoreProperties = java.util.Properties().apply {
               if (keystorePropertiesFile.exists()) {
-                  load(FileInputStream(keystorePropertiesFile))
+                  load(java.io.FileInputStream(keystorePropertiesFile))
               }
           }
           '''
 
           lines = content.split('\n')
-          last_import_idx = -1
-          for i, line in enumerate(lines):
-              if line.strip().startswith('import '):
-                  last_import_idx = i
-
-          if last_import_idx >= 0:
-              lines.insert(last_import_idx + 1, header)
+          last_import = max(
+              (i for i, l in enumerate(lines) if l.strip().startswith('import ')),
+              default=-1
+          )
+          if last_import >= 0:
+              lines.insert(last_import + 1, header)
               content = '\n'.join(lines)
           else:
-              content = header + content
+              content = header + '\n' + content
 
-          # 2. Insertar signingConfigs al principio del bloque android { ... }
+          # 3. Insertar signingConfigs antes de buildTypes.
           signing = '''
               signingConfigs {
                   create("release") {
@@ -157,18 +145,27 @@ jobs:
                   }
               }
           '''
-          content = re.sub(r'(android\s*\{)', r'\1\n' + signing, content, count=1)
 
-          # 3. Insertar signingConfig dentro de getByName("release") { ... }
-          content = re.sub(
-              r'(getByName\("release"\)\s*\{)',
-              r'\1\n                signingConfig = signingConfigs.getByName("release")',
-              content,
-              count=1
-          )
+          if 'signingConfigs' not in content:
+              content = re.sub(
+                  r'(\n\s*buildTypes\s*\{)',
+                  signing + r'\1',
+                  content,
+                  count=1
+              )
 
-          with open(path, 'w') as f:
-              f.write(content)
+          # 4. Activar signing en release.
+          if 'signingConfig = signingConfigs.getByName("release")' not in content:
+              content = re.sub(
+                  r'(getByName\("release"\)\s*\{)',
+                  r'\1\n                signingConfig = signingConfigs.getByName("release")',
+                  content,
+                  count=1
+              )
+
+          path.write_text(content)
+          print('✅ build.gradle.kts parcheado')
+          print('\n'.join(content.splitlines()[:25]))
           PYEOF
 
       - name: Build APK
