@@ -6,6 +6,7 @@ mod infra;
 use commands::auth::SessionState;
 use commands::canciones::CancionesState;
 use commands::eventos::EventosState;
+use commands::recuerdos::RecuerdosState;
 use std::sync::Mutex;
 use tracing_subscriber::EnvFilter;
 
@@ -25,6 +26,7 @@ pub fn run() {
         .manage(SessionState(Mutex::new(None)))
         .manage(CancionesState::new())
         .manage(EventosState::new())
+        .manage(RecuerdosState::new())
         .invoke_handler(tauri::generate_handler![
             commands::system::ping,
             commands::system::app_version,
@@ -39,6 +41,8 @@ pub fn run() {
             commands::ensayo::preparar_ensayo,
             commands::eventos::listar_eventos,
             commands::eventos::obtener_evento,
+            commands::recuerdos::listar_recuerdos,
+            commands::recuerdos::obtener_recuerdo,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar Allin Kawsay");
