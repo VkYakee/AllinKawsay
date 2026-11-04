@@ -1,4 +1,5 @@
 // src-tauri/src/commands/mod.rs
+pub mod admin;
 pub mod auth;
 pub mod canciones;
 pub mod ensayo;
