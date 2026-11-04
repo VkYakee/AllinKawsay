@@ -1,5 +1,5 @@
 // src/lib/stores/session.svelte.ts
-import { authService } from '../services/auth';
+import { authService, traducirErrorAuth } from '../services/auth';
 
 export interface UserSession {
   uid: string;
@@ -8,6 +8,7 @@ export interface UserSession {
   rol: 'publico' | 'miembro' | 'admin' | 'dev';
   fotoUrl: string;
   baneado: boolean;
+  emailVerified: boolean;
 }
 
 class Session {
@@ -27,6 +28,10 @@ class Session {
     return this.user?.nombre ?? 'Usuario';
   }
 
+  get needsVerification() {
+    return this.user !== null && !this.user.emailVerified;
+  }
+
   async login(email: string, password: string) {
     this.loading = true;
     this.error = null;
@@ -38,10 +43,65 @@ class Session {
         email: u.email,
         rol: u.rol,
         fotoUrl: u.foto_url,
-        baneado: u.baneado
+        baneado: u.baneado,
+        emailVerified: u.email_verified
       };
     } catch (e) {
-      this.error = e instanceof Error ? e.message : 'Error al ingresar';
+      this.error = traducirErrorAuth(e);
+      throw e;
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  async registrar(email: string, password: string, nombre: string) {
+    this.loading = true;
+    this.error = null;
+    try {
+      const u = await authService.registrar(email, password, nombre);
+      this.user = {
+        uid: u.uid,
+        nombre: u.nombre,
+        email: u.email,
+        rol: u.rol,
+        fotoUrl: u.foto_url,
+        baneado: u.baneado,
+        emailVerified: u.email_verified
+      };
+    } catch (e) {
+      this.error = traducirErrorAuth(e);
+      throw e;
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  async reenviarVerificacion() {
+    try {
+      await authService.reenviarVerificacion();
+    } catch (e) {
+      this.error = traducirErrorAuth(e);
+      throw e;
+    }
+  }
+
+  async verificarEmail(): Promise<boolean> {
+    try {
+      const ok = await authService.recargarUsuario();
+      if (this.user) this.user.emailVerified = ok;
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async resetPassword(email: string) {
+    this.loading = true;
+    this.error = null;
+    try {
+      await authService.resetPassword(email);
+    } catch (e) {
+      this.error = traducirErrorAuth(e);
       throw e;
     } finally {
       this.loading = false;
@@ -66,7 +126,8 @@ class Session {
           email: u.email,
           rol: u.rol,
           fotoUrl: u.foto_url,
-          baneado: u.baneado
+          baneado: u.baneado,
+          emailVerified: u.email_verified
         };
       } else {
         this.user = null;
