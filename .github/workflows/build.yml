@@ -60,7 +60,7 @@ jobs:
             echo "🔒 Lockfile encontrado → npm ci"
             npm ci
           else
-            echo "📦 Sin lockfile → npm install (genera node_modules)"
+            echo "📦 Sin lockfile → npm install"
             npm install --no-audit --no-fund
           fi
 
@@ -68,8 +68,17 @@ jobs:
         run: |
           set -e
           mkdir -p src-tauri/icons
-          echo "🎨 Generando iconos desde assets/logo.png"
-          npm run tauri icon assets/logo.png
+          echo "🎨 Generando iconos"
+          npm run tauri icon assets/logo.png || true
+          if [ ! -f src-tauri/icons/32x32.png ]; then
+            echo "⚠️ Fallback: creando iconos con ImageMagick"
+            sudo apt-get update && sudo apt-get install -y imagemagick
+            convert assets/logo.png -resize 32x32 src-tauri/icons/32x32.png
+            convert assets/logo.png -resize 128x128 src-tauri/icons/128x128.png
+            convert assets/logo.png -resize 256x256 src-tauri/icons/128x128@2x.png
+            convert assets/logo.png -resize 512x512 src-tauri/icons/icon.png
+            convert assets/logo.png -resize 256x256 src-tauri/icons/icon.ico
+          fi
 
       - name: Init Tauri Android
         run: npm run tauri android init
@@ -107,7 +116,8 @@ jobs:
           }
 
           '''
-          content = header + content
+          if 'val keystorePropertiesFile' not in content:
+              content = header + content
 
           signing = '''    signingConfigs {
                   create("release") {
@@ -120,13 +130,15 @@ jobs:
                   }
               }
           '''
-          content = re.sub(r'(android\s*\{)', r'\1\n' + signing, content, count=1)
+          if 'signingConfigs' not in content:
+              content = re.sub(r'(android\s*\{)', r'\1\n' + signing, content, count=1)
 
-          content = re.sub(
-              r'(getByName\("release"\)\s*\{)',
-              r'\1\n                signingConfig = signingConfigs.getByName("release")',
-              content, count=1
-          )
+          if 'signingConfig = signingConfigs.getByName("release")' not in content:
+              content = re.sub(
+                  r'(getByName\("release"\)\s*\{)',
+                  r'\1\n                signingConfig = signingConfigs.getByName("release")',
+                  content, count=1
+              )
 
           with open(path, 'w') as f:
               f.write(content)
