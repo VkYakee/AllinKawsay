@@ -1,5 +1,5 @@
 // src-tauri/src/infra/seed.rs
-use crate::domain::{Cancion, Columna, Estrofa, Evento};
+use crate::domain::{Cancion, Columna, Estrofa, Evento, Recuerdo};
 
 fn col(n7: &str, n6: &str) -> Columna {
     Columna { nota7: n7.into(), nota6: n6.into() }
@@ -173,6 +173,64 @@ pub fn eventos_demo() -> Vec<Evento> {
             fecha: "2026-09-20T20:00:00".into(),
             lat: None,
             lng: None,
+            creado_por: "admin".into(),
+            creador_nombre: "Directiva".into(),
+        },
+    ]
+}
+
+fn foto(seed: &str) -> String {
+    format!("https://picsum.photos/seed/{seed}/800/600")
+}
+
+fn foto_vertical(seed: &str) -> String {
+    format!("https://picsum.photos/seed/{seed}/600/800")
+}
+
+pub fn recuerdos_demo() -> Vec<Recuerdo> {
+    vec![
+        Recuerdo {
+            id: "r1".into(),
+            titulo: "Fiesta Patronal 2025".into(),
+            descripcion: "Presentación inolvidable en la plaza de armas. El público no dejaba de aplaudir.".into(),
+            fotos: vec![
+                foto("allin_fp1"),
+                foto_vertical("allin_fp2"),
+                foto("allin_fp3"),
+                foto_vertical("allin_fp4"),
+                foto("allin_fp5"),
+            ],
+            videos: vec!["demo_video_1".into()],
+            fecha: "2025-10-15T20:00:00".into(),
+            creado_por: "admin".into(),
+            creador_nombre: "Directiva".into(),
+        },
+        Recuerdo {
+            id: "r2".into(),
+            titulo: "Aniversario 2024".into(),
+            descripcion: "Noche de confraternidad y música. Los fundadores nos acompañaron.".into(),
+            fotos: vec![
+                foto("allin_an1"),
+                foto("allin_an2"),
+                foto_vertical("allin_an3"),
+                foto("allin_an4"),
+            ],
+            videos: vec![],
+            fecha: "2024-11-02T19:30:00".into(),
+            creado_por: "admin".into(),
+            creador_nombre: "Directiva".into(),
+        },
+        Recuerdo {
+            id: "r3".into(),
+            titulo: "Ensayo en el local".into(),
+            descripcion: "Preparativos para el concurso regional. Mucho esfuerzo y dedicación.".into(),
+            fotos: vec![
+                foto_vertical("allin_en1"),
+                foto("allin_en2"),
+                foto("allin_en3"),
+            ],
+            videos: vec![],
+            fecha: "2024-08-20T21:00:00".into(),
             creado_por: "admin".into(),
             creador_nombre: "Directiva".into(),
         },
