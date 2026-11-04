@@ -5,6 +5,7 @@
   import Icon from '../../../components/ui/Icon.svelte';
   import { session } from '../../../stores/session.svelte';
   import { player } from '../../../stores/player.svelte';
+  import { canciones } from '../../../stores/canciones.svelte';
   import { router } from '../../../stores/router.svelte';
 
   const proximoEvento = {
@@ -27,6 +28,16 @@
       autor: c.autor,
       imagenUrl: ''
     });
+  }
+
+  async function irEnsayo() {
+    if (canciones.all.length === 0) {
+      await canciones.cargar();
+    }
+    const primera = canciones.all[0];
+    if (primera) {
+      router.go('ensayo', { id: primera.id });
+    }
   }
 </script>
 
@@ -71,7 +82,7 @@
       <p class="text-[11px] text-white/50 mt-0.5">Toca en vivo</p>
     </GlassCard>
 
-    <GlassCard variant="granate" padding="lg" onTap={() => {}}>
+    <GlassCard variant="granate" padding="lg" onTap={irEnsayo}>
       <div class="w-10 h-10 rounded-full bg-dorado/25 flex items-center justify-center mb-3">
         <Icon name="play" size={20} class="text-dorado" />
       </div>
