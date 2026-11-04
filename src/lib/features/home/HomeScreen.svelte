@@ -7,6 +7,7 @@
   import InicioTab from './tabs/InicioTab.svelte';
   import CancioneroTab from '../cancionero/CancioneroTab.svelte';
   import EventosTab from '../eventos/EventosTab.svelte';
+  import RecuerdosTab from '../recuerdos/RecuerdosTab.svelte';
 
   type TabId = 'inicio' | 'cancionero' | 'eventos' | 'recuerdos' | 'perfil';
 
@@ -21,7 +22,6 @@
   let activeTab = $state<TabId>('inicio');
 
   const placeholders: Record<string, string> = {
-    recuerdos: 'Recuerdos',
     perfil: 'Perfil'
   };
 </script>
@@ -33,6 +33,8 @@
     <CancioneroTab />
   {:else if activeTab === 'eventos'}
     <EventosTab />
+  {:else if activeTab === 'recuerdos'}
+    <RecuerdosTab />
   {:else}
     <div class="min-h-[70dvh] flex flex-col items-center justify-center px-8 text-center">
       <div class="glass w-24 h-24 rounded-full flex items-center justify-center mb-6">
