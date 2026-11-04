@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
   push:
-    branches: [3.0]
+    branches: [rust]
 
 permissions:
   contents: write
@@ -57,48 +57,41 @@ jobs:
       - name: Install JS deps
         run: |
           if [ -f package-lock.json ]; then
-            echo "🔒 Lockfile encontrado → npm ci"
+            echo "Lockfile encontrado - npm ci"
             npm ci
           else
-            echo "📦 Sin lockfile → npm install"
+            echo "Sin lockfile - npm install"
             npm install --no-audit --no-fund
           fi
 
       - name: Generate app icons
-  run: |
-    set -e
-    mkdir -p src-tauri/icons assets
-
-    echo "🔍 Buscando logo en rutas conocidas..."
-    LOGO=""
-    for candidate in assets/logo.png android_config/icono.png docs/logo.png; do
-      if [ -f "$candidate" ]; then
-        LOGO="$candidate"
-        echo "✅ Encontrado: $candidate"
-        break
-      fi
-    done
-
-    if [ -z "$LOGO" ]; then
-      echo "⚠️ No se encontró logo. Generando uno por defecto (granate + AK dorado)."
-      sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
-      convert -size 512x512 xc:'#8B1A2B' \
-        -fill '#F5D061' -pointsize 240 -gravity center -annotate 0 'AK' \
-        assets/logo.png
-      LOGO="assets/logo.png"
-      echo "✅ Logo generado: assets/logo.png"
-    fi
-
-    if [ "$LOGO" != "assets/logo.png" ]; then
-      cp "$LOGO" assets/logo.png
-      echo "📋 Copiado a assets/logo.png"
-    fi
-
-    echo "🎨 Generando iconos con tauri..."
-    npm run tauri icon assets/logo.png
-
-    echo "✅ Iconos generados:"
-    ls -la src-tauri/icons/
+        run: |
+          set -e
+          mkdir -p src-tauri/icons assets
+          echo "Buscando logo..."
+          LOGO=""
+          for candidate in assets/logo.png android_config/icono.png docs/logo.png; do
+            if [ -f "$candidate" ]; then
+              LOGO="$candidate"
+              echo "Encontrado: $candidate"
+              break
+            fi
+          done
+          if [ -z "$LOGO" ]; then
+            echo "No se encontro logo. Generando uno por defecto."
+            sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+            convert -size 512x512 xc:'#8B1A2B' -fill '#F5D061' -pointsize 240 -gravity center -annotate 0 'AK' assets/logo.png
+            LOGO="assets/logo.png"
+            echo "Logo generado: assets/logo.png"
+          fi
+          if [ "$LOGO" != "assets/logo.png" ]; then
+            cp "$LOGO" assets/logo.png
+            echo "Copiado a assets/logo.png"
+          fi
+          echo "Generando iconos con tauri..."
+          npm run tauri icon assets/logo.png
+          echo "Iconos generados:"
+          ls -la src-tauri/icons/
 
       - name: Init Tauri Android
         run: npm run tauri android init
@@ -171,7 +164,7 @@ jobs:
         id: apk
         run: |
           APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -n 1)
-          if [ -z "$APK" ]; then echo "❌ No APK encontrado"; exit 1; fi
+          if [ -z "$APK" ]; then echo "No APK encontrado"; exit 1; fi
           echo "path=$APK" >> $GITHUB_OUTPUT
           SIZE=$(stat -c%s "$APK")
           SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $SIZE/1048576}")
@@ -188,14 +181,11 @@ jobs:
           tag_name: v3.0.0-rust-${{ github.run_number }}
           name: v3.0.0-rust-${{ github.run_number }}
           body: |
-            🚀 Nueva versión Rust/Tauri
+            Nueva version Rust/Tauri
 
             - **Build:** ${{ github.run_number }}
-            - **Tamaño:** ${{ steps.apk.outputs.size_mb }} MB
+            - **Tamano:** ${{ steps.apk.outputs.size_mb }} MB
             - **Commit:** ${{ github.sha }}
-            - **Fecha:** $(date +'%Y-%m-%d %H:%M UTC')
-
-            ${{ github.event.inputs.motivo }}
           files: dist-apk/AllinKawsay.apk
           prerelease: true
         env:
