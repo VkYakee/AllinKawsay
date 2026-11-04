@@ -7,6 +7,7 @@ export interface UserSession {
   email: string;
   rol: 'publico' | 'miembro' | 'admin' | 'dev';
   fotoUrl: string;
+  baneado: boolean;
 }
 
 class Session {
@@ -36,7 +37,8 @@ class Session {
         nombre: u.nombre,
         email: u.email,
         rol: u.rol,
-        fotoUrl: u.foto_url
+        fotoUrl: u.foto_url,
+        baneado: u.baneado
       };
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Error al ingresar';
@@ -47,8 +49,11 @@ class Session {
   }
 
   async logout() {
-    await authService.logout();
-    this.user = null;
+    try {
+      await authService.logout();
+    } finally {
+      this.user = null;
+    }
   }
 
   async restore() {
@@ -60,8 +65,11 @@ class Session {
           nombre: u.nombre,
           email: u.email,
           rol: u.rol,
-          fotoUrl: u.foto_url
+          fotoUrl: u.foto_url,
+          baneado: u.baneado
         };
+      } else {
+        this.user = null;
       }
     } catch {
       this.user = null;
