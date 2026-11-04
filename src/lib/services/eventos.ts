@@ -1,6 +1,13 @@
 // src/lib/services/eventos.ts
-import { Timestamp } from 'firebase/firestore';
-import { getCol, streamCol, getDocById, type FirestoreData } from './firestore';
+import { Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { getFirebaseDb } from '../config/firebase';
+import {
+  getCol,
+  streamCol,
+  getDocById,
+  addDocument,
+  type FirestoreData
+} from './firestore';
 
 export interface Evento {
   id: string;
@@ -12,6 +19,15 @@ export interface Evento {
   lng: number | null;
   creado_por: string;
   creador_nombre: string;
+}
+
+export interface EventoInput {
+  titulo: string;
+  descripcion: string;
+  lugar: string;
+  fecha: Date;
+  lat: number | null;
+  lng: number | null;
 }
 
 function timestampToIso(ts: unknown): string {
@@ -44,14 +60,49 @@ export const eventosService = {
     onData: (items: Evento[]) => void,
     onError: (err: Error) => void
   ): () => void {
-    return streamCol('eventos', mapEvento, (items) => {
-      items.sort((a, b) => a.fecha.localeCompare(b.fecha));
-      onData(items);
-    }, onError);
+    return streamCol(
+      'eventos',
+      mapEvento,
+      (items) => {
+        items.sort((a, b) => a.fecha.localeCompare(b.fecha));
+        onData(items);
+      },
+      onError
+    );
   },
 
   async obtener(id: string): Promise<Evento | null> {
     return getDocById('eventos', id, mapEvento);
+  },
+
+  async crear(input: EventoInput, autorUid: string, autorNombre: string): Promise<string> {
+    return addDocument('eventos', {
+      titulo: input.titulo.trim(),
+      descripcion: input.descripcion.trim(),
+      lugar: input.lugar.trim(),
+      fecha: Timestamp.fromDate(input.fecha),
+      lat: input.lat,
+      lng: input.lng,
+      creadoPor: autorUid,
+      creadorNombre: autorNombre,
+      fechaCreacion: Timestamp.now()
+    });
+  },
+
+  async actualizar(id: string, input: EventoInput): Promise<void> {
+    await updateDoc(doc(getFirebaseDb(), 'eventos', id), {
+      titulo: input.titulo.trim(),
+      descripcion: input.descripcion.trim(),
+      lugar: input.lugar.trim(),
+      fecha: Timestamp.fromDate(input.fecha),
+      lat: input.lat,
+      lng: input.lng,
+      fechaEdicion: Timestamp.now()
+    });
+  },
+
+  async eliminar(id: string): Promise<void> {
+    await deleteDoc(doc(getFirebaseDb(), 'eventos', id));
   }
 };
 
@@ -87,4 +138,9 @@ export function hora(iso: string): string {
 export function fechaLarga(iso: string): string {
   const d = parseFecha(iso);
   return `${d.getDate()} de ${mesLargo(iso)} de ${d.getFullYear()}`;
+}
+
+export function toLocalInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
