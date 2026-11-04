@@ -39,16 +39,21 @@ const mockNotasZampona = [
   { id: 'fila6_6', nota: 'Fa', fila: 6, posicion: 6 }
 ];
 
+const mockEventos = [
+  { id: 'e1', titulo: 'Fiesta Patronal', descripcion: 'Presentación central del grupo en la fiesta patronal de Juliaca. Traer instrumentos y uniforme completo.', lugar: 'Plaza de Armas, Juliaca', fecha: '2026-10-15T19:00:00', lat: -15.4994, lng: -70.1333, creado_por: 'admin', creador_nombre: 'Directiva' },
+  { id: 'e2', titulo: 'Aniversario del Grupo', descripcion: 'Celebración por el aniversario del C.I.A.C. Allin Kawsay. Cena de confraternidad y presentación especial.', lugar: 'Local institucional, Juliaca', fecha: '2026-11-02T18:30:00', lat: -15.4985, lng: -70.132, creado_por: 'admin', creador_nombre: 'Directiva' },
+  { id: 'e3', titulo: 'Concurso Regional de Sikuris', descripcion: 'Participación en el concurso regional. Ensayo general el día anterior a las 20:00.', lugar: 'Coliseo Cerrado, Puno', fecha: '2026-12-08T16:00:00', lat: -15.8402, lng: -70.0199, creado_por: 'admin', creador_nombre: 'Directiva' },
+  { id: 'e4', titulo: 'Ensayo General — Aniversario', descripcion: 'Ensayo obligatorio previo al aniversario. Repaso de todo el repertorio.', lugar: 'Local institucional', fecha: '2026-09-20T20:00:00', lat: null, lng: null, creado_por: 'admin', creador_nombre: 'Directiva' }
+];
+
 async function mockInvoke<T>(
   cmd: string,
   args?: Record<string, unknown>
 ): Promise<T> {
   await new Promise((r) => setTimeout(r, 120));
   switch (cmd) {
-    case 'ping':
-      return 'pong' as T;
-    case 'app_version':
-      return { name: 'Allin Kawsay', version: '3.0.0', platform: 'web-mock' } as T;
+    case 'ping': return 'pong' as T;
+    case 'app_version': return { name: 'Allin Kawsay', version: '3.0.0', platform: 'web-mock' } as T;
     case 'login': {
       const payload = args?.payload as { email: string; password: string };
       if (!payload.email.includes('@') || payload.password.length < 4) throw new Error('Credenciales inválidas');
@@ -56,13 +61,9 @@ async function mockInvoke<T>(
       mockUser = user;
       return user as T;
     }
-    case 'logout':
-      mockUser = null;
-      return undefined as T;
-    case 'current_user':
-      return mockUser as T;
-    case 'listar_canciones':
-      return mockCanciones as T;
+    case 'logout': mockUser = null; return undefined as T;
+    case 'current_user': return mockUser as T;
+    case 'listar_canciones': return mockCanciones as T;
     case 'obtener_cancion': {
       const id = args?.id as string;
       return (mockCanciones.find((c) => c.id === id) ?? null) as T;
@@ -74,10 +75,8 @@ async function mockInvoke<T>(
       c.reproducciones += 1;
       return c.reproducciones as T;
     }
-    case 'listar_notas_zampona':
-      return mockNotasZampona as T;
-    case 'tocar_nota':
-      return undefined as T;
+    case 'listar_notas_zampona': return mockNotasZampona as T;
+    case 'tocar_nota': return undefined as T;
     case 'preparar_ensayo': {
       const cancionId = args?.id as string;
       const c = mockCanciones.find((c) => c.id === cancionId);
@@ -91,17 +90,19 @@ async function mockInvoke<T>(
           const col = est.columnas[ci];
           const n7 = col.nota7.trim();
           const n6 = col.nota6.trim();
-          if (n7 && n7 !== '.') {
-            eventos.push({ nota_id: `fila7_${n7}`, estrofa_idx: ei, columna_idx: ci, es_fila7: true, offset_ms: offset });
-            offset += dur;
-          }
-          if (n6 && n6 !== '.') {
-            eventos.push({ nota_id: `fila6_${n6}`, estrofa_idx: ei, columna_idx: ci, es_fila7: false, offset_ms: offset });
-            offset += dur;
-          }
+          if (n7 && n7 !== '.') { eventos.push({ nota_id: `fila7_${n7}`, estrofa_idx: ei, columna_idx: ci, es_fila7: true, offset_ms: offset }); offset += dur; }
+          if (n6 && n6 !== '.') { eventos.push({ nota_id: `fila6_${n6}`, estrofa_idx: ei, columna_idx: ci, es_fila7: false, offset_ms: offset }); offset += dur; }
         }
       }
       return { cancion_id: c.id, titulo: c.titulo, eventos, duracion_nota_ms: dur, duracion_total_ms: offset } as T;
+    }
+    case 'listar_eventos': {
+      const lista = [...mockEventos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+      return lista as T;
+    }
+    case 'obtener_evento': {
+      const id = args?.id as string;
+      return (mockEventos.find((e) => e.id === id) ?? null) as T;
     }
     default:
       throw new Error(`Comando desconocido: ${cmd}`);
