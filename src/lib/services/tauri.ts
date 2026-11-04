@@ -15,8 +15,17 @@ export async function invoke<T>(
 
 let mockUser: unknown = null;
 
+const mockReproductor = {
+  cancion_id: null as string | null,
+  reproduciendo: false,
+  cargando: false,
+  posicion_ms: 0,
+  duracion_ms: 0
+};
+let mockTimer: ReturnType<typeof setInterval> | null = null;
+
 const mockCanciones = [
-  { id: 'c1', titulo: 'Adiós Conima', autor: 'Anónimo', ritmo: 'Huayño', region: 'Puno', imagen_url: '', audio_url: '', video_url: '', descripcion: 'Huayño tradicional del altiplano peruano.', reproducciones: 342, estrofas: [{ columnas: [{ nota7: '1', nota6: '5' }, { nota7: '2', nota6: '6' }, { nota7: '3', nota6: '7' }, { nota7: '3', nota6: '6' }, { nota7: '2', nota6: '5' }], bis: false }, { columnas: [{ nota7: '5', nota6: '2' }, { nota7: '6', nota6: '3' }, { nota7: '7', nota6: '4' }, { nota7: '6', nota6: '3' }], bis: false }], letra: 'Adiós Conima, tierra querida,\ndonde he pasado mi juventud.\nAdiós Conima, tierra querida,\nno te olvidaré jamás.', tags: ['tradicional', 'altiplano'] },
+  { id: 'c1', titulo: 'Adiós Conima', autor: 'Anónimo', ritmo: 'Huayño', region: 'Puno', imagen_url: '', audio_url: 'https://download.samplelib.com/mp3/sample-6s.mp3', video_url: '', descripcion: 'Huayño tradicional del altiplano peruano.', reproducciones: 342, estrofas: [{ columnas: [{ nota7: '1', nota6: '5' }, { nota7: '2', nota6: '6' }, { nota7: '3', nota6: '7' }, { nota7: '3', nota6: '6' }, { nota7: '2', nota6: '5' }], bis: false }, { columnas: [{ nota7: '5', nota6: '2' }, { nota7: '6', nota6: '3' }, { nota7: '7', nota6: '4' }, { nota7: '6', nota6: '3' }], bis: false }], letra: 'Adiós Conima, tierra querida,\ndonde he pasado mi juventud.\nAdiós Conima, tierra querida,\nno te olvidaré jamás.', tags: ['tradicional', 'altiplano'] },
   { id: 'c2', titulo: 'Aguila Negra', autor: 'Anónimo', ritmo: 'Huayño', region: 'Cusco', imagen_url: '', audio_url: '', video_url: '', descripcion: 'Huayño clásico del repertorio de sikuris.', reproducciones: 218, estrofas: [{ columnas: [{ nota7: '3', nota6: '7' }, { nota7: '2', nota6: '6' }, { nota7: '1', nota6: '5' }, { nota7: '2', nota6: '6' }, { nota7: '3', nota6: '7' }], bis: false }], letra: 'Águila negra que vas volando,\nllévame lejos de este lugar.\nÁguila negra que vas volando,\nllévame al cielo, quiero soñar.', tags: ['tradicional'] },
   { id: 'c3', titulo: 'Fiesta de mi Pueblo', autor: 'Anónimo', ritmo: 'Carnaval', region: 'Juliaca', imagen_url: '', audio_url: '', video_url: '', descripcion: 'Carnaval juliaqueño, ritmo festivo y colorido.', reproducciones: 156, estrofas: [{ columnas: [{ nota7: '1', nota6: '4' }, { nota7: '2', nota6: '5' }, { nota7: '3', nota6: '6' }], bis: false }, { columnas: [{ nota7: '6', nota6: '3' }, { nota7: '5', nota6: '2' }, { nota7: '4', nota6: '1' }], bis: false }], letra: 'En la fiesta de mi pueblo\ntodos bailan sin parar.\nEn la fiesta de mi pueblo\nhay que alegría sin igual.', tags: ['carnaval', 'juliaca'] },
   { id: 'c4', titulo: 'Qhapaq Qolla', autor: 'Anónimo', ritmo: 'Qhapaq Qolla', region: 'Puno', imagen_url: '', audio_url: '', video_url: '', descripcion: 'Danza ritual de los comerciantes del altiplano.', reproducciones: 501, estrofas: [{ columnas: [{ nota7: '2', nota6: '6' }, { nota7: '3', nota6: '7' }, { nota7: '4', nota6: '1' }, { nota7: '5', nota6: '2' }, { nota7: '6', nota6: '3' }], bis: false }], letra: 'Qhapaq Qolla, señor de las alturas,\nguía mi camino con tu bendición.\nQhapaq Qolla, señor de las alturas,\nprotege a mi pueblo con tu bendición.', tags: ['ritual', 'qhapaq'] },
@@ -67,7 +76,7 @@ async function mockInvoke<T>(
   cmd: string,
   args?: Record<string, unknown>
 ): Promise<T> {
-  await new Promise((r) => setTimeout(r, 120));
+  await new Promise((r) => setTimeout(r, 100));
   switch (cmd) {
     case 'ping': return 'pong' as T;
     case 'app_version': return { name: 'Allin Kawsay', version: '3.0.0', platform: 'web-mock' } as T;
@@ -133,16 +142,47 @@ async function mockInvoke<T>(
       const totalReproducciones = mockCanciones.reduce((s, c) => s + c.reproducciones, 0);
       const totalFotos = mockRecuerdos.reduce((s, r) => s + r.fotos.length, 0);
       const totalAudios = mockCanciones.filter((c) => c.audio_url !== '').length;
-      return {
-        total_canciones: mockCanciones.length,
-        total_eventos: mockEventos.length,
-        total_recuerdos: mockRecuerdos.length,
-        total_reproducciones: totalReproducciones,
-        total_fotos: totalFotos,
-        total_audios: totalAudios
-      } as T;
+      return { total_canciones: mockCanciones.length, total_eventos: mockEventos.length, total_recuerdos: mockRecuerdos.length, total_reproducciones: totalReproducciones, total_fotos: totalFotos, total_audios: totalAudios } as T;
     }
     case 'admin_usuarios': return mockUsuarios as T;
+
+    // ─── Reproductor mock ───
+    case 'play_cancion': {
+      const cancionId = args?.cancionId as string;
+      mockReproductor.cancion_id = cancionId;
+      mockReproductor.cargando = false;
+      mockReproductor.reproduciendo = true;
+      mockReproductor.posicion_ms = 0;
+      mockReproductor.duracion_ms = 6000;
+      if (mockTimer) clearInterval(mockTimer);
+      mockTimer = setInterval(() => {
+        if (!mockReproductor.reproduciendo) return;
+        mockReproductor.posicion_ms += 250;
+        if (mockReproductor.posicion_ms >= mockReproductor.duracion_ms) {
+          mockReproductor.posicion_ms = mockReproductor.duracion_ms;
+          mockReproductor.reproduciendo = false;
+          if (mockTimer) { clearInterval(mockTimer); mockTimer = null; }
+        }
+      }, 250);
+      return undefined as T;
+    }
+    case 'pausar_cancion':
+      mockReproductor.reproduciendo = false;
+      return undefined as T;
+    case 'reanudar_cancion':
+      if (mockReproductor.cancion_id) mockReproductor.reproduciendo = true;
+      return undefined as T;
+    case 'detener_cancion':
+      if (mockTimer) { clearInterval(mockTimer); mockTimer = null; }
+      mockReproductor.cancion_id = null;
+      mockReproductor.reproduciendo = false;
+      mockReproductor.cargando = false;
+      mockReproductor.posicion_ms = 0;
+      mockReproductor.duracion_ms = 0;
+      return undefined as T;
+    case 'estado_reproductor':
+      return { ...mockReproductor } as T;
+
     default:
       throw new Error(`Comando desconocido: ${cmd}`);
   }
