@@ -29,40 +29,45 @@
   });
 </script>
 
-<div class="app-background min-h-dvh flex flex-col items-center justify-center px-6 relative overflow-hidden">
-  <!-- Logo con glow -->
-  <div
-    class="relative mb-10 transition-all duration-700"
-    class:opacity-100={visible}
-    class:scale-100={visible}
-    class:opacity-0={!visible}
-    class:scale-75={!visible}
-  >
-    <div class="absolute inset-0 rounded-full bg-dorado blur-3xl opacity-40 animate-pulse"></div>
-    <div class="glass glass-gold relative w-32 h-32 rounded-full flex items-center justify-center">
-      <span class="text-4xl font-black text-dorado tracking-tighter">AK</span>
+<div class="app-background min-h-dvh flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+  <div class="flex flex-col items-center gap-6 max-w-xs w-full">
+    <!-- Logo -->
+    <div
+      class="relative transition-all duration-700"
+      class:opacity-100={visible}
+      class:scale-100={visible}
+      class:opacity-0={!visible}
+      class:scale-75={!visible}
+    >
+      <div class="absolute inset-0 rounded-full bg-dorado blur-3xl opacity-40 animate-pulse"></div>
+      <div class="glass glass-gold relative w-28 h-28 rounded-full flex items-center justify-center">
+        <span class="text-3xl font-black text-dorado tracking-tighter">AK</span>
+      </div>
+    </div>
+
+    <!-- Textos -->
+    <div class="flex flex-col items-center gap-2 text-center">
+      <h1
+        class="text-2xl font-black text-dorado tracking-[0.2em] leading-none transition-all duration-700 delay-200"
+        class:opacity-100={visible}
+        class:translate-y-0={visible}
+        class:opacity-0={!visible}
+        class:translate-y-3={!visible}
+      >
+        ALLIN KAWSAY
+      </h1>
+      <p
+        class="text-white/50 text-[10px] tracking-[0.3em] font-semibold uppercase transition-all duration-700 delay-300"
+        class:opacity-100={visible}
+        class:opacity-0={!visible}
+      >
+        C.I.A.C. · Juliaca · Perú
+      </p>
     </div>
   </div>
 
-  <h1
-    class="text-3xl font-black text-dorado tracking-[0.4em] transition-all duration-700 delay-200"
-    class:opacity-100={visible}
-    class:translate-y-0={visible}
-    class:opacity-0={!visible}
-    class:translate-y-4={!visible}
-  >
-    ALLIN KAWSAY
-  </h1>
-  <p
-    class="text-white/40 mt-3 text-[10px] tracking-[0.4em] font-semibold uppercase transition-all duration-700 delay-300"
-    class:opacity-100={visible}
-    class:opacity-0={!visible}
-  >
-    C.I.A.C. · Juliaca · Perú
-  </p>
-
-  <!-- Barra de carga -->
-  <div class="absolute left-0 right-0 bottom-16 px-12">
+  <!-- Barra de carga al pie -->
+  <div class="absolute left-0 right-0 bottom-10 px-10">
     <div class="h-1 rounded-full bg-white/10 overflow-hidden">
       <div
         class="h-full bg-gradient-to-r from-dorado to-dorado-dark"
