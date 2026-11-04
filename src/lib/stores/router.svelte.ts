@@ -8,7 +8,8 @@ export type Route =
   | 'zampona'
   | 'ensayo'
   | 'evento'
-  | 'recuerdo';
+  | 'recuerdo'
+  | 'admin';
 
 type Snapshot = { route: Route; params: Record<string, unknown> };
 
