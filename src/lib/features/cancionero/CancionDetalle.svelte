@@ -26,21 +26,23 @@
 
   async function tocarPlay() {
     if (!cancion) return;
-    player.play({
+    await player.play({
       id: cancion.id,
       titulo: cancion.titulo,
       autor: cancion.autor,
-      imagenUrl: cancion.imagen_url
+      imagenUrl: cancion.imagen_url,
+      audioUrl: cancion.audio_url
     });
-    const nuevas = await cancionesService.incrementarReproduccion(cancion.id);
-    cancion.reproducciones = nuevas;
+    if (cancion.audio_url) {
+      await cancionesService.incrementarReproduccion(cancion.id);
+      cancion.reproducciones += 1;
+    }
   }
 
   const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 </script>
 
 <div class="app-background min-h-dvh">
-  <!-- Header flotante -->
   <header class="sticky top-0 z-30 px-5 pt-3 pb-3 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/5">
     <div class="flex items-center gap-3">
       <GlassIconButton icon="chevron-left" onTap={() => router.back()} />
@@ -68,7 +70,6 @@
     </div>
   {:else}
     <div class="px-5 py-6 space-y-5 pb-40">
-      <!-- Hero -->
       <GlassCard variant="granate" padding="xl">
         <div class="flex items-start gap-4">
           <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-dorado to-dorado-dark flex items-center justify-center shadow-lg shadow-dorado/40 shrink-0">
@@ -124,7 +125,6 @@
         </div>
       </GlassCard>
 
-      <!-- Numerofonía -->
       {#if cancion.estrofas.length > 0}
         <div class="space-y-3">
           <div class="flex items-center gap-2 px-1">
@@ -181,7 +181,6 @@
         </div>
       {/if}
 
-      <!-- Letra -->
       {#if cancion.letra}
         <div class="space-y-3">
           <div class="flex items-center gap-2 px-1">
