@@ -1,7 +1,9 @@
 <!-- src/App.svelte -->
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { router } from './lib/stores/router.svelte';
   import { session } from './lib/stores/session.svelte';
+  import { initOneSignal, oneSignalLogin, oneSignalLogout } from './lib/services/onesignal';
   import SplashScreen from './lib/features/splash/SplashScreen.svelte';
   import LoginScreen from './lib/features/auth/LoginScreen.svelte';
   import HomeScreen from './lib/features/home/HomeScreen.svelte';
@@ -11,6 +13,18 @@
   import EventoDetalle from './lib/features/eventos/EventoDetalle.svelte';
   import RecuerdoDetalle from './lib/features/recuerdos/RecuerdoDetalle.svelte';
   import AdminScreen from './lib/features/admin/AdminScreen.svelte';
+
+  onMount(() => {
+    initOneSignal();
+  });
+
+  $effect(() => {
+    if (session.user) {
+      oneSignalLogin(session.user.uid);
+    } else {
+      oneSignalLogout();
+    }
+  });
 
   async function onSplashComplete() {
     await session.restore();
