@@ -11,10 +11,7 @@
   import { router } from '../../stores/router.svelte';
 
   onMount(() => {
-    if (!session.isAdmin) {
-      router.back();
-      return;
-    }
+    if (!session.isAdmin) { router.back(); return; }
     canciones.cargar();
     eventos.cargar();
     recuerdos.cargar();
@@ -27,25 +24,17 @@
     recuerdos.all.reduce((s, r) => s + r.fotos.length, 0)
   );
 
-  const acciones = [
-    {
-      icon: 'plus',
-      titulo: 'Nuevo evento',
-      desc: 'Programar presentación',
-      route: 'agregar-evento' as const
-    },
-    {
-      icon: 'music',
-      titulo: 'Nueva canción',
-      desc: 'Añadir al cancionero',
-      route: 'agregar-cancion' as const
-    },
-    {
-      icon: 'image',
-      titulo: 'Nuevo recuerdo',
-      desc: 'Subir fotos y videos',
-      route: 'agregar-recuerdo' as const
-    }
+  const accionesCrear = [
+    { icon: 'plus', titulo: 'Nuevo evento', desc: 'Programar presentación', route: 'agregar-evento' as const },
+    { icon: 'music', titulo: 'Nueva canción', desc: 'Añadir al cancionero', route: 'agregar-cancion' as const },
+    { icon: 'image', titulo: 'Nuevo recuerdo', desc: 'Subir fotos y videos', route: 'agregar-recuerdo' as const }
+  ];
+
+  const accionesGestion = [
+    { icon: 'user', titulo: 'Usuarios', desc: 'Roles y suspensiones', route: 'gestion-usuarios' as const },
+    { icon: 'grid', titulo: 'Categorías', desc: 'Organizar el cancionero', route: 'gestion-categorias' as const },
+    { icon: 'clock', titulo: 'Historial', desc: 'Actividad del grupo', route: 'actividad' as const },
+    { icon: 'download', titulo: 'Respaldo', desc: 'Exportar a JSON', route: 'exportar-respaldo' as const }
   ];
 </script>
 
@@ -121,14 +110,36 @@
 
     <div>
       <h3 class="text-[11px] font-bold text-dorado tracking-[0.25em] uppercase px-1 mb-3">
-        Acciones
+        Crear contenido
       </h3>
       <div class="space-y-2">
-        {#each acciones as a}
+        {#each accionesCrear as a}
           <GlassCard padding="md" onTap={() => router.go(a.route)}>
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-dorado to-dorado-dark flex items-center justify-center shrink-0 shadow-lg shadow-dorado/40">
                 <Icon name={a.icon} size={20} class="text-granate-dark" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-white">{a.titulo}</p>
+                <p class="text-[11px] text-white/50 mt-0.5">{a.desc}</p>
+              </div>
+              <Icon name="chevron-right" size={16} class="text-dorado/50" />
+            </div>
+          </GlassCard>
+        {/each}
+      </div>
+    </div>
+
+    <div>
+      <h3 class="text-[11px] font-bold text-dorado tracking-[0.25em] uppercase px-1 mb-3">
+        Gestión
+      </h3>
+      <div class="space-y-2">
+        {#each accionesGestion as a}
+          <GlassCard padding="md" onTap={() => router.go(a.route)}>
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
+                <Icon name={a.icon} size={20} class="text-dorado" />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-bold text-white">{a.titulo}</p>
