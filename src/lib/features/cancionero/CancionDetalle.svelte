@@ -8,6 +8,7 @@
   import ComentariosSection from './ComentariosSection.svelte';
   import { cancionesService, type Cancion } from '../../services/canciones';
   import { notasService } from '../../services/notas';
+  import { actividadService } from '../../services/actividad';
   import { canciones } from '../../stores/canciones.svelte';
   import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
@@ -27,7 +28,6 @@
 
   onMount(async () => {
     cancion = canciones.buscar(id) ?? (await cancionesService.obtener(id));
-    notaTexto = session.user ? (session.user as any).notaCancion?.(id) ?? '' : '';
     loading = false;
   });
 
@@ -58,6 +58,24 @@
     } catch {}
   }
 
+  async function eliminar() {
+    if (!cancion) return;
+    if (!confirm(`¿Eliminar "${cancion.titulo}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await cancionesService.eliminar(cancion.id);
+      await actividadService.registrar(
+        'eliminar_cancion',
+        `Eliminó la canción "${cancion.titulo}"`,
+        session.user?.uid ?? '',
+        session.displayName
+      );
+      canciones.refrescar();
+      router.back();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al eliminar');
+    }
+  }
+
   const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 </script>
 
@@ -70,11 +88,11 @@
         <p class="text-sm font-bold text-white truncate mt-0.5">{cancion?.titulo ?? '...'}</p>
       </div>
       {#if cancion}
-        <GlassIconButton
-          icon="share"
-          size="sm"
-          onTap={() => router.go('compartir-cancion', { id: cancion!.id })}
-        />
+        {#if session.isAdmin}
+          <GlassIconButton icon="edit" size="sm" onTap={() => router.go('editar-cancion', { id: cancion!.id })} />
+          <GlassIconButton icon="trash" size="sm" onTap={eliminar} />
+        {/if}
+        <GlassIconButton icon="share" size="sm" onTap={() => router.go('compartir-cancion', { id: cancion!.id })} />
       {/if}
     </div>
   </header>
@@ -91,7 +109,6 @@
     </div>
   {:else}
     <div class="px-5 py-6 pb-40 space-y-4">
-      <!-- Hero -->
       <GlassCard variant="granate" padding="xl">
         <div class="flex items-start gap-4">
           <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-dorado to-dorado-dark flex items-center justify-center shadow-lg shadow-dorado/40 shrink-0">
@@ -110,56 +127,35 @@
             </div>
           </div>
         </div>
-
         {#if cancion.descripcion}
           <p class="text-xs text-white/60 mt-4 leading-relaxed">{cancion.descripcion}</p>
         {/if}
-
         <div class="flex items-center gap-2 mt-5">
           <div class="flex-1">
             <GlassButton variant="primary" fullWidth icon="play" onTap={tocarPlay}>Escuchar</GlassButton>
           </div>
         </div>
-
         <div class="flex items-center justify-center gap-1.5 mt-3">
           <Icon name="play" size={10} class="text-dorado/60" fill />
           <span class="text-[11px] text-white/40 font-semibold">{cancion.reproducciones} reproducciones</span>
         </div>
       </GlassCard>
 
-      <!-- Tabs -->
       <div class="glass glass-strong rounded-full p-1 flex">
-        <button
-          type="button"
-          onclick={() => (tabActivo = 'info')}
-          class="flex-1 h-10 rounded-full text-[11px] font-bold tracking-wider uppercase transition-all {tabActivo === 'info'
-            ? 'bg-gradient-to-br from-granate to-granate-dark text-dorado'
-            : 'text-white/50'}"
-        >
-          Info
-        </button>
-        <button
-          type="button"
-          onclick={() => (tabActivo = 'letra')}
-          class="flex-1 h-10 rounded-full text-[11px] font-bold tracking-wider uppercase transition-all {tabActivo === 'letra'
-            ? 'bg-gradient-to-br from-granate to-granate-dark text-dorado'
-            : 'text-white/50'}"
-        >
-          Letra
-        </button>
-        <button
-          type="button"
-          onclick={() => (tabActivo = 'comentarios')}
-          class="flex-1 h-10 rounded-full text-[11px] font-bold tracking-wider uppercase transition-all {tabActivo === 'comentarios'
-            ? 'bg-gradient-to-br from-granate to-granate-dark text-dorado'
-            : 'text-white/50'}"
-        >
-          Comentarios
-        </button>
+        {#each [{ k: 'info', l: 'Info' }, { k: 'letra', l: 'Letra' }, { k: 'comentarios', l: 'Comentarios' }] as t}
+          <button
+            type="button"
+            onclick={() => (tabActivo = t.k as typeof tabActivo)}
+            class="flex-1 h-10 rounded-full text-[11px] font-bold tracking-wider uppercase transition-all {tabActivo === t.k
+              ? 'bg-gradient-to-br from-granate to-granate-dark text-dorado'
+              : 'text-white/50'}"
+          >
+            {t.l}
+          </button>
+        {/each}
       </div>
 
       {#if tabActivo === 'info'}
-        <!-- Nota personal -->
         {#if session.user}
           <div class="space-y-2">
             <div class="flex items-center gap-2 px-1">
@@ -183,12 +179,8 @@
                 ></textarea>
               </div>
               <div class="flex gap-2">
-                <div class="flex-1">
-                  <GlassButton variant="secondary" fullWidth onTap={() => (notaEditando = false)}>Cancelar</GlassButton>
-                </div>
-                <div class="flex-1">
-                  <GlassButton variant="primary" fullWidth icon="check" onTap={guardarNota}>Guardar</GlassButton>
-                </div>
+                <div class="flex-1"><GlassButton variant="secondary" fullWidth onTap={() => (notaEditando = false)}>Cancelar</GlassButton></div>
+                <div class="flex-1"><GlassButton variant="primary" fullWidth icon="check" onTap={guardarNota}>Guardar</GlassButton></div>
               </div>
             {:else}
               <GlassCard padding="md">
@@ -200,7 +192,6 @@
           </div>
         {/if}
 
-        <!-- Partitura -->
         {#if cancion.estrofas.length > 0}
           <div class="space-y-3">
             <div class="flex items-center gap-2 px-1">
@@ -212,14 +203,9 @@
             {#each cancion.estrofas as estrofa, idx}
               <GlassCard padding="lg">
                 <div class="flex items-center justify-between mb-3">
-                  <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">
-                    Estrofa {romanos[idx] ?? idx + 1}
-                  </p>
+                  <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">Estrofa {romanos[idx] ?? idx + 1}</p>
                   {#if estrofa.bis}
-                    <div class="flex items-center gap-1 text-dorado">
-                      <Icon name="refresh" size={12} />
-                      <span class="text-[10px] font-bold tracking-wider">BIS</span>
-                    </div>
+                    <div class="flex items-center gap-1 text-dorado"><Icon name="refresh" size={12} /><span class="text-[10px] font-bold tracking-wider">BIS</span></div>
                   {/if}
                 </div>
                 <div class="overflow-x-auto -mx-1 px-1">
@@ -272,7 +258,7 @@
                 <Icon name="info" size={22} class="text-dorado/60" />
               </div>
               <p class="text-sm font-bold text-white">Sin letra</p>
-              <p class="text-xs text-white/50 mt-1">Esta canción aún no tiene letra registrada</p>
+              <p class="text-xs text-white/50 mt-1">Esta canción aún no tiene letra</p>
             </div>
           </GlassCard>
         {/if}
