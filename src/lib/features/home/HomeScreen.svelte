@@ -6,6 +6,7 @@
   import Icon from '../../components/ui/Icon.svelte';
   import InicioTab from './tabs/InicioTab.svelte';
   import CancioneroTab from '../cancionero/CancioneroTab.svelte';
+  import EventosTab from '../eventos/EventosTab.svelte';
 
   type TabId = 'inicio' | 'cancionero' | 'eventos' | 'recuerdos' | 'perfil';
 
@@ -20,7 +21,6 @@
   let activeTab = $state<TabId>('inicio');
 
   const placeholders: Record<string, string> = {
-    eventos: 'Eventos',
     recuerdos: 'Recuerdos',
     perfil: 'Perfil'
   };
@@ -31,6 +31,8 @@
     <InicioTab />
   {:else if activeTab === 'cancionero'}
     <CancioneroTab />
+  {:else if activeTab === 'eventos'}
+    <EventosTab />
   {:else}
     <div class="min-h-[70dvh] flex flex-col items-center justify-center px-8 text-center">
       <div class="glass w-24 h-24 rounded-full flex items-center justify-center mb-6">
