@@ -3,11 +3,11 @@
   import BottomTabs from '../../components/ui/BottomTabs.svelte';
   import type { TabItem } from '../../components/ui/BottomTabs.svelte';
   import MiniPlayer from '../../components/ui/MiniPlayer.svelte';
-  import Icon from '../../components/ui/Icon.svelte';
   import InicioTab from './tabs/InicioTab.svelte';
   import CancioneroTab from '../cancionero/CancioneroTab.svelte';
   import EventosTab from '../eventos/EventosTab.svelte';
   import RecuerdosTab from '../recuerdos/RecuerdosTab.svelte';
+  import PerfilTab from '../perfil/PerfilTab.svelte';
 
   type TabId = 'inicio' | 'cancionero' | 'eventos' | 'recuerdos' | 'perfil';
 
@@ -20,10 +20,6 @@
   ];
 
   let activeTab = $state<TabId>('inicio');
-
-  const placeholders: Record<string, string> = {
-    perfil: 'Perfil'
-  };
 </script>
 
 <div class="app-background min-h-dvh">
@@ -35,16 +31,8 @@
     <EventosTab />
   {:else if activeTab === 'recuerdos'}
     <RecuerdosTab />
-  {:else}
-    <div class="min-h-[70dvh] flex flex-col items-center justify-center px-8 text-center">
-      <div class="glass w-24 h-24 rounded-full flex items-center justify-center mb-6">
-        <Icon name="sparkles" size={36} class="text-dorado" />
-      </div>
-      <h2 class="text-2xl font-black text-dorado tracking-tight">
-        {placeholders[activeTab]}
-      </h2>
-      <p class="text-white/40 text-sm mt-2">Próximamente</p>
-    </div>
+  {:else if activeTab === 'perfil'}
+    <PerfilTab />
   {/if}
 
   <MiniPlayer />
