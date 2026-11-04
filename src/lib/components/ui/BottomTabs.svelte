@@ -67,9 +67,9 @@
               {/if}
             </div>
             <span
-              class="text-[9px] font-bold tracking-[0.12em] uppercase transition-colors"
-              class:text-dorado={isActive}
-              class:text-white/40={!isActive}
+              class="text-[9px] font-bold tracking-[0.12em] uppercase transition-colors {isActive
+                ? 'text-dorado'
+                : 'text-white/40'}"
             >
               {tab.label}
             </span>
