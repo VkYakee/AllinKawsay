@@ -1,9 +1,11 @@
 <!-- src/App.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import { listen } from '@tauri-apps/api/event';
   import { router } from './lib/stores/router.svelte';
   import { session } from './lib/stores/session.svelte';
   import { initOneSignal, oneSignalLogin, oneSignalLogout } from './lib/services/onesignal';
+
   import SplashScreen from './lib/features/splash/SplashScreen.svelte';
   import LoginScreen from './lib/features/auth/LoginScreen.svelte';
   import HomeScreen from './lib/features/home/HomeScreen.svelte';
@@ -14,8 +16,27 @@
   import RecuerdoDetalle from './lib/features/recuerdos/RecuerdoDetalle.svelte';
   import AdminScreen from './lib/features/admin/AdminScreen.svelte';
 
-  onMount(() => {
+  let unlistenBack: (() => void) | null = null;
+
+  onMount(async () => {
     initOneSignal();
+
+    // Interceptar el botón atrás de Android.
+    // En Tauri 2 el evento se llama "tauri://back-button".
+    try {
+      unlistenBack = await listen('tauri://back-button', () => {
+        if (router.history.length > 0) {
+          router.back();
+        }
+        // Si no hay historial: se permite el comportamiento nativo (cerrar app).
+      });
+    } catch {
+      // Web sin Tauri: sin listener.
+    }
+  });
+
+  onDestroy(() => {
+    unlistenBack?.();
   });
 
   $effect(() => {
