@@ -7,7 +7,8 @@ export type Route =
   | 'cancion'
   | 'zampona'
   | 'ensayo'
-  | 'evento';
+  | 'evento'
+  | 'recuerdo';
 
 type Snapshot = { route: Route; params: Record<string, unknown> };
 
