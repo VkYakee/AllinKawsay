@@ -5,6 +5,9 @@ class EventosStore {
   all = $state<Evento[]>([]);
   loading = $state(false);
   loaded = $state(false);
+  error = $state<string | null>(null);
+
+  private unsubscribe: (() => void) | null = null;
 
   get proximos(): Evento[] {
     return this.all.filter((e) => esFuturo(e.fecha));
@@ -14,19 +17,36 @@ class EventosStore {
     return this.all.filter((e) => !esFuturo(e.fecha)).reverse();
   }
 
-  async cargar() {
-    if (this.loading || this.loaded) return;
+  cargar() {
+    if (this.loaded || this.loading) return;
     this.loading = true;
-    try {
-      this.all = await eventosService.listar();
-      this.loaded = true;
-    } finally {
-      this.loading = false;
-    }
+    this.error = null;
+    this.unsubscribe = eventosService.stream(
+      (items) => {
+        this.all = items;
+        this.loaded = true;
+        this.loading = false;
+      },
+      (err) => {
+        this.error = err.message;
+        this.loading = false;
+      }
+    );
   }
 
   buscar(id: string): Evento | undefined {
     return this.all.find((e) => e.id === id);
+  }
+
+  refrescar() {
+    this.detener();
+    this.loaded = false;
+    this.cargar();
+  }
+
+  detener() {
+    this.unsubscribe?.();
+    this.unsubscribe = null;
   }
 }
 
