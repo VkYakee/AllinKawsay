@@ -8,6 +8,7 @@
   import CancionDetalle from './lib/features/cancionero/CancionDetalle.svelte';
   import ZamponaScreen from './lib/features/zampona/ZamponaScreen.svelte';
   import EnsayoScreen from './lib/features/ensayo/EnsayoScreen.svelte';
+  import EventoDetalle from './lib/features/eventos/EventoDetalle.svelte';
 
   async function onSplashComplete() {
     await session.restore();
@@ -27,6 +28,8 @@
   <ZamponaScreen />
 {:else if router.current === 'ensayo'}
   <EnsayoScreen id={router.params.id as string} />
+{:else if router.current === 'evento'}
+  <EventoDetalle id={router.params.id as string} />
 {:else}
   <div class="app-background min-h-dvh flex items-center justify-center">
     <p class="text-white/40 text-sm tracking-wider">404</p>
