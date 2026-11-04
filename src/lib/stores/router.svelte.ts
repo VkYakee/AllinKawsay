@@ -18,7 +18,12 @@ export type Route =
   | 'agregar-cancion'
   | 'editar-cancion'
   | 'agregar-recuerdo'
-  | 'editar-recuerdo';
+  | 'editar-recuerdo'
+  | 'buscar'
+  | 'historia'
+  | 'editar-historia'
+  | 'compartir-app'
+  | 'compartir-cancion';
 
 type Snapshot = { route: Route; params: Record<string, unknown> };
 
