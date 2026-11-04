@@ -3,6 +3,7 @@ mod commands;
 mod domain;
 mod infra;
 
+use commands::admin::UsuariosState;
 use commands::auth::SessionState;
 use commands::canciones::CancionesState;
 use commands::eventos::EventosState;
@@ -27,6 +28,7 @@ pub fn run() {
         .manage(CancionesState::new())
         .manage(EventosState::new())
         .manage(RecuerdosState::new())
+        .manage(UsuariosState::new())
         .invoke_handler(tauri::generate_handler![
             commands::system::ping,
             commands::system::app_version,
@@ -43,6 +45,8 @@ pub fn run() {
             commands::eventos::obtener_evento,
             commands::recuerdos::listar_recuerdos,
             commands::recuerdos::obtener_recuerdo,
+            commands::admin::admin_stats,
+            commands::admin::admin_usuarios,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar Allin Kawsay");
