@@ -9,6 +9,7 @@ use commands::canciones::CancionesState;
 use commands::eventos::EventosState;
 use commands::recuerdos::RecuerdosState;
 use std::sync::Mutex;
+use tauri::Manager;
 use tracing_subscriber::EnvFilter;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -24,6 +25,15 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
+        .setup(|app| {
+            let resource_dir = app
+                .path()
+                .resource_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."));
+            let audio = infra::audio::spawn(resource_dir);
+            app.manage(audio);
+            Ok(())
+        })
         .manage(SessionState(Mutex::new(None)))
         .manage(CancionesState::new())
         .manage(EventosState::new())
