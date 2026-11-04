@@ -78,6 +78,31 @@ async function mockInvoke<T>(
       return mockNotasZampona as T;
     case 'tocar_nota':
       return undefined as T;
+    case 'preparar_ensayo': {
+      const cancionId = args?.id as string;
+      const c = mockCanciones.find((c) => c.id === cancionId);
+      if (!c) throw new Error('Canción no encontrada');
+      const dur = 500;
+      const eventos: Array<{ nota_id: string; estrofa_idx: number; columna_idx: number; es_fila7: boolean; offset_ms: number }> = [];
+      let offset = 0;
+      for (let ei = 0; ei < c.estrofas.length; ei++) {
+        const est = c.estrofas[ei];
+        for (let ci = 0; ci < est.columnas.length; ci++) {
+          const col = est.columnas[ci];
+          const n7 = col.nota7.trim();
+          const n6 = col.nota6.trim();
+          if (n7 && n7 !== '.') {
+            eventos.push({ nota_id: `fila7_${n7}`, estrofa_idx: ei, columna_idx: ci, es_fila7: true, offset_ms: offset });
+            offset += dur;
+          }
+          if (n6 && n6 !== '.') {
+            eventos.push({ nota_id: `fila6_${n6}`, estrofa_idx: ei, columna_idx: ci, es_fila7: false, offset_ms: offset });
+            offset += dur;
+          }
+        }
+      }
+      return { cancion_id: c.id, titulo: c.titulo, eventos, duracion_nota_ms: dur, duracion_total_ms: offset } as T;
+    }
     default:
       throw new Error(`Comando desconocido: ${cmd}`);
   }
