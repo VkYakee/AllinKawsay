@@ -15,36 +15,26 @@
   import EventoDetalle from './lib/features/eventos/EventoDetalle.svelte';
   import RecuerdoDetalle from './lib/features/recuerdos/RecuerdoDetalle.svelte';
   import AdminScreen from './lib/features/admin/AdminScreen.svelte';
+  import AgregarEvento from './lib/features/admin/AgregarEvento.svelte';
+  import AgregarCancion from './lib/features/admin/AgregarCancion.svelte';
+  import AgregarRecuerdo from './lib/features/admin/AgregarRecuerdo.svelte';
 
   let unlistenBack: (() => void) | null = null;
 
   onMount(async () => {
     initOneSignal();
-
-    // Interceptar el botón atrás de Android.
-    // En Tauri 2 el evento se llama "tauri://back-button".
     try {
       unlistenBack = await listen('tauri://back-button', () => {
-        if (router.history.length > 0) {
-          router.back();
-        }
-        // Si no hay historial: se permite el comportamiento nativo (cerrar app).
+        if (router.history.length > 0) router.back();
       });
-    } catch {
-      // Web sin Tauri: sin listener.
-    }
+    } catch {}
   });
 
-  onDestroy(() => {
-    unlistenBack?.();
-  });
+  onDestroy(() => unlistenBack?.());
 
   $effect(() => {
-    if (session.user) {
-      oneSignalLogin(session.user.uid);
-    } else {
-      oneSignalLogout();
-    }
+    if (session.user) oneSignalLogin(session.user.uid);
+    else oneSignalLogout();
   });
 
   async function onSplashComplete() {
@@ -71,6 +61,18 @@
   <RecuerdoDetalle id={router.params.id as string} />
 {:else if router.current === 'admin'}
   <AdminScreen />
+{:else if router.current === 'agregar-evento'}
+  <AgregarEvento />
+{:else if router.current === 'editar-evento'}
+  <AgregarEvento id={router.params.id as string} />
+{:else if router.current === 'agregar-cancion'}
+  <AgregarCancion />
+{:else if router.current === 'editar-cancion'}
+  <AgregarCancion id={router.params.id as string} />
+{:else if router.current === 'agregar-recuerdo'}
+  <AgregarRecuerdo />
+{:else if router.current === 'editar-recuerdo'}
+  <AgregarRecuerdo id={router.params.id as string} />
 {:else}
   <div class="app-background min-h-dvh flex items-center justify-center">
     <p class="text-white/40 text-sm tracking-wider">404</p>
