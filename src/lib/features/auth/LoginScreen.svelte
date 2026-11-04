@@ -8,7 +8,6 @@
 
   let email = $state('');
   let password = $state('');
-  let error = $state('');
 
   const emailValid = $derived(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email));
   const passValid = $derived(password.length >= 4);
@@ -16,18 +15,20 @@
 
   async function handleLogin() {
     if (!canSubmit) return;
-    error = '';
     try {
       await session.login(email, password);
-      router.replace('home');
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Error al ingresar';
+      if (session.needsVerification) {
+        router.replace('verificacion');
+      } else {
+        router.replace('home');
+      }
+    } catch {
+      // error mostrado desde session.error
     }
   }
 </script>
 
 <div class="app-background min-h-dvh flex flex-col px-6 pt-12 pb-8">
-  <!-- Logo + título -->
   <div class="flex-1 flex flex-col items-center justify-center">
     <div class="relative mb-8">
       <div class="absolute inset-0 rounded-full bg-dorado blur-3xl opacity-30"></div>
@@ -37,52 +38,35 @@
     </div>
 
     <h1 class="text-2xl font-black text-dorado tracking-[0.35em]">ALLIN KAWSAY</h1>
-    <p class="text-white/40 mt-3 text-[10px] tracking-[0.4em] font-semibold uppercase">
+    <p class="text-white/50 mt-3 text-[10px] tracking-[0.4em] font-semibold uppercase">
       Inicia sesión
     </p>
   </div>
 
-  <!-- Formulario -->
   <div class="space-y-4 pb-4">
-    <GlassInput
-      bind:value={email}
-      label="Email"
-      placeholder="tu@email.com"
-      icon="mail"
-      type="email"
-      success={emailValid}
-      onEnter={handleLogin}
-    />
+    <GlassInput bind:value={email} label="Email" placeholder="tu@email.com" icon="mail" type="email" success={emailValid} onEnter={handleLogin} />
+    <GlassInput bind:value={password} label="Contraseña" placeholder="••••••••" icon="lock" type="password" success={passValid} onEnter={handleLogin} />
 
-    <GlassInput
-      bind:value={password}
-      label="Contraseña"
-      placeholder="••••••••"
-      icon="lock"
-      type="password"
-      success={passValid}
-      onEnter={handleLogin}
-    />
-
-    {#if error}
-      <div class="glass rounded-xl p-3 border border-red-500/30 flex items-center gap-2">
+    {#if session.error}
+      <div class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
         <Icon name="alert-circle" size={16} class="text-red-400 shrink-0" />
-        <p class="text-xs text-red-300">{error}</p>
+        <p class="text-xs text-red-300">{session.error}</p>
       </div>
     {/if}
 
-    <div class="pt-2">
-      <GlassButton
-        variant="primary"
-        fullWidth
-        icon="log-in"
-        loading={session.loading}
-        disabled={!canSubmit}
-        onTap={handleLogin}
+    <div class="flex justify-end">
+      <button
+        type="button"
+        onclick={() => router.go('recuperar')}
+        class="text-[11px] text-dorado/80 font-semibold tracking-wider uppercase"
       >
-        Ingresar
-      </GlassButton>
+        ¿Olvidaste tu contraseña?
+      </button>
     </div>
+
+    <GlassButton variant="primary" fullWidth icon="log-in" loading={session.loading} disabled={!canSubmit} onTap={handleLogin}>
+      Ingresar
+    </GlassButton>
 
     <div class="flex items-center gap-3 py-2">
       <div class="flex-1 h-px bg-white/10"></div>
@@ -90,8 +74,8 @@
       <div class="flex-1 h-px bg-white/10"></div>
     </div>
 
-    <GlassButton variant="secondary" fullWidth icon="google" onTap={() => {}}>
-      Continuar con Google
+    <GlassButton variant="secondary" fullWidth icon="user-plus" onTap={() => router.go('registro')}>
+      Crear cuenta nueva
     </GlassButton>
 
     <p class="text-center text-[10px] text-white/30 tracking-[0.2em] pt-4 uppercase">
