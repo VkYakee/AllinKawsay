@@ -5,6 +5,7 @@
   import Icon from '../../components/ui/Icon.svelte';
   import EventoCard from './EventoCard.svelte';
   import { eventos } from '../../stores/eventos.svelte';
+  import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
 
   type Filtro = 'proximos' | 'pasados';
@@ -24,17 +25,22 @@
 <div class="px-5 py-6 pb-40 space-y-4">
   <div class="flex items-center justify-between">
     <div>
-      <p class="text-[11px] text-dorado/60 tracking-[0.25em] font-bold uppercase">
-        Calendario
-      </p>
-      <h2 class="text-3xl font-black text-white tracking-tight mt-1">
-        Eventos
-      </h2>
+      <p class="text-[11px] text-dorado/60 tracking-[0.25em] font-bold uppercase">Calendario</p>
+      <h2 class="text-3xl font-black text-white tracking-tight mt-1">Eventos</h2>
     </div>
-    <GlassIconButton icon="calendar" variant="gold" />
+    {#if session.isAdmin}
+      <button
+        type="button"
+        onclick={() => router.go('agregar-evento')}
+        class="w-11 h-11 rounded-full bg-gradient-to-br from-dorado to-dorado-dark flex items-center justify-center shadow-lg shadow-dorado/40 active:scale-90 transition-transform"
+      >
+        <Icon name="plus" size={22} class="text-granate-dark" />
+      </button>
+    {:else}
+      <GlassIconButton icon="calendar" variant="gold" />
+    {/if}
   </div>
 
-  <!-- Toggle próximos / pasados -->
   <div class="glass glass-strong rounded-full p-1 flex">
     <button
       type="button"
@@ -62,7 +68,7 @@
     </p>
   </div>
 
-  {#if eventos.loading}
+  {#if eventos.loading && !eventos.loaded}
     <div class="space-y-2">
       {#each Array(3) as _}
         <div class="glass rounded-2xl h-[88px] animate-pulse"></div>
@@ -70,7 +76,7 @@
     </div>
   {:else if listaActual.length === 0}
     <div class="glass rounded-2xl p-8 flex flex-col items-center text-center">
-      <div class="w-16 h-16 rounded-full bg-dorado/10 flex items-center justify-center mb-3">
+      <div class="w-16 h-16 rounded-full bg-dorado/15 flex items-center justify-center mb-3">
         <Icon name="calendar" size={26} class="text-dorado/60" />
       </div>
       <p class="text-base font-bold text-white">
@@ -78,7 +84,7 @@
       </p>
       <p class="text-xs text-white/50 mt-1">
         {filtro === 'proximos'
-          ? 'Los nuevos eventos aparecerán aquí'
+          ? session.isAdmin ? 'Toca + para crear uno' : 'Los nuevos aparecerán aquí'
           : 'Aún no hay historial'}
       </p>
     </div>
