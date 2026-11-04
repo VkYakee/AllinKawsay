@@ -55,6 +55,14 @@ const mockRecuerdos = [
   { id: 'r3', titulo: 'Ensayo en el local', descripcion: 'Preparativos para el concurso regional. Mucho esfuerzo y dedicación.', fotos: [fotoV('allin_en1'), foto('allin_en2'), foto('allin_en3')], videos: [], fecha: '2024-08-20T21:00:00', creado_por: 'admin', creador_nombre: 'Directiva' }
 ];
 
+const mockUsuarios = [
+  { uid: 'u1', nombre: 'Directiva Allin Kawsay', email: 'directiva@allinkawsay.pe', rol: 'admin', foto_url: '', baneado: false },
+  { uid: 'u2', nombre: 'María Quispe', email: 'maria@allinkawsay.pe', rol: 'miembro', foto_url: '', baneado: false },
+  { uid: 'u3', nombre: 'José Mamani', email: 'jose@allinkawsay.pe', rol: 'miembro', foto_url: '', baneado: false },
+  { uid: 'u4', nombre: 'Rosa Ticona', email: 'rosa@allinkawsay.pe', rol: 'publico', foto_url: '', baneado: false },
+  { uid: 'u5', nombre: 'Carlos Apaza', email: 'carlos@example.com', rol: 'publico', foto_url: '', baneado: true }
+];
+
 async function mockInvoke<T>(
   cmd: string,
   args?: Record<string, unknown>
@@ -121,6 +129,20 @@ async function mockInvoke<T>(
       const id = args?.id as string;
       return (mockRecuerdos.find((r) => r.id === id) ?? null) as T;
     }
+    case 'admin_stats': {
+      const totalReproducciones = mockCanciones.reduce((s, c) => s + c.reproducciones, 0);
+      const totalFotos = mockRecuerdos.reduce((s, r) => s + r.fotos.length, 0);
+      const totalAudios = mockCanciones.filter((c) => c.audio_url !== '').length;
+      return {
+        total_canciones: mockCanciones.length,
+        total_eventos: mockEventos.length,
+        total_recuerdos: mockRecuerdos.length,
+        total_reproducciones: totalReproducciones,
+        total_fotos: totalFotos,
+        total_audios: totalAudios
+      } as T;
+    }
+    case 'admin_usuarios': return mockUsuarios as T;
     default:
       throw new Error(`Comando desconocido: ${cmd}`);
   }
