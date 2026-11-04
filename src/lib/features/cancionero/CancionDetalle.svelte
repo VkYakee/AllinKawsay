@@ -92,6 +92,7 @@
           <GlassIconButton icon="edit" size="sm" onTap={() => router.go('editar-cancion', { id: cancion!.id })} />
           <GlassIconButton icon="trash" size="sm" onTap={eliminar} />
         {/if}
+        <GlassIconButton icon="maximize" size="sm" onTap={() => router.go('modo-presentacion', { id: cancion!.id })} />
         <GlassIconButton icon="share" size="sm" onTap={() => router.go('compartir-cancion', { id: cancion!.id })} />
       {/if}
     </div>
