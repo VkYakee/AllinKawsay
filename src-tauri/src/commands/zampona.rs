@@ -18,6 +18,6 @@ pub async fn tocar_nota(
     if !existe {
         return Err(format!("Nota desconocida: {id}"));
     }
-    audio.tocar(&id);
+    audio.tocar_nota(&id);
     Ok(())
 }
