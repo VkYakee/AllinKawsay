@@ -25,7 +25,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"
 thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-rodio = { version = "0.19", default-features = false, features = ["symphonia-vorbis", "symphonia-mp3", "symphonia-wav", "cpal"] }
+rodio = { version = "0.19", default-features = false, features = ["playback", "symphonia-vorbis", "symphonia-mp3", "oboe-shared-stdcxx"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 [profile.release]
