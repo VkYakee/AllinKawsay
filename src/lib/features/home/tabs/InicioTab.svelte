@@ -5,6 +5,7 @@
   import Icon from '../../../components/ui/Icon.svelte';
   import { session } from '../../../stores/session.svelte';
   import { player } from '../../../stores/player.svelte';
+  import { router } from '../../../stores/router.svelte';
 
   const proximoEvento = {
     titulo: 'Fiesta Patronal',
@@ -62,7 +63,7 @@
   </GlassCard>
 
   <div class="grid grid-cols-2 gap-3">
-    <GlassCard variant="gold" padding="lg" onTap={() => {}}>
+    <GlassCard variant="gold" padding="lg" onTap={() => router.go('zampona')}>
       <div class="w-10 h-10 rounded-full bg-dorado/25 flex items-center justify-center mb-3">
         <Icon name="piano" size={20} class="text-dorado" />
       </div>
