@@ -1,5 +1,9 @@
 // src/lib/stores/ensayo.svelte.ts
-import { ensayoService, type EnsayoPreparado } from '../services/ensayo';
+import {
+  prepararEventos,
+  type EnsayoPreparado,
+  type EventoEnsayo
+} from '../services/ensayo';
 import { zamponaService } from '../services/zampona';
 
 class EnsayoStore {
@@ -14,16 +18,22 @@ class EnsayoStore {
   private rafId: number | null = null;
   private lastTick = 0;
 
-  get eventoActual() {
+  get eventoActual(): EventoEnsayo | null {
     if (!this.preparado || this.idxActual < 0) return null;
     return this.preparado.eventos[this.idxActual] ?? null;
   }
 
-  async preparar(cancionId: string) {
+  preparar(
+    estrofas: Array<{
+      columnas: Array<{ nota7: string; nota6: string }>;
+      bis: boolean;
+    }>,
+    duracionNotaMs = 500
+  ) {
     this.stop();
     this.cargando = true;
     try {
-      this.preparado = await ensayoService.preparar(cancionId);
+      this.preparado = prepararEventos(estrofas, duracionNotaMs);
     } finally {
       this.cargando = false;
     }
@@ -81,7 +91,10 @@ class EnsayoStore {
 
     for (let i = 0; i < eventos.length; i++) {
       const ev = eventos[i];
-      if (this.offsetMs >= ev.offset_ms && this.offsetMs < ev.offset_ms + dur) {
+      if (
+        this.offsetMs >= ev.offset_ms &&
+        this.offsetMs < ev.offset_ms + dur
+      ) {
         brillando.add(ev.nota_id);
         if (i !== this.idxActual) {
           this.idxActual = i;
