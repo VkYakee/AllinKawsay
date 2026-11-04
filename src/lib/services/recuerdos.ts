@@ -1,5 +1,6 @@
 // src/lib/services/recuerdos.ts
-import { invoke } from './tauri';
+import { Timestamp } from 'firebase/firestore';
+import { getCol, streamCol, getDocById, type FirestoreData } from './firestore';
 
 export interface Recuerdo {
   id: string;
@@ -12,12 +13,48 @@ export interface Recuerdo {
   creador_nombre: string;
 }
 
+function timestampToIso(ts: unknown): string {
+  if (ts instanceof Timestamp) return ts.toDate().toISOString();
+  if (typeof ts === 'string') return ts;
+  return new Date().toISOString();
+}
+
+function mapStringArray(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x): x is string => typeof x === 'string');
+}
+
+function mapRecuerdo(id: string, data: FirestoreData): Recuerdo {
+  return {
+    id,
+    titulo: typeof data.titulo === 'string' ? data.titulo : '',
+    descripcion: typeof data.descripcion === 'string' ? data.descripcion : '',
+    fotos: mapStringArray(data.fotos),
+    videos: mapStringArray(data.videos),
+    fecha: timestampToIso(data.fecha),
+    creado_por: typeof data.creadoPor === 'string' ? data.creadoPor : '',
+    creador_nombre:
+      typeof data.creadorNombre === 'string' ? data.creadorNombre : ''
+  };
+}
+
 export const recuerdosService = {
-  listar(): Promise<Recuerdo[]> {
-    return invoke<Recuerdo[]>('listar_recuerdos');
+  async listar(): Promise<Recuerdo[]> {
+    return getCol('recuerdos', mapRecuerdo);
   },
-  obtener(id: string): Promise<Recuerdo | null> {
-    return invoke<Recuerdo | null>('obtener_recuerdo', { id });
+
+  stream(
+    onData: (items: Recuerdo[]) => void,
+    onError: (err: Error) => void
+  ): () => void {
+    return streamCol('recuerdos', mapRecuerdo, (items) => {
+      items.sort((a, b) => b.fecha.localeCompare(a.fecha));
+      onData(items);
+    }, onError);
+  },
+
+  async obtener(id: string): Promise<Recuerdo | null> {
+    return getDocById('recuerdos', id, mapRecuerdo);
   }
 };
 
