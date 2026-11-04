@@ -5,13 +5,11 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
 
 use rodio::{Decoder, OutputStream, Sink, Source};
 use serde::Serialize;
 use tracing::{error, info, warn};
 
-// ─── Estado público del reproductor (compartido con comandos) ───
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct ReproductorState {
     pub cancion_id: Option<String>,
@@ -23,7 +21,6 @@ pub struct ReproductorState {
 
 pub type ReproductorStateShare = Arc<Mutex<ReproductorState>>;
 
-// ─── Comandos internos al thread de audio ───
 pub enum ComandoAudio {
     Nota(String),
     PlayCancion { cancion_id: String, path: PathBuf },
@@ -32,7 +29,6 @@ pub enum ComandoAudio {
     Detener,
 }
 
-// ─── Handle público ───
 pub struct AudioHandle {
     tx: mpsc::Sender<ComandoAudio>,
     estado: ReproductorStateShare,
@@ -64,7 +60,6 @@ impl AudioHandle {
     }
 }
 
-// ─── Levanta el thread de audio ───
 pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
     let (tx, rx) = mpsc::channel::<ComandoAudio>();
     let estado: ReproductorStateShare = Arc::new(Mutex::new(ReproductorState::default()));
@@ -86,7 +81,6 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
         info!("🎵 Samples precargados: {}", samples.len());
 
         let mut sink_cancion: Option<Sink> = None;
-        let mut duracion_actual = Duration::ZERO;
 
         while let Ok(cmd) = rx.recv() {
             match cmd {
@@ -140,7 +134,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                         }
                     };
 
-                    duracion_actual = decoder.total_duration().unwrap_or(Duration::ZERO);
+                    let duracion = decoder.total_duration().unwrap_or_default();
 
                     let sink = match Sink::try_new(&stream_handle) {
                         Ok(s) => s,
@@ -158,7 +152,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                         let mut g = estado_thread.lock().unwrap();
                         g.reproduciendo = true;
                         g.cargando = false;
-                        g.duracion_ms = duracion_actual.as_millis() as u64;
+                        g.duracion_ms = duracion.as_millis() as u64;
                     }
 
                     sink_cancion = Some(sink);
@@ -186,14 +180,12 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                 }
             }
 
-            // Actualizar posición si hay canción activa
             if let Some(s) = &sink_cancion {
                 let pos = s.get_pos();
                 let mut g = estado_thread.lock().unwrap();
                 g.posicion_ms = pos.as_millis() as u64;
 
                 if s.empty() && g.reproduciendo {
-                    // terminó
                     g.reproduciendo = false;
                 }
             }
