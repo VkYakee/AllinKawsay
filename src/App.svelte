@@ -9,6 +9,7 @@
   import ZamponaScreen from './lib/features/zampona/ZamponaScreen.svelte';
   import EnsayoScreen from './lib/features/ensayo/EnsayoScreen.svelte';
   import EventoDetalle from './lib/features/eventos/EventoDetalle.svelte';
+  import RecuerdoDetalle from './lib/features/recuerdos/RecuerdoDetalle.svelte';
 
   async function onSplashComplete() {
     await session.restore();
@@ -30,6 +31,8 @@
   <EnsayoScreen id={router.params.id as string} />
 {:else if router.current === 'evento'}
   <EventoDetalle id={router.params.id as string} />
+{:else if router.current === 'recuerdo'}
+  <RecuerdoDetalle id={router.params.id as string} />
 {:else}
   <div class="app-background min-h-dvh flex items-center justify-center">
     <p class="text-white/40 text-sm tracking-wider">404</p>
