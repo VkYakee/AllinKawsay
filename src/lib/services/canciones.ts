@@ -1,10 +1,11 @@
 // src/lib/services/canciones.ts
-import { orderBy } from 'firebase/firestore';
+import { Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { getFirebaseDb } from '../config/firebase';
 import {
   getCol,
   streamCol,
   getDocById,
-  updateDocument,
+  addDocument,
   type FirestoreData
 } from './firestore';
 
@@ -34,6 +35,19 @@ export interface Cancion {
   tags: string[];
 }
 
+export interface CancionInput {
+  titulo: string;
+  autor: string;
+  ritmo: string;
+  region: string;
+  descripcion: string;
+  imagen_url: string;
+  audio_url: string;
+  video_url: string;
+  letra: string;
+  tags: string[];
+}
+
 function mapColumna(raw: unknown): Columna {
   const d = (raw ?? {}) as Record<string, unknown>;
   return {
@@ -51,17 +65,18 @@ function mapEstrofa(raw: unknown): Estrofa {
 function mapCancion(id: string, data: FirestoreData): Cancion {
   const estrofasRaw = Array.isArray(data.estrofas) ? data.estrofas : [];
   const letrasRaw = Array.isArray(data.letras) ? data.letras : [];
-  const letra = letrasRaw.length > 0
-    ? letrasRaw
-        .map((l) => {
-          const obj = (l ?? {}) as Record<string, unknown>;
-          return typeof obj.texto === 'string' ? obj.texto : '';
-        })
-        .filter((t) => t.trim().length > 0)
-        .join('\n\n')
-    : typeof data.letra === 'string'
-    ? data.letra
-    : '';
+  const letra =
+    letrasRaw.length > 0
+      ? letrasRaw
+          .map((l) => {
+            const obj = (l ?? {}) as Record<string, unknown>;
+            return typeof obj.texto === 'string' ? obj.texto : '';
+          })
+          .filter((t) => t.trim().length > 0)
+          .join('\n\n')
+      : typeof data.letra === 'string'
+        ? data.letra
+        : '';
 
   return {
     id,
@@ -92,10 +107,15 @@ export const cancionesService = {
     onData: (items: Cancion[]) => void,
     onError: (err: Error) => void
   ): () => void {
-    return streamCol('canciones', mapCancion, (items) => {
-      items.sort((a, b) => a.titulo.localeCompare(b.titulo));
-      onData(items);
-    }, onError, orderBy('titulo'));
+    return streamCol(
+      'canciones',
+      mapCancion,
+      (items) => {
+        items.sort((a, b) => a.titulo.localeCompare(b.titulo));
+        onData(items);
+      },
+      onError
+    );
   },
 
   async obtener(id: string): Promise<Cancion | null> {
@@ -105,8 +125,54 @@ export const cancionesService = {
   async incrementarReproduccion(id: string): Promise<void> {
     const c = await getDocById<Cancion>('canciones', id, mapCancion);
     if (!c) return;
-    await updateDocument('canciones', id, {
+    await updateDoc(doc(getFirebaseDb(), 'canciones', id), {
       reproducciones: c.reproducciones + 1
     });
+  },
+
+  async crear(input: CancionInput, autorUid: string, autorNombre: string): Promise<string> {
+    return addDocument('canciones', {
+      titulo: input.titulo.trim(),
+      autor: input.autor.trim(),
+      ritmo: input.ritmo.trim(),
+      region: input.region.trim(),
+      descripcion: input.descripcion.trim(),
+      imagenUrl: input.imagen_url,
+      audioUrl: input.audio_url,
+      videoUrl: input.video_url.trim(),
+      letra: input.letra.trim(),
+      letras: input.letra.trim()
+        ? [{ titulo: '', texto: input.letra.trim() }]
+        : [],
+      tags: input.tags,
+      estrofas: [],
+      reproducciones: 0,
+      creadoPor: autorUid,
+      creadorNombre: autorNombre,
+      fechaCreacion: Timestamp.now()
+    });
+  },
+
+  async actualizar(id: string, input: CancionInput): Promise<void> {
+    await updateDoc(doc(getFirebaseDb(), 'canciones', id), {
+      titulo: input.titulo.trim(),
+      autor: input.autor.trim(),
+      ritmo: input.ritmo.trim(),
+      region: input.region.trim(),
+      descripcion: input.descripcion.trim(),
+      imagenUrl: input.imagen_url,
+      audioUrl: input.audio_url,
+      videoUrl: input.video_url.trim(),
+      letra: input.letra.trim(),
+      letras: input.letra.trim()
+        ? [{ titulo: '', texto: input.letra.trim() }]
+        : [],
+      tags: input.tags,
+      fechaEdicion: Timestamp.now()
+    });
+  },
+
+  async eliminar(id: string): Promise<void> {
+    await deleteDoc(doc(getFirebaseDb(), 'canciones', id));
   }
 };
