@@ -23,7 +23,11 @@ export type Route =
   | 'historia'
   | 'editar-historia'
   | 'compartir-app'
-  | 'compartir-cancion';
+  | 'compartir-cancion'
+  | 'gestion-usuarios'
+  | 'gestion-categorias'
+  | 'actividad'
+  | 'exportar-respaldo';
 
 type Snapshot = { route: Route; params: Record<string, unknown> };
 
