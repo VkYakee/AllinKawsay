@@ -5,6 +5,7 @@
   import { router } from './lib/stores/router.svelte';
   import { session } from './lib/stores/session.svelte';
   import { initOneSignal, oneSignalLogin, oneSignalLogout } from './lib/services/onesignal';
+  import { hayActualizacion, type InfoVersion } from './lib/services/update';
 
   import SplashScreen from './lib/features/splash/SplashScreen.svelte';
   import LoginScreen from './lib/features/auth/LoginScreen.svelte';
@@ -14,6 +15,7 @@
   import HomeScreen from './lib/features/home/HomeScreen.svelte';
   import CancionDetalle from './lib/features/cancionero/CancionDetalle.svelte';
   import CompartirCancionScreen from './lib/features/cancionero/CompartirCancionScreen.svelte';
+  import ModoPresentacionScreen from './lib/features/cancionero/ModoPresentacionScreen.svelte';
   import ZamponaScreen from './lib/features/zampona/ZamponaScreen.svelte';
   import EnsayoScreen from './lib/features/ensayo/EnsayoScreen.svelte';
   import EventoDetalle from './lib/features/eventos/EventoDetalle.svelte';
@@ -30,9 +32,13 @@
   import HistoriaScreen from './lib/features/historia/HistoriaScreen.svelte';
   import EditarHistoriaScreen from './lib/features/historia/EditarHistoriaScreen.svelte';
   import CompartirAppScreen from './lib/features/compartir/CompartirAppScreen.svelte';
+  import GestionCache from './lib/features/perfil/GestionCache.svelte';
+  import ActualizacionDialog from './lib/features/update/ActualizacionDialog.svelte';
   import { canciones } from './lib/stores/canciones.svelte';
 
   let unlistenBack: (() => void) | null = null;
+  let updateInfo = $state<InfoVersion | null>(null);
+  let updateChecked = false;
 
   onMount(async () => {
     initOneSignal();
@@ -46,9 +52,19 @@
   onDestroy(() => unlistenBack?.());
 
   $effect(() => {
-    if (session.user) oneSignalLogin(session.user.uid);
-    else oneSignalLogout();
+    if (session.user) {
+      oneSignalLogin(session.user.uid);
+      checkUpdate();
+    } else {
+      oneSignalLogout();
+    }
   });
+
+  async function checkUpdate() {
+    if (updateChecked) return;
+    updateChecked = true;
+    updateInfo = await hayActualizacion();
+  }
 
   async function onSplashComplete() {
     await session.restore();
@@ -85,6 +101,8 @@
       <p class="text-white/40 text-sm">Canción no encontrada</p>
     </div>
   {/if}
+{:else if router.current === 'modo-presentacion'}
+  <ModoPresentacionScreen id={router.params.id as string} />
 {:else if router.current === 'zampona'}
   <ZamponaScreen />
 {:else if router.current === 'ensayo'}
@@ -123,8 +141,14 @@
   <ActividadScreen />
 {:else if router.current === 'exportar-respaldo'}
   <ExportarRespaldo />
+{:else if router.current === 'gestion-cache'}
+  <GestionCache />
 {:else}
   <div class="app-background min-h-dvh flex items-center justify-center">
     <p class="text-white/40 text-sm tracking-wider">404</p>
   </div>
+{/if}
+
+{#if updateInfo}
+  <ActualizacionDialog info={updateInfo} onCerrar={() => (updateInfo = null)} />
 {/if}
