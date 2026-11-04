@@ -4,13 +4,10 @@ export type Route =
   | 'splash'
   | 'login'
   | 'home'
-  | 'cancionero'
-  | 'eventos'
-  | 'recuerdos'
-  | 'perfil'
   | 'cancion'
   | 'zampona'
-  | 'ensayo';
+  | 'ensayo'
+  | 'evento';
 
 type Snapshot = { route: Route; params: Record<string, unknown> };
 
