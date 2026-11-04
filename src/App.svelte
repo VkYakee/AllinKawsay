@@ -8,6 +8,9 @@
 
   import SplashScreen from './lib/features/splash/SplashScreen.svelte';
   import LoginScreen from './lib/features/auth/LoginScreen.svelte';
+  import RegistroScreen from './lib/features/auth/RegistroScreen.svelte';
+  import RecuperarScreen from './lib/features/auth/RecuperarScreen.svelte';
+  import VerificacionScreen from './lib/features/auth/VerificacionScreen.svelte';
   import HomeScreen from './lib/features/home/HomeScreen.svelte';
   import CancionDetalle from './lib/features/cancionero/CancionDetalle.svelte';
   import ZamponaScreen from './lib/features/zampona/ZamponaScreen.svelte';
@@ -39,7 +42,13 @@
 
   async function onSplashComplete() {
     await session.restore();
-    router.replace(session.isLogged ? 'home' : 'login');
+    if (!session.isLogged) {
+      router.replace('login');
+    } else if (session.needsVerification) {
+      router.replace('verificacion');
+    } else {
+      router.replace('home');
+    }
   }
 </script>
 
@@ -47,6 +56,12 @@
   <SplashScreen onComplete={onSplashComplete} />
 {:else if router.current === 'login'}
   <LoginScreen />
+{:else if router.current === 'registro'}
+  <RegistroScreen />
+{:else if router.current === 'recuperar'}
+  <RecuperarScreen />
+{:else if router.current === 'verificacion'}
+  <VerificacionScreen />
 {:else if router.current === 'home'}
   <HomeScreen />
 {:else if router.current === 'cancion'}
