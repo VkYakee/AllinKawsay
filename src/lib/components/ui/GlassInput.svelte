@@ -7,7 +7,7 @@
     label?: string;
     placeholder?: string;
     icon?: string;
-    type?: 'text' | 'email' | 'password' | 'number' | 'url' | 'tel';
+    type?: 'text' | 'email' | 'password' | 'number' | 'url' | 'tel' | 'date' | 'time';
     error?: string;
     success?: boolean;
     disabled?: boolean;
@@ -34,21 +34,20 @@
     class: className = ''
   }: Props = $props();
 
+  const uid = `gi-${Math.random().toString(36).slice(2, 9)}`;
   let focused = $state(false);
   let showPassword = $state(false);
   let inputEl: HTMLInputElement | undefined = $state(undefined);
 
-  const inputType = $derived(
-    type === 'password' && showPassword ? 'text' : type
-  );
+  const inputType = $derived(type === 'password' && showPassword ? 'text' : type);
 
   const borderClass = $derived(
     error
       ? 'border-red-500/60 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
       : success
-        ? 'border-dorado/60 shadow-[0_0_20px_rgba(245,208,97,0.15)]'
+        ? 'border-dorado/70 shadow-[0_0_20px_rgba(245,208,97,0.18)]'
         : focused
-          ? 'border-dorado/50 shadow-[0_0_20px_rgba(245,208,97,0.10)]'
+          ? 'border-dorado/60 shadow-[0_0_20px_rgba(245,208,97,0.12)]'
           : 'border-white/10'
   );
 
@@ -69,7 +68,10 @@
 
 <div class="flex flex-col gap-1.5 {className}">
   {#if label}
-    <label class="text-[11px] font-semibold tracking-[0.15em] uppercase text-dorado/70 px-1">
+    <label
+      for={uid}
+      class="text-[11px] font-semibold tracking-[0.15em] uppercase text-dorado/80 px-1"
+    >
       {label}
     </label>
   {/if}
@@ -77,11 +79,12 @@
   <div class="glass rounded-2xl {borderClass} transition-all duration-200">
     <div class="flex items-center gap-2 px-4 h-14">
       {#if icon}
-        <Icon name={icon} size={18} class="text-dorado/70 shrink-0" />
+        <Icon name={icon} size={18} class="text-dorado/80 shrink-0" />
       {/if}
 
       <input
         bind:this={inputEl}
+        id={uid}
         type={inputType}
         {value}
         {placeholder}
@@ -98,7 +101,7 @@
         <button
           type="button"
           onclick={() => showPassword = !showPassword}
-          class="text-dorado/70 active:scale-90 transition-transform"
+          class="text-dorado/80 active:scale-90 transition-transform"
         >
           <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
         </button>
