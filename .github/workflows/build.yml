@@ -65,20 +65,40 @@ jobs:
           fi
 
       - name: Generate app icons
-        run: |
-          set -e
-          mkdir -p src-tauri/icons
-          echo "🎨 Generando iconos"
-          npm run tauri icon assets/logo.png || true
-          if [ ! -f src-tauri/icons/32x32.png ]; then
-            echo "⚠️ Fallback: creando iconos con ImageMagick"
-            sudo apt-get update && sudo apt-get install -y imagemagick
-            convert assets/logo.png -resize 32x32 src-tauri/icons/32x32.png
-            convert assets/logo.png -resize 128x128 src-tauri/icons/128x128.png
-            convert assets/logo.png -resize 256x256 src-tauri/icons/128x128@2x.png
-            convert assets/logo.png -resize 512x512 src-tauri/icons/icon.png
-            convert assets/logo.png -resize 256x256 src-tauri/icons/icon.ico
-          fi
+  run: |
+    set -e
+    mkdir -p src-tauri/icons assets
+
+    echo "🔍 Buscando logo en rutas conocidas..."
+    LOGO=""
+    for candidate in assets/logo.png android_config/icono.png docs/logo.png; do
+      if [ -f "$candidate" ]; then
+        LOGO="$candidate"
+        echo "✅ Encontrado: $candidate"
+        break
+      fi
+    done
+
+    if [ -z "$LOGO" ]; then
+      echo "⚠️ No se encontró logo. Generando uno por defecto (granate + AK dorado)."
+      sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+      convert -size 512x512 xc:'#8B1A2B' \
+        -fill '#F5D061' -pointsize 240 -gravity center -annotate 0 'AK' \
+        assets/logo.png
+      LOGO="assets/logo.png"
+      echo "✅ Logo generado: assets/logo.png"
+    fi
+
+    if [ "$LOGO" != "assets/logo.png" ]; then
+      cp "$LOGO" assets/logo.png
+      echo "📋 Copiado a assets/logo.png"
+    fi
+
+    echo "🎨 Generando iconos con tauri..."
+    npm run tauri icon assets/logo.png
+
+    echo "✅ Iconos generados:"
+    ls -la src-tauri/icons/
 
       - name: Init Tauri Android
         run: npm run tauri android init
