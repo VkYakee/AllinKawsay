@@ -1,18 +1,12 @@
 // src-tauri/src/infra/seed.rs
-use crate::domain::{Cancion, Columna, Estrofa};
+use crate::domain::{Cancion, Columna, Estrofa, Evento};
 
 fn col(n7: &str, n6: &str) -> Columna {
-    Columna {
-        nota7: n7.into(),
-        nota6: n6.into(),
-    }
+    Columna { nota7: n7.into(), nota6: n6.into() }
 }
 
 fn est(columnas: Vec<Columna>) -> Estrofa {
-    Estrofa {
-        columnas,
-        bis: false,
-    }
+    Estrofa { columnas, bis: false }
 }
 
 pub fn canciones_demo() -> Vec<Cancion> {
@@ -132,6 +126,55 @@ pub fn canciones_demo() -> Vec<Cancion> {
             ])],
             letra: "Bajo la luna del altiplano\nlos sikuris tocan sin cesar.\nBajo la luna del altiplano\nsu música nos hace soñar.".into(),
             tags: vec!["sikuri".into(), "moderno".into()],
+        },
+    ]
+}
+
+pub fn eventos_demo() -> Vec<Evento> {
+    vec![
+        Evento {
+            id: "e1".into(),
+            titulo: "Fiesta Patronal".into(),
+            descripcion: "Presentación central del grupo en la fiesta patronal de Juliaca. Traer instrumentos y uniforme completo.".into(),
+            lugar: "Plaza de Armas, Juliaca".into(),
+            fecha: "2026-10-15T19:00:00".into(),
+            lat: Some(-15.4994),
+            lng: Some(-70.1333),
+            creado_por: "admin".into(),
+            creador_nombre: "Directiva".into(),
+        },
+        Evento {
+            id: "e2".into(),
+            titulo: "Aniversario del Grupo".into(),
+            descripcion: "Celebración por el aniversario del C.I.A.C. Allin Kawsay. Cena de confraternidad y presentación especial.".into(),
+            lugar: "Local institucional, Juliaca".into(),
+            fecha: "2026-11-02T18:30:00".into(),
+            lat: Some(-15.4985),
+            lng: Some(-70.1320),
+            creado_por: "admin".into(),
+            creador_nombre: "Directiva".into(),
+        },
+        Evento {
+            id: "e3".into(),
+            titulo: "Concurso Regional de Sikuris".into(),
+            descripcion: "Participación en el concurso regional. Ensayo general el día anterior a las 20:00.".into(),
+            lugar: "Coliseo Cerrado, Puno".into(),
+            fecha: "2026-12-08T16:00:00".into(),
+            lat: Some(-15.8402),
+            lng: Some(-70.0199),
+            creado_por: "admin".into(),
+            creador_nombre: "Directiva".into(),
+        },
+        Evento {
+            id: "e4".into(),
+            titulo: "Ensayo General — Aniversario".into(),
+            descripcion: "Ensayo obligatorio previo al aniversario. Repaso de todo el repertorio.".into(),
+            lugar: "Local institucional".into(),
+            fecha: "2026-09-20T20:00:00".into(),
+            lat: None,
+            lng: None,
+            creado_por: "admin".into(),
+            creador_nombre: "Directiva".into(),
         },
     ]
 }
