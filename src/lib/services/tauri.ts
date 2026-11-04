@@ -46,6 +46,15 @@ const mockEventos = [
   { id: 'e4', titulo: 'Ensayo General — Aniversario', descripcion: 'Ensayo obligatorio previo al aniversario. Repaso de todo el repertorio.', lugar: 'Local institucional', fecha: '2026-09-20T20:00:00', lat: null, lng: null, creado_por: 'admin', creador_nombre: 'Directiva' }
 ];
 
+const foto = (s: string) => `https://picsum.photos/seed/${s}/800/600`;
+const fotoV = (s: string) => `https://picsum.photos/seed/${s}/600/800`;
+
+const mockRecuerdos = [
+  { id: 'r1', titulo: 'Fiesta Patronal 2025', descripcion: 'Presentación inolvidable en la plaza de armas. El público no dejaba de aplaudir.', fotos: [foto('allin_fp1'), fotoV('allin_fp2'), foto('allin_fp3'), fotoV('allin_fp4'), foto('allin_fp5')], videos: ['demo_video_1'], fecha: '2025-10-15T20:00:00', creado_por: 'admin', creador_nombre: 'Directiva' },
+  { id: 'r2', titulo: 'Aniversario 2024', descripcion: 'Noche de confraternidad y música. Los fundadores nos acompañaron.', fotos: [foto('allin_an1'), foto('allin_an2'), fotoV('allin_an3'), foto('allin_an4')], videos: [], fecha: '2024-11-02T19:30:00', creado_por: 'admin', creador_nombre: 'Directiva' },
+  { id: 'r3', titulo: 'Ensayo en el local', descripcion: 'Preparativos para el concurso regional. Mucho esfuerzo y dedicación.', fotos: [fotoV('allin_en1'), foto('allin_en2'), foto('allin_en3')], videos: [], fecha: '2024-08-20T21:00:00', creado_por: 'admin', creador_nombre: 'Directiva' }
+];
+
 async function mockInvoke<T>(
   cmd: string,
   args?: Record<string, unknown>
@@ -103,6 +112,14 @@ async function mockInvoke<T>(
     case 'obtener_evento': {
       const id = args?.id as string;
       return (mockEventos.find((e) => e.id === id) ?? null) as T;
+    }
+    case 'listar_recuerdos': {
+      const lista = [...mockRecuerdos].sort((a, b) => b.fecha.localeCompare(a.fecha));
+      return lista as T;
+    }
+    case 'obtener_recuerdo': {
+      const id = args?.id as string;
+      return (mockRecuerdos.find((r) => r.id === id) ?? null) as T;
     }
     default:
       throw new Error(`Comando desconocido: ${cmd}`);
