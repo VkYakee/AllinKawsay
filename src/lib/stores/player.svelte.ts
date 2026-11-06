@@ -69,10 +69,12 @@ class Player {
       await reproductorService.pausar();
       this.playing = false;
       this.stopPolling();
+      this.generation = (await reproductorService.estado()).generation;
     } else {
       await reproductorService.reanudar();
       this.playing = true;
       this.startPolling();
+      this.generation = (await reproductorService.estado()).generation;
     }
   }
 
