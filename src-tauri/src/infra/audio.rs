@@ -25,6 +25,8 @@ pub struct ReproductorState {
     pub cargando: bool,
     pub posicion_ms: u64,
     pub duracion_ms: u64,
+    pub velocidad: f32,
+    pub generation: u64,
 }
 
 
@@ -45,6 +47,8 @@ struct SampleData {
 pub enum ComandoAudio {
     Nota(String),
     PlayCancion { cancion_id: String, path: PathBuf },
+    Buscar(u64),
+    Velocidad(f32),
     Pausar,
     Reanudar,
     Detener,
@@ -62,6 +66,13 @@ impl AudioHandle {
 
     pub fn play_cancion(&self, cancion_id: String, path: PathBuf) {
         let _ = self.tx.send(ComandoAudio::PlayCancion { cancion_id, path });
+    }
+
+    pub fn buscar(&self, position_ms: u64) { let _ = self.tx.send(ComandoAudio::Buscar(position_ms)); }
+
+    pub fn set_velocidad(&self, speed: f32) -> Result<(), String> {
+        if !speed.is_finite() || !(0.25..=2.0).contains(&speed) { return Err("La velocidad debe estar entre 0.25x y 2.0x".into()); }
+        self.tx.send(ComandoAudio::Velocidad(speed)).map_err(|e| e.to_string())
     }
 
     pub fn pausar(&self) {
@@ -224,6 +235,8 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                             state.reproduciendo = false;
                             state.posicion_ms = 0;
                             state.duracion_ms = 0;
+                            state.velocidad = 1.0;
+                            state.generation = state.generation.wrapping_add(1);
                         }
 
                         let file = match std::fs::File::open(&path) {
@@ -265,7 +278,27 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                         sink_cancion = Some(sink);
                     }
 
+                    ComandoAudio::Buscar(position_ms) => {
+                        { let mut state = estado_thread.lock().unwrap(); state.generation = state.generation.wrapping_add(1); }
+                        if let Some(sink) = &sink_cancion {
+                            match sink.try_seek(Duration::from_millis(position_ms)) {
+                                Ok(()) => estado_thread.lock().unwrap().posicion_ms = position_ms,
+                                Err(e) => warn!("No se pudo buscar a {}ms: {}", position_ms, e),
+                            }
+                        }
+                    }
+
+                    ComandoAudio::Velocidad(speed) => {
+                        if let Some(sink) = &sink_cancion {
+                            sink.set_speed(speed);
+                            let mut state = estado_thread.lock().unwrap();
+                            state.velocidad = speed;
+                            state.generation = state.generation.wrapping_add(1);
+                        }
+                    }
+
                     ComandoAudio::Pausar => {
+                        { let mut state = estado_thread.lock().unwrap(); state.generation = state.generation.wrapping_add(1); }
                         if let Some(sink) = &sink_cancion {
                             sink.pause();
                             estado_thread.lock().unwrap().reproduciendo = false;
@@ -274,6 +307,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
 
                     ComandoAudio::Reanudar => {
+                        { let mut state = estado_thread.lock().unwrap(); state.generation = state.generation.wrapping_add(1); }
                         if let Some(sink) = &sink_cancion {
                             sink.play();
                             estado_thread.lock().unwrap().reproduciendo = true;
@@ -298,7 +332,9 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                             sink_zampona = nuevo_sink;
                         }
                         voces_activas.clear();
-                        *estado_thread.lock().unwrap() = ReproductorState::default();
+                        let mut state = estado_thread.lock().unwrap();
+                        let generation = state.generation.wrapping_add(1);
+                        *state = ReproductorState { generation, ..Default::default() };
                     }
                 }
             }
