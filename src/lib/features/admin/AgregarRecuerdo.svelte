@@ -33,9 +33,10 @@
   let cargandoEdicion = $state(false);
   let error = $state('');
 
-  onMount(async () => {
+  async function cargarRecuerdo() {
     if (!editando) return;
     cargandoEdicion = true;
+    error = '';
     try {
       const existente = recuerdos.buscar(id) ?? await recuerdosService.obtener(id);
       if (!existente) {
@@ -52,6 +53,10 @@
     } finally {
       cargandoEdicion = false;
     }
+  }
+
+  onMount(() => {
+    void cargarRecuerdo();
   });
 
   async function subirFotos(e: Event) {
@@ -152,6 +157,11 @@
   <div class="px-5 py-6 pb-10 space-y-4">
     {#if cargandoEdicion}
       <div class="glass rounded-2xl border border-dorado/20 px-4 py-3 flex items-center gap-3"><div class="w-5 h-5 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div><p class="text-xs text-white/70">Cargando los datos del recuerdo…</p></div>
+    {:else if editando && error && fotos.length === 0 && videos.length === 0 && !titulo}
+      <div role="alert" class="glass rounded-2xl border border-red-500/30 p-4 flex items-center gap-3">
+        <p class="text-xs text-red-200 flex-1">{error}</p>
+        <button type="button" onclick={cargarRecuerdo} class="text-[11px] font-bold text-dorado">Reintentar</button>
+      </div>
     {/if}
     <GlassInput bind:value={titulo} label="Título *" placeholder="Fiesta Patronal 2026" icon="image" />
 
