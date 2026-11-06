@@ -63,6 +63,21 @@
       <p class="text-xs text-white/60 mt-2">Panel de control del grupo</p>
     </GlassCard>
 
+    {#if canciones.error || eventos.error || recuerdos.error}
+      <section class="rounded-2xl border border-red-400/20 bg-red-400/5 p-4 space-y-3">
+        <div class="flex items-center gap-2"><Icon name="alert-circle" size={16} class="text-red-300" /><p class="text-xs font-bold text-white">Hay información que no se pudo cargar</p></div>
+        {#if canciones.error}
+          <div class="flex items-center justify-between gap-2"><span class="text-[11px] text-white/55">Canciones: {canciones.error}</span><button type="button" onclick={() => canciones.refrescar()} class="text-[10px] font-bold text-dorado">Reintentar</button></div>
+        {/if}
+        {#if eventos.error}
+          <div class="flex items-center justify-between gap-2"><span class="text-[11px] text-white/55">Eventos: {eventos.error}</span><button type="button" onclick={() => eventos.refrescar()} class="text-[10px] font-bold text-dorado">Reintentar</button></div>
+        {/if}
+        {#if recuerdos.error}
+          <div class="flex items-center justify-between gap-2"><span class="text-[11px] text-white/55">Recuerdos: {recuerdos.error}</span><button type="button" onclick={() => recuerdos.refrescar()} class="text-[10px] font-bold text-dorado">Reintentar</button></div>
+        {/if}
+      </section>
+    {/if}
+
     <div>
       <h3 class="text-[11px] font-bold text-dorado tracking-[0.25em] uppercase px-1 mb-3">
         Métricas
@@ -80,7 +95,7 @@
             <Icon name="calendar" size={14} class="text-dorado" />
             <p class="text-[9px] text-white/50 tracking-wider font-bold uppercase">Eventos</p>
           </div>
-          <p class="text-2xl font-black text-white leading-none">{eventos.all.length}</p>
+          <p class="text-2xl font-black text-white leading-none">{eventos.proximos.length}</p>
         </GlassCard>
         <GlassCard padding="md">
           <div class="flex items-center gap-2 mb-2">
