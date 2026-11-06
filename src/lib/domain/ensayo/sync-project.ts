@@ -183,3 +183,43 @@ export function createSyncProject(id: string, songId: string, now = Date.now()):
     regions: []
   };
 }
+
+
+/** Contrato neutral del scheduler: offsets absolutos en milisegundos del audio. */
+export interface ScheduledSample {
+  atMs: number;
+  sampleId: string;
+  eventId: string;
+  musicalEventId?: string;
+}
+
+/**
+ * Compila únicamente notas habilitadas/no silenciadas dentro de una ventana.
+ * El backend debe validar generation y comparar atMs contra el reloj nativo.
+ * No usa timers ni reloj del navegador.
+ */
+export function compileScheduledSamples(
+  project: SyncProject,
+  fromUs: number,
+  untilUs: number
+): ScheduledSample[] {
+  if (!isSafeTime(fromUs) || !isSafeTime(untilUs) || untilUs < fromUs) {
+    throw new RangeError('Ventana temporal inválida.');
+  }
+  const track = project.tracks.find((item) => item.kind === 'zampona');
+  if (!track || !track.enabled || track.muted) return [];
+
+  return orderedEvents(track.events)
+    .filter((event) =>
+      event.kind === 'zampona-note' &&
+      event.sampleId &&
+      event.atUs >= fromUs &&
+      event.atUs <= untilUs
+    )
+    .map((event) => ({
+      atMs: Math.round(event.atUs / 1000),
+      sampleId: event.sampleId!,
+      eventId: event.id,
+      musicalEventId: event.musicalEventId
+    }));
+}
