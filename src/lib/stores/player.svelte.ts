@@ -19,6 +19,7 @@ class Player {
   generation = $state(0);
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private pollInFlight = false;
 
   get isActive() {
     return this.current !== null;
@@ -101,8 +102,12 @@ class Player {
   private startPolling() {
     this.stopPolling();
     this.pollTimer = setInterval(async () => {
+      if (this.pollInFlight) return;
+      this.pollInFlight = true;
       try {
         const estado = await reproductorService.estado();
+        // Una respuesta antigua no debe sobrescribir el estado de otra canción.
+        if (this.current?.id !== estado.cancion_id) return;
         this.playing = estado.reproduciendo;
         this.posicionMs = estado.posicion_ms;
         this.duracionMs = estado.duracion_ms;
@@ -119,6 +124,8 @@ class Player {
         }
       } catch {
         // silencioso
+      } finally {
+        this.pollInFlight = false;
       }
     }, 250);
   }
