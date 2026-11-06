@@ -1,7 +1,6 @@
 <!-- src/lib/features/recuerdos/RecuerdosTab.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import GlassIconButton from '../../components/ui/GlassIconButton.svelte';
   import Icon from '../../components/ui/Icon.svelte';
   import RecuerdoCard from './RecuerdoCard.svelte';
   import { recuerdos } from '../../stores/recuerdos.svelte';
