@@ -1,7 +1,7 @@
 // src/lib/services/reproductor.ts
 import { invoke } from './tauri';
 
-export interface NotaProgramada { at_ms: number; sample_id: string; event_id: string; }
+export interface NotaProgramada { at_ms: number; sample_id: string; event_id: string; gain: number; }
 
 export interface EstadoReproductor {
   cancion_id: string | null;
