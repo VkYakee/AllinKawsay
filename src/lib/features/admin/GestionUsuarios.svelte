@@ -48,18 +48,27 @@
     return lista;
   });
 
+  async function registrarActividad(tipo: string, mensaje: string) {
+    try {
+      await actividadService.registrar(
+        tipo,
+        mensaje,
+        session.user?.uid ?? '',
+        session.displayName
+      );
+    } catch {
+      // El cambio de usuario ya se aplicó; el historial es secundario.
+      error = 'El cambio se aplicó, pero no se pudo registrar en el historial.';
+    }
+  }
+
   async function cambiarRol(u: Usuario, nuevoRol: Rol) {
     if (u.uid === session.user?.uid || usuarioEnProceso) return;
     usuarioEnProceso = u.uid;
     error = '';
     try {
       await usuariosService.cambiarRol(u.uid, nuevoRol);
-      await actividadService.registrar(
-        'cambiar_rol',
-        `Cambió el rol de ${u.nombre} a ${rolLabel(nuevoRol)}`,
-        session.user?.uid ?? '',
-        session.displayName
-      );
+      await registrarActividad('cambiar_rol', `Cambió el rol de ${u.nombre} a ${rolLabel(nuevoRol)}`);
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'No se pudo cambiar el rol.';
     } finally {
@@ -73,12 +82,7 @@
     error = '';
     try {
       await usuariosService.banear(u.uid);
-      await actividadService.registrar(
-        'banear_usuario',
-        `Suspendió a ${u.nombre}`,
-        session.user?.uid ?? '',
-        session.displayName
-      );
+      await registrarActividad('banear_usuario', `Suspendió a ${u.nombre}`);
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'No se pudo suspender al usuario.';
     } finally {
@@ -92,12 +96,7 @@
     error = '';
     try {
       await usuariosService.desbanear(u.uid);
-      await actividadService.registrar(
-        'desbanear_usuario',
-        `Reactivó a ${u.nombre}`,
-        session.user?.uid ?? '',
-        session.displayName
-      );
+      await registrarActividad('desbanear_usuario', `Reactivó a ${u.nombre}`);
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'No se pudo reactivar al usuario.';
     } finally {
