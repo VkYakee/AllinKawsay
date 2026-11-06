@@ -23,7 +23,8 @@
         c.titulo.toLowerCase().includes(q) ||
         c.autor.toLowerCase().includes(q) ||
         c.ritmo.toLowerCase().includes(q) ||
-        c.region.toLowerCase().includes(q);
+        c.region.toLowerCase().includes(q) ||
+        c.tags.some((tag) => tag.toLowerCase().includes(q));
       const okR = !ritmoActivo || c.ritmo === ritmoActivo;
       return okQ && okR;
     });
@@ -118,6 +119,15 @@
         <div class="glass rounded-2xl h-[84px] animate-pulse"></div>
       {/each}
     </div>
+  {:else if canciones.error}
+    <div class="glass rounded-2xl p-6 border border-red-400/20 text-center">
+      <div class="w-12 h-12 rounded-full bg-red-400/10 flex items-center justify-center mx-auto mb-3">
+        <Icon name="alert-circle" size={22} class="text-red-300" />
+      </div>
+      <p class="text-sm font-bold text-white">No pudimos cargar el cancionero</p>
+      <p class="text-xs text-white/50 mt-1">{canciones.error}</p>
+      <button type="button" onclick={() => canciones.refrescar()} class="mt-4 rounded-full bg-dorado/15 px-4 py-2 text-xs font-bold text-dorado">Intentar de nuevo</button>
+    </div>
   {:else if filtradas.length === 0}
     <div class="glass rounded-2xl p-8 flex flex-col items-center text-center">
       <div class="w-16 h-16 rounded-full bg-dorado/15 flex items-center justify-center mb-3">
@@ -131,6 +141,9 @@
           ? session.isAdmin ? 'Toca + para agregar la primera' : 'Aún no hay canciones'
           : 'Prueba con otro término'}
       </p>
+      {#if canciones.all.length > 0}
+        <button type="button" onclick={() => { query = ''; ritmoActivo = ''; }} class="mt-4 rounded-full bg-white/5 px-4 py-2 text-xs font-bold text-dorado">Limpiar búsqueda y filtros</button>
+      {/if}
     </div>
   {:else}
     <div class="space-y-2">
