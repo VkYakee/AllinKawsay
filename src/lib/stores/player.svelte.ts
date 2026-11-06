@@ -48,6 +48,8 @@ class Player {
       return;
     }
 
+    this.syncProject = null;
+    this.scheduledGeneration = -1;
     this.current = track;
     this.loading = true;
     this.posicionMs = 0;
