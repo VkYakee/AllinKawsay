@@ -24,7 +24,8 @@
       c.titulo.toLowerCase().includes(q) ||
       c.autor.toLowerCase().includes(q) ||
       c.ritmo.toLowerCase().includes(q) ||
-      c.region.toLowerCase().includes(q)
+      c.region.toLowerCase().includes(q) ||
+      c.tags.some((tag) => tag.toLowerCase().includes(q))
     )
   );
 
@@ -77,6 +78,14 @@
   </header>
 
   <div class="px-5 py-6 pb-32 space-y-4">
+    {#if canciones.error || eventos.error || recuerdos.error}
+      <div class="glass rounded-2xl border border-red-400/20 p-3 space-y-2">
+        <p class="text-xs font-bold text-white">Algunos resultados pueden no estar disponibles</p>
+        {#if canciones.error}<div class="flex items-center justify-between gap-2"><span class="text-[10px] text-white/50">Canciones: {canciones.error}</span><button type="button" onclick={() => canciones.refrescar()} class="text-[10px] text-dorado font-bold">Reintentar</button></div>{/if}
+        {#if eventos.error}<div class="flex items-center justify-between gap-2"><span class="text-[10px] text-white/50">Eventos: {eventos.error}</span><button type="button" onclick={() => eventos.refrescar()} class="text-[10px] text-dorado font-bold">Reintentar</button></div>{/if}
+        {#if recuerdos.error}<div class="flex items-center justify-between gap-2"><span class="text-[10px] text-white/50">Recuerdos: {recuerdos.error}</span><button type="button" onclick={() => recuerdos.refrescar()} class="text-[10px] text-dorado font-bold">Reintentar</button></div>{/if}
+      </div>
+    {/if}
     {#if q.length < 2}
       <div class="flex flex-col items-center text-center py-16">
         <div class="w-20 h-20 rounded-full bg-dorado/15 flex items-center justify-center mb-4">
