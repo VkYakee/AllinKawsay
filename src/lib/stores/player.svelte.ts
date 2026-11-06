@@ -1,5 +1,6 @@
 // src/lib/stores/player.svelte.ts
 import { reproductorService } from '../services/reproductor';
+import { compileScheduledSamples, validateSyncProject, type SyncProject } from '../domain/ensayo/sync-project';
 
 export interface Track {
   id: string;
@@ -87,6 +88,15 @@ class Player {
     this.velocidad = Math.max(0.25, Math.min(2, speed));
     const estado = await reproductorService.estado();
     this.generation = estado.generation;
+  }
+
+  async programarProyectoSync(project: SyncProject): Promise<number> {
+    if (!this.current || project.songId !== this.current.id) throw new Error('Proyecto de sincronización no corresponde a canción activa.');
+    const issues = validateSyncProject(project);
+    if (issues.length) throw new Error('Proyecto de sincronización inválido: ' + issues[0].message);
+    const compiled = compileScheduledSamples(project, 0, Math.max(0, Math.round(this.duracionMs * 1000)));
+    await reproductorService.programarNotas(this.generation, compiled.map(event => ({ at_ms: event.atMs, sample_id: event.sampleId, event_id: event.eventId })));
+    return compiled.length;
   }
 
   async stop() {
