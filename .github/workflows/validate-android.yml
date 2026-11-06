@@ -59,7 +59,7 @@ jobs:
         run: echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --include=optional --no-audit --no-fund
 
       - name: Build web frontend
         run: npm run build
