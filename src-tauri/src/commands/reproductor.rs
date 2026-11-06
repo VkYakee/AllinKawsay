@@ -78,7 +78,10 @@ pub async fn play_cancion(
         let _ = std::fs::remove_file(&path);
         return Err("Descarga vacía".into());
     }
-    file.flush().map_err(|e| format!("No se pudo completar el audio: {e}"))?;
+    if let Err(e) = file.flush() {
+        let _ = std::fs::remove_file(&path);
+        return Err(format!("No se pudo completar el audio: {e}"));
+    }
 
     audio.play_cancion(cancion_id, path);
     Ok(())
