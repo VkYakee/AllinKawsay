@@ -12,9 +12,10 @@
 
   interface Props {
     onOpenCancionero: () => void;
+    onOpenEventos: () => void;
   }
 
-  let { onOpenCancionero }: Props = $props();
+  let { onOpenCancionero, onOpenEventos }: Props = $props();
 
   onMount(() => {
     if (!canciones.loaded) canciones.cargar();
@@ -73,21 +74,21 @@
     </div>
     <div class="flex items-center gap-2 shrink-0">
       <GlassIconButton icon="search" onTap={() => router.go('buscar')} />
-      <GlassIconButton icon="bell" variant="gold" onTap={() => router.go('actividad')} />
+      <GlassIconButton icon="calendar" variant="gold" onTap={onOpenEventos} />
     </div>
   </header>
 
   <section class="space-y-3">
     <div class="flex items-center justify-between px-1">
       <p class="text-[10px] text-dorado tracking-[0.22em] font-bold uppercase">Agenda del conjunto</p>
-      <button type="button" onclick={() => router.go('home')} class="text-[10px] text-white/45 font-semibold uppercase tracking-wider">Comunidad</button>
+      <button type="button" onclick={onOpenEventos} class="text-[10px] text-white/45 font-semibold uppercase tracking-wider">Ver eventos</button>
     </div>
     {#if eventos.loading && !eventos.loaded}
       <div class="glass rounded-3xl h-36 animate-pulse"></div>
     {:else if proximoEvento}
       <button type="button" onclick={() => router.go('evento', { id: proximoEvento.id })} class="w-full text-left glass glass-granate rounded-3xl p-5 border border-dorado/20 active:scale-[0.99] transition-transform">
         <div class="flex items-center gap-2 mb-3">
-          <span class="w-8 h-8 rounded-full bg-dorado/15 flex items-center justify-center"><Icon name="calendar-days" size={16} class="text-dorado" /></span>
+          <span class="w-8 h-8 rounded-full bg-dorado/15 flex items-center justify-center"><Icon name="calendar" size={16} class="text-dorado" /></span>
           <span class="text-[10px] text-dorado tracking-[0.2em] font-bold uppercase">Próxima actividad</span>
           <span class="ml-auto text-[10px] text-white/45">Ver detalle ↗</span>
         </div>
@@ -104,19 +105,19 @@
           <p class="text-sm font-bold text-white">Todavía no hay actividades próximas</p>
           <p class="text-xs text-white/45 mt-1">Cuando se publique un evento, aparecerá aquí.</p>
         </div>
-        <button type="button" onclick={() => router.go('home')} class="text-dorado text-xs font-bold">Ver</button>
+        <button type="button" onclick={onOpenEventos} class="text-dorado text-xs font-bold">Ver</button>
       </div>
     {/if}
   </section>
 
   <section class="grid grid-cols-2 gap-3">
     <GlassCard variant="gold" padding="lg" onTap={() => router.go('zampona')}>
-      <div class="w-11 h-11 rounded-2xl bg-dorado/20 flex items-center justify-center mb-4"><Icon name="music-2" size={21} class="text-dorado" /></div>
+      <div class="w-11 h-11 rounded-2xl bg-dorado/20 flex items-center justify-center mb-4"><Icon name="music" size={21} class="text-dorado" /></div>
       <p class="text-base font-bold text-dorado">Mini zampoña</p>
       <p class="text-[11px] text-white/50 mt-1">Explora y practica notas</p>
     </GlassCard>
     <GlassCard variant="granate" padding="lg" onTap={irEnsayo}>
-      <div class="w-11 h-11 rounded-2xl bg-dorado/20 flex items-center justify-center mb-4"><Icon name="play-circle" size={21} class="text-dorado" /></div>
+      <div class="w-11 h-11 rounded-2xl bg-dorado/20 flex items-center justify-center mb-4"><Icon name="play" size={21} class="text-dorado" /></div>
       <p class="text-base font-bold text-white">Modo ensayo</p>
       <p class="text-[11px] text-white/55 mt-1">Practica con el cancionero</p>
     </GlassCard>
@@ -161,7 +162,7 @@
 
   <section class="glass rounded-3xl p-5 border border-white/10">
     <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-2xl bg-dorado/10 flex items-center justify-center"><Icon name="users" size={20} class="text-dorado" /></div>
+      <div class="w-11 h-11 rounded-2xl bg-dorado/10 flex items-center justify-center"><Icon name="user" size={20} class="text-dorado" /></div>
       <div class="flex-1 min-w-0">
         <p class="text-sm font-bold text-white">Nuestra historia sigue creciendo</p>
         <p class="text-xs text-white/45 mt-1">Revisa recuerdos, eventos y actividades del conjunto.</p>
