@@ -22,6 +22,48 @@ Revisión de la rama `rebuild/ensayo-engine`, 6 de noviembre de 2026:
 
 Por tanto, Dart ya no forma parte del camino normal de compilación de la rama reconstruida, pero sus fuentes todavía contienen referencias útiles al esquema Firestore, comportamientos anteriores y funcionalidades que deben contrastarse antes de retirar archivos.
 
+
+## Revisión de integraciones — 6 de noviembre de 2026
+
+### Firebase
+
+- La aplicación activa inicializa Firebase de forma diferida y reutiliza la instancia existente.
+- Auth y Firestore se consumen desde los servicios TypeScript.
+- La API key web de Firebase incluida en el cliente identifica el proyecto; no debe tratarse como secreto. La protección real depende de Firebase Security Rules, App Check cuando corresponda y restricciones de API.
+- Pendiente: revisar reglas publicadas y permisos efectivos. No se modifican reglas ni credenciales desde esta auditoría.
+
+### Cloudinary
+
+- El servicio activo usa unsigned upload preset y valida que la respuesta incluya `secure_url`.
+- Las rutas nuevas están separadas por tipo (`canciones/audio`, `canciones/imagenes`, `recuerdos/fotos`, `recuerdos/videos`), mientras el servicio Dart antiguo agrupaba parte del contenido por ID de canción.
+- No cambiar ni borrar los archivos remotos existentes: las URLs guardadas en Firestore siguen siendo referencias válidas aunque cambie la carpeta de futuras subidas.
+- Pendiente: verificar el preset, límites y políticas de formatos/tamaño en el panel de Cloudinary; no se deben inventar ni codificar límites sin esa evidencia.
+
+### OneSignal
+
+- La aplicación activa usa el SDK web v16 y asocia/desasocia el UID de Firebase.
+- El inicio del SDK es opcional. Se corrigió `src/App.svelte` para capturar el rechazo de inicialización: un fallo de OneSignal ya no deja una promesa rechazada sin gestionar durante el arranque.
+- No se solicita permiso de notificaciones automáticamente al abrir la app; debe pedirse desde una acción explícita del usuario.
+- **Riesgo del legado:** `lib/services/onesignal_service.dart` enviaba notificaciones REST desde el cliente leyendo `restApiKey` de Firestore. Una clave REST no debe exponerse a una app cliente ni leerse desde una colección accesible desde el dispositivo. No se migrará ese envío a TypeScript/Rust cliente. Cuando se reconstruya el panel de notificaciones, el envío debe pasar por un backend confiable (por ejemplo Cloud Functions) con autorización administrativa y secretos en entorno servidor.
+- Pendiente: verificar la configuración de dominios/orígenes y el flujo de permiso en Android; el SDK web y el SDK Flutter no son equivalentes automáticamente.
+
+### Almacenamiento local y motor nativo
+
+- La sincronización de Ensayo se guarda como JSON versionado por canción en almacenamiento local, con validación al leer y antes de guardar.
+- El audio original permanece externo y sin modificar.
+- El motor de audio usa Rust/rodio; las dependencias Flutter de audio no deben seguir ampliándose.
+- Pendiente: probar persistencia tras cerrar/reabrir la app Android y comprobar salida/latencia auditivamente en dispositivo real. La compilación por sí sola no demuestra ausencia de pop/plop.
+
+### Clasificación inicial de legado Dart
+
+| Bloque | Estado | Decisión |
+|---|---|---|
+| `lib/services/onesignal_service.dart` | Pendiente de sustituir con backend seguro | No migrar envío REST cliente; rescatar solo la asociación de identidad ya cubierta por SDK activo |
+| `lib/services/storage_service.dart` | Parcialmente sustituido | Mantener como referencia hasta comprobar todas las subidas y referencias URL |
+| `lib/features/grabar/**` | No migrar en bloque | Excluir las herramientas de dividir/editar audio descartadas; rescatar solo reglas de sincronización útiles |
+| `lib/**` pantallas/modelos | Referencia/pendiente según módulo | Comparar campo por campo y flujo por flujo antes de borrar |
+| `pubspec.yaml` y lockfile Flutter | Residual candidato | Retirar cuando termine la comparación de modelos y no queden scripts/workflows Flutter activos |
+
 ## Reglas para retirar legado
 
 No eliminar carpetas completas por lenguaje. Cada bloque se clasifica por función y evidencia:
