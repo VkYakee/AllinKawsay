@@ -146,7 +146,9 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
         let mut scheduled: VecDeque<ScheduledAudioNote> = VecDeque::new();
 
         loop {
-            let cmd = match rx.recv_timeout(Duration::from_millis(16)) {
+            // Mantener la resolución del scheduler por debajo de un frame de audio
+            // perceptible: 4 ms reduce la tardanza máxima de disparo frente a 16 ms.
+            let cmd = match rx.recv_timeout(Duration::from_millis(4)) {
                 Ok(cmd) => Some(cmd),
                 Err(RecvTimeoutError::Timeout) => None,
                 Err(RecvTimeoutError::Disconnected) => break,
