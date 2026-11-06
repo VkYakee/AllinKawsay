@@ -24,7 +24,7 @@
 
 <div class="app-background min-h-dvh">
   {#if activeTab === 'inicio'}
-    <InicioTab />
+    <InicioTab onOpenCancionero={() => (activeTab = 'cancionero')} />
   {:else if activeTab === 'cancionero'}
     <CancioneroTab />
   {:else if activeTab === 'eventos'}
