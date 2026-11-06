@@ -79,3 +79,30 @@ La validación debe permitir contenido parcial si el modelo lo admite. No bloque
 - Los errores explican cómo resolver el problema.
 - No se introduce scroll horizontal en el visor de partituras.
 - Los estados de carga, vacío, éxito y error tienen diseño consistente.
+
+
+## Progreso de reconstrucción — 6 de noviembre de 2026
+
+Se amplió el trabajo para que la reconstrucción no quede concentrada en Ensayo. Cambios ya aplicados en la rama:
+
+- Inicio utiliza el flujo real de eventos y canciones; se retiraron los datos ficticios de ejemplo y el contador fijo de la navegación.
+- Los accesos desde Inicio abren las pestañas reales de Cancionero y Eventos.
+- Inicio distingue carga, ausencia de contenido y errores recuperables de Firestore.
+- Cancionero busca también por etiquetas y ofrece recuperación ante errores y limpieza de filtros.
+- Búsqueda global incluye etiquetas de canciones y distingue una búsqueda todavía en curso de una búsqueda sin resultados.
+- Eventos y Recuerdos muestran estados de error con reintento en lugar de presentar un vacío engañoso.
+- Perfil dejó de mostrar contadores de favoritos, escuchas y logros que todavía no tienen una fuente de datos implementada; también se retiró un botón de ajustes sin destino.
+- Administración muestra el número de eventos próximos y permite reintentar la carga de cada colección cuando falla.
+- Los formularios de edición de canciones, eventos y recuerdos consultan el documento por ID cuando no está presente en el store, muestran el estado de carga y no permiten guardar antes de completar la carga.
+- README actualizado con áreas funcionales, arquitectura y flujo de desarrollo.
+
+### Orden de trabajo general vigente
+
+1. Cerrar la navegación y los estados de carga/error de las áreas principales.
+2. Terminar y validar los formularios compartidos de alta/edición y los editores de canción.
+3. Revisar detalle, lectura de partitura y modo presentación, manteniendo las dos filas visibles sin desplazamiento horizontal.
+4. Consolidar eventos, recuerdos, perfil y administración.
+5. Continuar el sincronizador Ensayo en paralelo, sin convertirlo en el único frente de trabajo.
+6. Revisar integraciones y completar validación Android.
+
+Estos cambios son modificaciones de código revisables; no se declara compilación exitosa hasta que el workflow de validación termine correctamente.
