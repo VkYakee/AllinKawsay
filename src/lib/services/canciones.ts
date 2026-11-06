@@ -105,21 +105,24 @@ function mapEstrofa(raw: unknown): Estrofa {
   if (Array.isArray(d.fila7) || Array.isArray(d.fila6)) {
     const arriba = Array.isArray(d.fila7) ? d.fila7 : [];
     const abajo = Array.isArray(d.fila6) ? d.fila6 : [];
-    const count = Math.max(arriba.length, abajo.length);
-    const columnas = Array.from({ length: count }, (_, i) => ({
-      nota7: typeof arriba[i] === 'string' ? arriba[i] as string : '',
-      nota6: typeof abajo[i] === 'string' ? abajo[i] as string : ''
-    }));
+    // El modelo Dart histórico concatenaba primero la fila 6 y después la 7.
+    // Mantener ese orden evita desplazar partituras antiguas al migrarlas.
+    const columnas: Columna[] = [
+      ...abajo.filter((nota): nota is string => typeof nota === 'string')
+        .map((nota) => ({ nota7: '', nota6: nota })),
+      ...arriba.filter((nota): nota is string => typeof nota === 'string')
+        .map((nota) => ({ nota7: nota, nota6: '' }))
+    ];
     return { columnas, bis: d.bis === true };
   }
 
   if (typeof d.texto === 'string') {
     const columnas: Columna[] = [];
     let fila: 6 | 7 = 6;
-    for (const match of d.texto.matchAll(/[0-9.]+|\\\\|\\//g)) {
+    for (const match of d.texto.matchAll(/[0-9.]+|\/|\\/g)) {
       const token = match[0];
       if (token === '/') fila = 7;
-      else if (token === '\\\\') fila = 6;
+      else if (token === '\\') fila = 6;
       else columnas.push(fila === 7
         ? { nota7: token, nota6: '' }
         : { nota7: '', nota6: token });
@@ -153,7 +156,7 @@ function mapCancion(id: string, data: FirestoreData): Cancion {
       texto: typeof part.texto === 'string' ? part.texto : ''
     };
   }).filter((part) => part.texto.trim().length > 0);
-  const letraDesdePartes = letras.map((part) => part.texto).join('\n\n');
+  const letraDesdePartes = letras.map((part) => part.texto).join('\n\n')
   const letra = letraDesdePartes || (typeof data.letra === 'string' ? data.letra : '');
 
   return {
