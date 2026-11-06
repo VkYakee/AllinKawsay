@@ -92,10 +92,9 @@ function mapEstrofa(raw: unknown): Estrofa {
       const event = asRecord(rawEvent);
       const tipo = typeof event.tipo === 'number' ? event.tipo : 1;
       const valor = typeof event.valor === 'string' ? event.valor : '';
-      if (tipo === 2) {
-      } else if (tipo === 0) {
+      if (tipo === 0) {
         columnas.push({ nota7: valor, nota6: '' });
-      } else {
+      } else if (tipo !== 2) {
         columnas.push({ nota7: '', nota6: valor });
       }
     }
