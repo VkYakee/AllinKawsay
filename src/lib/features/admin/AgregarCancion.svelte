@@ -37,6 +37,7 @@
   let paso = $state(0);
   const pasos = ['Datos', 'Partitura', 'Letra'];
   function avanzar() {
+    if (guardando) return;
     error = '';
     if (cargandoEdicion) { error = 'Espera a que termine de cargar la canción.'; return; }
     if (paso === 0 && !titulo.trim()) { error = 'Primero escribe el nombre de la canción.'; return; }
@@ -119,6 +120,7 @@
   }
 
   async function guardar() {
+    if (guardando) return;
     error = '';
     if (cargandoEdicion) { error = 'Espera a que termine de cargar la canción.'; return; }
     if (!titulo.trim()) { error = 'El título es obligatorio'; return; }
@@ -187,7 +189,7 @@
     {/if}
     <div class="grid grid-cols-3 gap-2" aria-label="Progreso de canción">
       {#each pasos as nombre, indice}
-        <button type="button" onclick={() => { if (indice < paso || (indice === 1 && titulo.trim())) paso = indice; }} class="text-left space-y-2" aria-current={paso === indice ? 'step' : undefined}>
+        <button type="button" onclick={() => { if (!cargandoEdicion && !guardando && (indice < paso || (indice === 1 && titulo.trim()))) paso = indice; }} class="text-left space-y-2" aria-current={paso === indice ? 'step' : undefined}>
           <div class="h-1.5 rounded-full transition-colors duration-300 {indice <= paso ? 'bg-dorado' : 'bg-white/10'}"></div>
           <span class="text-[10px] font-bold {paso === indice ? 'text-dorado' : 'text-white/40'}">{indice + 1}. {nombre}</span>
         </button>
@@ -219,7 +221,7 @@
         </div>
       {:else}
         <label class="block">
-          <input type="file" accept="image/*" onchange={subirImagen} class="hidden" disabled={subiendoImagen} />
+          <input type="file" accept="image/*" onchange={subirImagen} class="hidden" disabled={subiendoImagen || cargandoEdicion || guardando} />
           <div class="glass rounded-2xl h-32 flex flex-col items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95 transition-transform">
             {#if subiendoImagen}
               <div class="w-8 h-8 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div>
@@ -245,7 +247,7 @@
         </div>
       {:else}
         <label class="block">
-          <input type="file" accept="audio/*" onchange={subirAudio} class="hidden" disabled={subiendoAudio} />
+          <input type="file" accept="audio/*" onchange={subirAudio} class="hidden" disabled={subiendoAudio || cargandoEdicion || guardando} />
           <div class="glass rounded-2xl h-20 flex items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95 transition-transform">
             {#if subiendoAudio}
               <div class="w-6 h-6 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div>
