@@ -33,6 +33,14 @@
   let audioUrl = $state('');
   let videoUrl = $state('');
   let estrofas = $state<Estrofa[]>([]);
+  let paso = $state(0);
+  const pasos = ['Datos', 'Partitura', 'Letra'];
+  function avanzar() {
+    error = '';
+    if (paso === 0 && !titulo.trim()) { error = 'Primero escribe el nombre de la canción.'; return; }
+    if (paso < pasos.length - 1) paso += 1;
+  }
+  function retroceder() { error = ''; if (paso > 0) paso -= 1; else router.back(); }
 
   let subiendoImagen = $state(false);
   let subiendoAudio = $state(false);
@@ -144,7 +152,7 @@
 <div class="app-background min-h-dvh">
   <header class="sticky top-0 z-30 px-5 pt-3 pb-3 bg-[#12100F]/85 backdrop-blur-xl border-b border-white/5">
     <div class="flex items-center gap-3">
-      <GlassIconButton icon="chevron-left" onTap={() => router.back()} />
+      <GlassIconButton icon="chevron-left" onTap={retroceder} />
       <div class="flex-1 min-w-0">
         <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">
           {editando ? 'Editar' : 'Nueva'}
@@ -155,6 +163,19 @@
   </header>
 
   <div class="px-5 py-6 pb-10 space-y-4">
+    <div class="grid grid-cols-3 gap-2" aria-label="Progreso de canción">
+      {#each pasos as nombre, indice}
+        <button type="button" onclick={() => { if (indice < paso || (indice === 1 && titulo.trim())) paso = indice; }} class="text-left space-y-2" aria-current={paso === indice ? 'step' : undefined}>
+          <div class="h-1.5 rounded-full transition-colors duration-300 {indice <= paso ? 'bg-dorado' : 'bg-white/10'}"></div>
+          <span class="text-[10px] font-bold {paso === indice ? 'text-dorado' : 'text-white/40'}">{indice + 1}. {nombre}</span>
+        </button>
+      {/each}
+    </div>
+    {#if paso === 0}
+    <GlassCard padding="md" variant="gold">
+      <p class="text-sm font-bold text-white">Empecemos por lo básico</p>
+      <p class="text-xs text-white/60 mt-1">Añade los datos y archivos que identifican esta canción. Podrás completar la partitura y la letra después.</p>
+    </GlassCard>
     <GlassInput bind:value={titulo} label="Título *" placeholder="Adiós Conima" icon="music" />
     <GlassInput bind:value={autor} label="Autor" placeholder="Anónimo" icon="user" />
 
@@ -233,6 +254,13 @@
       </div>
     </div>
 
+    {/if}
+
+    {#if paso === 1}
+    <GlassCard padding="md">
+      <p class="text-sm font-bold text-white">Construyamos la partitura</p>
+      <p class="text-xs text-white/60 mt-1">Organiza las notas en columnas. La fila 7 va arriba y la fila 6 abajo. Puedes guardar la canción y completar esta parte más adelante.</p>
+    </GlassCard>
     <!-- Numerofonía -->
     <div class="space-y-2">
       <div class="flex items-center gap-2 px-1">
@@ -244,6 +272,13 @@
       <EditorNumerofonia bind:estrofas onCambio={() => {}} />
     </div>
 
+    {/if}
+
+    {#if paso === 2}
+    <GlassCard padding="md">
+      <p class="text-sm font-bold text-white">Añade la letra y revisa</p>
+      <p class="text-xs text-white/60 mt-1">No necesitas completar todos los campos ahora. Puedes volver a editar la canción cuando quieras.</p>
+    </GlassCard>
     <!-- Letra -->
     <div class="space-y-2">
       <div class="flex items-center gap-2 px-1">
@@ -255,6 +290,8 @@
       <EditorLetra bind:letra onCambio={() => {}} />
     </div>
 
+    {/if}
+
     {#if error}
       <div class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
         <Icon name="alert-circle" size={16} class="text-red-400 shrink-0" />
@@ -262,8 +299,18 @@
       </div>
     {/if}
 
-    <GlassButton variant="primary" fullWidth icon="check" loading={guardando} onTap={guardar}>
-      {editando ? 'Guardar cambios' : 'Crear canción'}
-    </GlassButton>
+    {#if paso < 2}
+      <div class="flex gap-2">
+        {#if paso > 0}<GlassButton variant="secondary" onTap={retroceder}>Atrás</GlassButton>{/if}
+        <div class="flex-1"><GlassButton variant="primary" fullWidth icon="arrow-right" onTap={avanzar}>Continuar</GlassButton></div>
+      </div>
+    {:else}
+      <div class="space-y-2">
+        <GlassButton variant="secondary" fullWidth onTap={retroceder}>Volver a la partitura</GlassButton>
+        <GlassButton variant="primary" fullWidth icon="check" loading={guardando} onTap={guardar}>
+          {editando ? 'Guardar cambios' : 'Crear canción'}
+        </GlassButton>
+      </div>
+    {/if}
   </div>
 </div>
