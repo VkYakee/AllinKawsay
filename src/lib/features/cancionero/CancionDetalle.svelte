@@ -6,6 +6,7 @@
   import GlassIconButton from '../../components/ui/GlassIconButton.svelte';
   import Icon from '../../components/ui/Icon.svelte';
   import ComentariosSection from './ComentariosSection.svelte';
+  import PartituraView from '../ensayo/PartituraView.svelte';
   import { cancionesService, type Cancion } from '../../services/canciones';
   import { notasService } from '../../services/notas';
   import { actividadService } from '../../services/actividad';
@@ -202,21 +203,8 @@
               <h3 class="text-[11px] font-bold text-dorado tracking-[0.25em] uppercase">Partitura</h3>
             </div>
             {#each cancion.estrofas as estrofa, idx}
-              <GlassCard padding="lg">
-                <div class="flex items-center justify-between mb-3">
-                  <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">Estrofa {romanos[idx] ?? idx + 1}</p>
-                  {#if estrofa.bis}
-                    <div class="flex items-center gap-1 text-dorado"><Icon name="refresh" size={12} /><span class="text-[10px] font-bold tracking-wider">BIS</span></div>
-                  {/if}
-                </div>
-                <div class="overflow-x-auto -mx-1 px-1">
-                  <table class="border-collapse">
-                    <tbody>
-                      <tr>
-                        <td class="px-2 h-10 text-[11px] font-black text-dorado bg-granate rounded-tl-lg w-8 text-center">7</td>
-                        {#each estrofa.columnas as col}
-                          <td class="px-2 h-10 text-center text-[15px] font-black text-white font-mono border-l border-white/10 min-w-[34px] tabular-nums">{col.nota7 || '·'}</td>
-                        {/each}
+              <PartituraView {estrofa} numero={idx + 1} />
+            {/each}
                       </tr>
                       <tr>
                         <td class="px-2 h-10 text-[11px] font-black text-dorado bg-granate rounded-bl-lg w-8 text-center border-t border-white/10">6</td>
