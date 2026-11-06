@@ -22,16 +22,27 @@
   let jsonGenerado = $state(false);
   let error = $state('');
 
-  onMount(async () => {
-    if (!session.isAdmin) { router.back(); return; }
+  let cargandoConteo = $state(true);
+
+  async function cargarConteo() {
+    cargandoConteo = true;
+    error = '';
     try {
       conteo = await respaldoService.contar();
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Error al contar';
+      error = e instanceof Error ? e.message : 'No se pudo consultar el contenido.';
+    } finally {
+      cargandoConteo = false;
     }
+  }
+
+  onMount(() => {
+    if (!session.isAdmin) { router.back(); return; }
+    void cargarConteo();
   });
 
   async function generar() {
+    if (generando) return;
     generando = true;
     error = '';
     try {
@@ -75,7 +86,12 @@
       </p>
     </GlassCard>
 
-    {#if conteo}
+    {#if cargandoConteo}
+      <div class="glass rounded-2xl p-4 flex items-center gap-3 border border-white/10">
+        <div class="w-5 h-5 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-xs text-white/60">Consultando contenido…</p>
+      </div>
+    {:else if conteo}
       <GlassCard padding="lg">
         <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase mb-3">Contenido actual</p>
         <div class="space-y-2">
@@ -111,13 +127,18 @@
           </div>
         </div>
       </GlassCard>
+    {:else}
+      <div class="glass rounded-2xl p-4 flex items-center justify-between gap-3 border border-white/10">
+        <p class="text-xs text-white/60">No se pudo obtener el conteo del contenido.</p>
+        <button type="button" onclick={cargarConteo} class="text-xs font-bold text-dorado">Reintentar</button>
+      </div>
     {/if}
 
     {#if jsonGenerado}
       <div class="glass rounded-2xl p-3 border border-emerald-500/40 flex items-center gap-2">
         <Icon name="check-circle" size={18} class="text-emerald-400 shrink-0" />
         <p class="text-xs text-emerald-300 flex-1">
-          Respaldo descargado ({formatoBytes(jsonSize)})
+          Descarga iniciada ({formatoBytes(jsonSize)})
         </p>
       </div>
     {/if}
