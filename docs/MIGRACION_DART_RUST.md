@@ -18,7 +18,7 @@ Revisión de la rama `rebuild/ensayo-engine`, 6 de noviembre de 2026:
 - `.github/workflows/validate-android.yml` instala Node, Java, Rust y Android SDK; construye Android mediante Tauri y no ejecuta Flutter.
 - `src/App.svelte` es el punto de entrada de la aplicación reconstruida.
 - `pubspec.yaml` y el árbol `lib/**/*.dart` siguen presentes. El árbol Dart contiene más de un centenar de archivos entre pantallas, widgets, modelos y servicios.
-- El workflow antiguo de release Flutter no forma parte del flujo activo; el workflow de build anterior está deshabilitado.
+- Se eliminó el workflow antiguo de release y la configuración Android Flutter (`android_config/`), conservando únicamente `android_config/icono.png`, que el workflow Tauri utiliza para generar iconos.
 
 Por tanto, Dart ya no forma parte del camino normal de compilación de la rama reconstruida, pero sus fuentes todavía contienen referencias útiles al esquema Firestore, comportamientos anteriores y funcionalidades que deben contrastarse antes de retirar archivos.
 
@@ -117,7 +117,7 @@ Esto no completa todavía la paridad del antiguo modelo: `setlist` y el flujo de
 - **Sesión Firebase:** `authService.currentUser()` ahora conserva la sesión autenticada si Firestore falla temporalmente al leer el perfil, aplicando privilegios públicos por defecto hasta poder leer el rol. Así no se confunde un fallo de red/permisos con un cierre de sesión; el acceso administrativo no se concede durante esa degradación.
 - **Cloudinary:** la app 3.0 ya usa subida directa con preset unsigned desde `src/lib/services/cloudinary.ts`. El servicio Dart no debe seguir ampliándose. Mantener límites y permisos en la configuración de Cloudinary; no introducir secretos de API en el cliente.
 - **OneSignal:** el cliente activo carga el SDK web en `src/App.svelte`. El servicio Dart antiguo también enviaba REST desde el dispositivo leyendo `restApiKey` de Firestore; no migrar ese envío al cliente nuevo ni exponer esa clave. Para notificaciones administrativas se necesita una función de servidor segura. La compatibilidad de push nativo en Android/Tauri queda pendiente de validación en dispositivo.
-- **Android:** `validate-android.yml` compila mediante `tauri android init/build`. El workflow todavía copia `android_config/icono.png` para generar los iconos Tauri; por ello no se puede eliminar `android_config/` completo. Los Gradle, manifiestos y `MainActivity.kt` de esa carpeta son candidatos a limpieza individual tras confirmar que ningún script los consume.
+- **Android:** `validate-android.yml` compila mediante `tauri android init/build`. Se retiraron los Gradle, manifiestos, `MainActivity.kt` y recursos heredados de Flutter. Se conserva `android_config/icono.png` porque el workflow Tauri lo usa como fuente para generar los iconos.
 - **Dart:** `pubspec.yaml` y `lib/` no participan en el workflow Android activo, pero continúan como referencia de modelos y formatos. No se eliminan hasta cerrar la comparación funcional y de datos.
 
 ## Secuencia de limpieza
