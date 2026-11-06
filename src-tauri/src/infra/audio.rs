@@ -39,7 +39,7 @@ impl Default for ReproductorState {
 pub type ReproductorStateShare = Arc<Mutex<ReproductorState>>;
 
 #[derive(Debug, Clone)]
-pub struct ScheduledAudioNote { pub at_ms: u64, pub sample_id: String, pub event_id: String }
+pub struct ScheduledAudioNote { pub at_ms: u64, pub sample_id: String, pub event_id: String, pub gain: f32 }
 
 struct SampleData {
     channels: u16,
@@ -404,7 +404,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                             for (i, value) in pcm.iter_mut().enumerate() {
                                 let frame = i / channels;
                                 let env = (frame as f32 / attack as f32).min(1.0).min((frames.saturating_sub(frame + 1)) as f32 / release as f32);
-                                *value *= env * ZAMPONA_GAIN;
+                                *value *= env * ZAMPONA_GAIN * event.gain.clamp(0.0, 1.0);
                             }
                             zampona_mixer.add(rodio::buffer::SamplesBuffer::new(sample.channels, sample.sample_rate, pcm));
                             voces_activas.push_back((now, Duration::from_secs_f64(frames as f64 / sample.sample_rate as f64)));
