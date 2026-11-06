@@ -15,61 +15,85 @@ interface OneSignalInstance {
   };
 }
 
-let cargado = false;
+let inicializacion: Promise<void> | null = null;
 let inicializado = false;
+let identidadPendiente: string | null = null;
 
-export async function initOneSignal(): Promise<void> {
-  if (cargado || !ONESIGNAL_APP_ID) return;
-  cargado = true;
+function aplicarIdentidad(OneSignal: OneSignalInstance): void {
+  const accion = identidadPendiente
+    ? OneSignal.login(identidadPendiente)
+    : OneSignal.logout();
+  void accion.catch((e) => console.warn('⚠️ No se pudo actualizar la identidad de OneSignal:', e));
+}
 
-  await new Promise<void>((resolve) => {
-    const existing = document.querySelector('script[src*="onesignal"]');
-    if (existing) {
-      resolve();
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => {
-      console.warn('⚠️ No se pudo cargar OneSignal');
-      resolve();
-    };
-    document.head.appendChild(script);
-  });
+export function initOneSignal(): Promise<void> {
+  if (inicializacion) return inicializacion;
+  if (!ONESIGNAL_APP_ID || typeof window === 'undefined' || typeof document === 'undefined') {
+    return Promise.resolve();
+  }
 
-  const win = window as OneSignalWindow;
-  win.OneSignalDeferred = win.OneSignalDeferred || [];
-  win.OneSignalDeferred.push(async (OneSignal) => {
-    try {
-      await OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        allowLocalhostAsSecureOrigin: true,
-        notifyButton: { enable: false }
+  inicializacion = new Promise<void>((resolve, reject) => {
+    const win = window as OneSignalWindow;
+
+    const cargarSdk = (): Promise<void> => new Promise((resolveScript, rejectScript) => {
+      const existing = document.querySelector<HTMLScriptElement>('script[src*="OneSignalSDK.page.js"]');
+      if (existing) {
+        if (win.OneSignal) {
+          resolveScript();
+        } else {
+          existing.addEventListener('load', () => resolveScript(), { once: true });
+          existing.addEventListener('error', () => rejectScript(new Error('No se pudo cargar OneSignal')), { once: true });
+        }
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      script.defer = true;
+      script.onload = () => resolveScript();
+      script.onerror = () => rejectScript(new Error('No se pudo cargar OneSignal'));
+      document.head.appendChild(script);
+    });
+
+    void cargarSdk().then(() => {
+      win.OneSignalDeferred = win.OneSignalDeferred || [];
+      win.OneSignalDeferred.push(async (OneSignal) => {
+        try {
+          await OneSignal.init({
+            appId: ONESIGNAL_APP_ID,
+            allowLocalhostAsSecureOrigin: true,
+            notifyButton: { enable: false }
+          });
+          inicializado = true;
+          aplicarIdentidad(OneSignal);
+          console.log('✅ OneSignal inicializado');
+          resolve();
+        } catch (e) {
+          console.warn('⚠️ Error inicializando OneSignal:', e);
+          inicializacion = null;
+          reject(e);
+        }
       });
-      inicializado = true;
-      console.log('✅ OneSignal inicializado');
-    } catch (e) {
-      console.warn('⚠️ Error inicializando OneSignal:', e);
-    }
+    }).catch((e: unknown) => {
+      inicializacion = null;
+      console.warn('⚠️ Error cargando OneSignal:', e);
+      reject(e);
+    });
   });
+
+  return inicializacion;
 }
 
 export function oneSignalLogin(uid: string): void {
+  identidadPendiente = uid;
   if (!inicializado) return;
-  try {
-    (window as OneSignalWindow).OneSignal?.login(uid);
-  } catch {
-    // silencioso
-  }
+  const OneSignal = (window as OneSignalWindow).OneSignal;
+  if (OneSignal) aplicarIdentidad(OneSignal);
 }
 
 export function oneSignalLogout(): void {
+  identidadPendiente = null;
   if (!inicializado) return;
-  try {
-    (window as OneSignalWindow).OneSignal?.logout();
-  } catch {
-    // silencioso
-  }
+  const OneSignal = (window as OneSignalWindow).OneSignal;
+  if (OneSignal) aplicarIdentidad(OneSignal);
 }
