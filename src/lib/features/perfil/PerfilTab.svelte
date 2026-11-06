@@ -2,7 +2,6 @@
 <script lang="ts">
   import GlassCard from '../../components/ui/GlassCard.svelte';
   import GlassButton from '../../components/ui/GlassButton.svelte';
-  import GlassIconButton from '../../components/ui/GlassIconButton.svelte';
   import Icon from '../../components/ui/Icon.svelte';
   import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
@@ -47,7 +46,6 @@
       <p class="text-[11px] text-dorado/60 tracking-[0.25em] font-bold uppercase">Mi cuenta</p>
       <h2 class="text-3xl font-black text-white tracking-tight mt-1">Perfil</h2>
     </div>
-    <GlassIconButton icon="settings" variant="gold" />
   </div>
 
   <GlassCard variant="granate" padding="xl">
