@@ -94,6 +94,13 @@
         <p class="text-base font-bold text-white">Escribe para buscar</p>
         <p class="text-xs text-white/50 mt-1">Canciones, eventos y recuerdos</p>
       </div>
+    {:else if total === 0 && ((canciones.loading && !canciones.loaded) || (eventos.loading && !eventos.loaded) || (recuerdos.loading && !recuerdos.loaded))}
+      <div class="space-y-3">
+        <div class="glass rounded-2xl h-16 animate-pulse"></div>
+        <div class="glass rounded-2xl h-16 animate-pulse"></div>
+        <div class="glass rounded-2xl h-16 animate-pulse"></div>
+        <p class="text-center text-xs text-white/45">Buscando en canciones, eventos y recuerdos…</p>
+      </div>
     {:else if total === 0}
       <div class="flex flex-col items-center text-center py-16">
         <div class="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
