@@ -64,3 +64,14 @@ pub async fn estado_reproductor(
     let guard = share.lock().map_err(|_| "Estado bloqueado".to_string())?;
     Ok(guard.clone())
 }
+
+#[tauri::command]
+pub async fn buscar_cancion(position_ms: u64, audio: State<'_, AudioHandle>) -> Result<(), String> {
+    audio.buscar(position_ms);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn velocidad_cancion(speed: f32, audio: State<'_, AudioHandle>) -> Result<(), String> {
+    audio.set_velocidad(speed)
+}

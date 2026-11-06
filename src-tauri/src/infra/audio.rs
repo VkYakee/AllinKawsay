@@ -18,13 +18,20 @@ const ZAMPONA_GAIN: f32 = 0.55;
 const ATTACK_MS: u64 = 4;
 const RELEASE_MS: u64 = 12;
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ReproductorState {
     pub cancion_id: Option<String>,
     pub reproduciendo: bool,
     pub cargando: bool,
     pub posicion_ms: u64,
     pub duracion_ms: u64,
+}
+
+
+impl Default for ReproductorState {
+    fn default() -> Self {
+        Self { cancion_id: None, reproduciendo: false, cargando: false, posicion_ms: 0, duracion_ms: 0, velocidad: 1.0, generation: 0 }
+    }
 }
 
 pub type ReproductorStateShare = Arc<Mutex<ReproductorState>>;

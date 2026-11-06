@@ -7,6 +7,8 @@ export interface EstadoReproductor {
   cargando: boolean;
   posicion_ms: number;
   duracion_ms: number;
+  velocidad: number;
+  generation: number;
 }
 
 export const reproductorService = {
@@ -18,6 +20,13 @@ export const reproductorService = {
   },
   reanudar(): Promise<void> {
     return invoke<void>('reanudar_cancion');
+  },
+  buscar(positionMs: number): Promise<void> {
+    return invoke<void>('buscar_cancion', { positionMs: Math.max(0, Math.round(positionMs)) });
+  },
+  setVelocidad(speed: number): Promise<void> {
+    const bounded = Math.max(0.25, Math.min(2, speed));
+    return invoke<void>('velocidad_cancion', { speed: bounded });
   },
   detener(): Promise<void> {
     return invoke<void>('detener_cancion');

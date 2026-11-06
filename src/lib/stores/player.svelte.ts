@@ -15,6 +15,8 @@ class Player {
   loading = $state(false);
   posicionMs = $state(0);
   duracionMs = $state(0);
+  velocidad = $state(1);
+  generation = $state(0);
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -72,6 +74,20 @@ class Player {
     }
   }
 
+  async buscar(positionMs: number) {
+    await reproductorService.buscar(positionMs);
+    this.posicionMs = Math.max(0, Math.min(this.duracionMs || positionMs, positionMs));
+    const estado = await reproductorService.estado();
+    this.generation = estado.generation;
+  }
+
+  async setVelocidad(speed: number) {
+    await reproductorService.setVelocidad(speed);
+    this.velocidad = Math.max(0.25, Math.min(2, speed));
+    const estado = await reproductorService.estado();
+    this.generation = estado.generation;
+  }
+
   async stop() {
     await reproductorService.detener();
     this.current = null;
@@ -90,6 +106,8 @@ class Player {
         this.playing = estado.reproduciendo;
         this.posicionMs = estado.posicion_ms;
         this.duracionMs = estado.duracion_ms;
+        this.velocidad = estado.velocidad;
+        this.generation = estado.generation;
 
         // Si el backend dice que terminó y no hay progreso, limpia el estado
         if (

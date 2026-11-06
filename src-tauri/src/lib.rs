@@ -40,6 +40,8 @@ pub fn run() {
             commands::reproductor::reanudar_cancion,
             commands::reproductor::detener_cancion,
             commands::reproductor::estado_reproductor,
+            commands::reproductor::buscar_cancion,
+            commands::reproductor::velocidad_cancion,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar Allin Kawsay");
