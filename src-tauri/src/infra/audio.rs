@@ -2,9 +2,10 @@
 use std::collections::HashMap;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 use rodio::{Decoder, OutputStream, Sink, Source};
 use serde::Serialize;
@@ -82,7 +83,15 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
 
         let mut sink_cancion: Option<Sink> = None;
 
-        while let Ok(cmd) = rx.recv() {
+        loop {
+            // Polling corto: el estado del audio debe avanzar aunque no lleguen comandos.
+            let cmd = match rx.recv_timeout(Duration::from_millis(16)) {
+                Ok(cmd) => Some(cmd),
+                Err(RecvTimeoutError::Timeout) => None,
+                Err(RecvTimeoutError::Disconnected) => break,
+            };
+
+            if let Some(cmd) = cmd {
             match cmd {
                 ComandoAudio::Nota(id) => {
                     let Some(data) = samples.get(&id) else {
@@ -178,6 +187,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
                     *estado_thread.lock().unwrap() = ReproductorState::default();
                 }
+            }
             }
 
             if let Some(s) = &sink_cancion {
