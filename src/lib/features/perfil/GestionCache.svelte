@@ -18,7 +18,7 @@
   });
 
   async function limpiar() {
-    if (!confirm('¿Limpiar caché? Se borrarán los archivos temporales descargados.')) return;
+    if (!confirm('¿Limpiar archivos temporales de la aplicación?')) return;
     limpiando = true;
     try {
       archivosEliminados = await limpiarCache();
@@ -50,7 +50,7 @@
       </div>
       <h2 class="text-lg font-black text-white text-center mb-1">Caché de archivos</h2>
       <p class="text-xs text-white/60 text-center leading-relaxed">
-        Archivos temporales descargados de canciones, imágenes y videos.
+        Archivos temporales técnicos de la aplicación. La descarga y conservación sin conexión de canciones, imágenes y videos todavía no está implementada en esta versión.
       </p>
       <p class="text-2xl font-black text-dorado text-center mt-4">
         {archivos} {archivos === 1 ? 'archivo' : 'archivos'}
