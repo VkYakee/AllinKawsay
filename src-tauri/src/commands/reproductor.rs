@@ -1,7 +1,11 @@
 // src-tauri/src/commands/reproductor.rs
 use tauri::State;
 
-use crate::infra::audio::{AudioHandle, ReproductorState};
+use crate::infra::audio::{AudioHandle, ReproductorState, ScheduledAudioNote};
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+pub struct ScheduledNoteInput { pub at_ms: u64, pub sample_id: String, pub event_id: String }
 
 #[tauri::command]
 pub async fn play_cancion(
@@ -74,4 +78,12 @@ pub async fn buscar_cancion(position_ms: u64, audio: State<'_, AudioHandle>) -> 
 #[tauri::command]
 pub async fn velocidad_cancion(speed: f32, audio: State<'_, AudioHandle>) -> Result<(), String> {
     audio.set_velocidad(speed)
+}
+
+
+#[tauri::command]
+pub async fn programar_notas(generation: u64, events: Vec<ScheduledNoteInput>, audio: State<'_, AudioHandle>) -> Result<(), String> {
+    if events.len() > 4096 { return Err("Máximo 4096 notas por lote".into()); }
+    let batch = events.into_iter().map(|e| ScheduledAudioNote { at_ms: e.at_ms, sample_id: e.sample_id, event_id: e.event_id }).collect();
+    audio.programar(generation, batch)
 }

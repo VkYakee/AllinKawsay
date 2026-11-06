@@ -203,6 +203,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
 
                     ComandoAudio::PlayCancion { cancion_id, path } => {
+                        scheduled.clear();
                         if let Some(sink) = sink_cancion.take() {
                             sink.stop();
                         }
@@ -279,6 +280,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
 
                     ComandoAudio::Buscar(position_ms) => {
+                        scheduled.clear();
                         {
                             let mut state = estado_thread.lock().unwrap();
                             state.generation = state.generation.wrapping_add(1);
@@ -312,6 +314,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
 
                     ComandoAudio::Velocidad(speed) => {
+                        scheduled.clear();
                         if let Some(sink) = &sink_cancion {
                             sink.set_speed(speed);
                             let mut state = estado_thread.lock().unwrap();
@@ -321,6 +324,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
 
                     ComandoAudio::Pausar => {
+                        scheduled.clear();
                         { let mut state = estado_thread.lock().unwrap(); state.generation = state.generation.wrapping_add(1); }
                         if let Some(sink) = &sink_cancion {
                             sink.pause();
@@ -330,6 +334,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
 
                     ComandoAudio::Reanudar => {
+                        scheduled.clear();
                         { let mut state = estado_thread.lock().unwrap(); state.generation = state.generation.wrapping_add(1); }
                         if let Some(sink) = &sink_cancion {
                             sink.play();
@@ -339,6 +344,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
 
                     ComandoAudio::Detener => {
+                        scheduled.clear();
                         if let Some(sink) = sink_cancion.take() {
                             sink.stop();
                         }
@@ -366,10 +372,30 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                 let position = sink.get_pos();
                 let mut state = estado_thread.lock().unwrap();
                 state.posicion_ms = position.as_millis() as u64;
-                if sink.empty() && state.reproduciendo {
-                    state.reproduciendo = false;
-                }
+                if sink.empty() && state.reproduciendo { state.reproduciendo = false; scheduled.clear(); }
             }
+            let (clock_ms, playing) = { let st = estado_thread.lock().unwrap(); (st.posicion_ms, st.reproduciendo) };
+            if playing {
+                while scheduled.front().map(|event| event.at_ms <= clock_ms).unwrap_or(false) {
+                    let event = scheduled.pop_front().unwrap();
+                    if let Some(sample) = samples.get(&event.sample_id) {
+                        let channels = sample.channels.max(1) as usize;
+                        let frames = sample.samples.len() / channels;
+                        if frames > 0 && sample.sample_rate > 0 && voces_activas.len() < MAX_ZAMPONA_VOICES {
+                            let attack = ((sample.sample_rate as u64 * ATTACK_MS) / 1000).max(1) as usize;
+                            let release = ((sample.sample_rate as u64 * RELEASE_MS) / 1000).max(1) as usize;
+                            let mut pcm = sample.samples.clone();
+                            for (i, value) in pcm.iter_mut().enumerate() {
+                                let frame = i / channels;
+                                let env = (frame as f32 / attack as f32).min(1.0).min((frames.saturating_sub(frame + 1)) as f32 / release as f32);
+                                *value *= env * ZAMPONA_GAIN;
+                            }
+                            zampona_mixer.add(rodio::buffer::SamplesBuffer::new(sample.channels, sample.sample_rate, pcm));
+                            voces_activas.push_back((Instant::now(), Duration::from_secs_f64(frames as f64 / sample.sample_rate as f64)));
+                        }
+                    } else { warn!("Muestra programada inexistente: {}", event.sample_id); }
+                }
+            } else { scheduled.clear(); }
         }
     });
 
