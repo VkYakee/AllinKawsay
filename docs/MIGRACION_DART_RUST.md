@@ -54,6 +54,10 @@ Por tanto, Dart ya no forma parte del camino normal de compilación de la rama r
 - El motor de audio usa Rust/rodio; las dependencias Flutter de audio no deben seguir ampliándose.
 - Pendiente: probar persistencia tras cerrar/reabrir la app Android y comprobar salida/latencia auditivamente en dispositivo real. La compilación por sí sola no demuestra ausencia de pop/plop.
 
+### Caché multimedia
+
+Los servicios Dart tenían caché persistente LRU para audio y recuerdos. La pantalla 3.0 solo cuenta y limpia archivos temporales `allin_` en el directorio temporal de Tauri; no es una caché offline equivalente. La UI ahora declara esa limitación y no promete conservar canciones, imágenes o videos sin conexión. La caché LRU queda pendiente de migración solo si se decide recuperar esa función.
+
 ### Clasificación inicial de legado Dart
 
 | Bloque | Estado | Decisión |
