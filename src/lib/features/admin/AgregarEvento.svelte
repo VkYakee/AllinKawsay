@@ -68,7 +68,7 @@
     if (!mapEl || map) return;
     map = L.map(mapEl, {
       center: [lat ?? -15.4994, lng ?? -70.1333],
-      zoom: lat ? 15 : 13,
+      zoom: lat !== null && lng !== null ? 15 : 13,
       zoomControl: false,
       attributionControl: false
     });
@@ -96,6 +96,7 @@
   }
 
   async function guardar() {
+    if (guardando) return;
     error = '';
     if (cargandoEdicion) { error = 'Espera a que termine de cargar el evento.'; return; }
     if (!titulo.trim()) { error = 'El título es obligatorio'; return; }
