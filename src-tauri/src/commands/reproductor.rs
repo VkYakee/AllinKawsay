@@ -1,4 +1,5 @@
 // src-tauri/src/commands/reproductor.rs
+use std::io::Write;
 use tauri::State;
 
 use crate::infra::audio::{AudioHandle, ReproductorState, ScheduledAudioNote};
@@ -13,30 +14,71 @@ pub async fn play_cancion(
     url: String,
     audio: State<'_, AudioHandle>,
 ) -> Result<(), String> {
-    if url.trim().is_empty() {
-        return Err("URL vacía".into());
+    if cancion_id.trim().is_empty()
+        || !cancion_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err("Id de canción inválido".into());
     }
 
-    let response = reqwest::get(&url)
-        .await
-        .map_err(|e| format!("Error de red: {e}"))?;
+    let parsed_url = reqwest::Url::parse(url.trim())
+        .map_err(|_| "URL de audio inválida".to_string())?;
+    if parsed_url.scheme() != "https"
+        || parsed_url.host_str() != Some("res.cloudinary.com")
+        || !parsed_url.path().starts_with("/eveyybgz/")
+        || !parsed_url.username().is_empty()
+        || parsed_url.password().is_some()
+    {
+        return Err("El audio debe provenir del almacenamiento seguro de Cloudinary".into());
+    }
 
+    // No permitir que una redirección de Cloudinary convierta la descarga en
+    // una petición a otro host (protección SSRF para el comando nativo).
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.url().scheme() == "https"
+                && attempt.url().host_str() == Some("res.cloudinary.com")
+            {
+                attempt.follow()
+            } else {
+                attempt.stop()
+            }
+        }))
+        .build()
+        .map_err(|e| format!("No se pudo preparar la descarga: {e}"))?;
+
+    let mut response = client.get(parsed_url).send().await
+        .map_err(|e| format!("Error de red: {e}"))?;
     if !response.status().is_success() {
         return Err(format!("HTTP {}", response.status()));
     }
 
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| format!("Error descargando: {e}"))?;
-
-    if bytes.is_empty() {
-        return Err("Descarga vacía".into());
-    }
-
+    // Escribir por fragmentos evita cargar el audio completo en RAM.
     let tmp_dir = std::env::temp_dir();
     let path = tmp_dir.join(format!("allin_cancion_{cancion_id}.audio"));
-    std::fs::write(&path, &bytes).map_err(|e| format!("No se pudo guardar: {e}"))?;
+    let mut file = std::fs::File::create(&path)
+        .map_err(|e| format!("No se pudo crear archivo temporal: {e}"))?;
+    let mut total_bytes = 0_u64;
+    loop {
+        match response.chunk().await {
+            Ok(Some(chunk)) => {
+                total_bytes = total_bytes.saturating_add(chunk.len() as u64);
+                if let Err(e) = file.write_all(&chunk) {
+                    let _ = std::fs::remove_file(&path);
+                    return Err(format!("No se pudo guardar el audio: {e}"));
+                }
+            }
+            Ok(None) => break,
+            Err(e) => {
+                let _ = std::fs::remove_file(&path);
+                return Err(format!("Error descargando audio: {e}"));
+            }
+        }
+    }
+    if total_bytes == 0 {
+        let _ = std::fs::remove_file(&path);
+        return Err("Descarga vacía".into());
+    }
+    file.flush().map_err(|e| format!("No se pudo completar el audio: {e}"))?;
 
     audio.play_cancion(cancion_id, path);
     Ok(())
