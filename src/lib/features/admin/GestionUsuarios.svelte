@@ -19,12 +19,16 @@
   let loading = $state(true);
   let filtro = $state<'todos' | 'activos' | 'baneados'>('activos');
   let query = $state('');
+  let error = $state('');
 
   onMount(() => {
     if (!session.isAdmin) { router.back(); return; }
     const unsub = usuariosService.stream(
-      (items) => { usuarios = items; loading = false; },
-      () => (loading = false)
+      (items) => { usuarios = items; loading = false; error = ''; },
+      (cause) => {
+        loading = false;
+        error = cause instanceof Error ? cause.message : 'No se pudieron cargar los usuarios.';
+      }
     );
     return unsub;
   });
@@ -45,6 +49,7 @@
 
   async function cambiarRol(u: Usuario, nuevoRol: Rol) {
     if (u.uid === session.user?.uid) return;
+    error = '';
     try {
       await usuariosService.cambiarRol(u.uid, nuevoRol);
       await actividadService.registrar(
@@ -53,11 +58,14 @@
         session.user?.uid ?? '',
         session.displayName
       );
-    } catch {}
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo cambiar el rol.';
+    }
   }
 
   async function banear(u: Usuario) {
     if (!confirm(`¿Suspender a ${u.nombre}?`)) return;
+    error = '';
     try {
       await usuariosService.banear(u.uid);
       await actividadService.registrar(
@@ -66,10 +74,13 @@
         session.user?.uid ?? '',
         session.displayName
       );
-    } catch {}
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo suspender al usuario.';
+    }
   }
 
   async function desbanear(u: Usuario) {
+    error = '';
     try {
       await usuariosService.desbanear(u.uid);
       await actividadService.registrar(
@@ -78,7 +89,9 @@
         session.user?.uid ?? '',
         session.displayName
       );
-    } catch {}
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo reactivar al usuario.';
+    }
   }
 
   function inicial(n: string): string {
@@ -98,6 +111,9 @@
   </header>
 
   <div class="px-5 py-6 pb-32 space-y-4">
+    {#if error}
+      <div role="alert" class="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-xs text-red-200">{error}</div>
+    {/if}
     <div class="glass rounded-2xl border border-white/10">
       <div class="flex items-center gap-2 px-4 h-12">
         <Icon name="search" size={16} class="text-dorado/70" />
