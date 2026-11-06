@@ -75,6 +75,12 @@
     </div>
     {#if eventos.loading && !eventos.loaded}
       <div class="glass rounded-3xl h-36 animate-pulse"></div>
+    {:else if eventos.error}
+      <div class="glass rounded-3xl p-5 border border-red-400/20">
+        <p class="text-sm font-bold text-white">No se pudo consultar la agenda</p>
+        <p class="text-xs text-white/50 mt-1">{eventos.error}</p>
+        <button type="button" onclick={() => eventos.refrescar()} class="mt-3 text-xs font-bold text-dorado">Volver a intentar</button>
+      </div>
     {:else if proximoEvento}
       <button type="button" onclick={() => router.go('evento', { id: proximoEvento.id })} class="w-full text-left glass glass-granate rounded-3xl p-5 border border-dorado/20 active:scale-[0.99] transition-transform">
         <div class="flex items-center gap-2 mb-3">
@@ -123,6 +129,12 @@
     </div>
     {#if canciones.loading && !canciones.loaded}
       <div class="space-y-2">{#each Array(3) as _}<div class="glass rounded-2xl h-[76px] animate-pulse"></div>{/each}</div>
+    {:else if canciones.error}
+      <div class="glass rounded-2xl p-5 border border-red-400/20">
+        <p class="text-sm font-bold text-white">No se pudo cargar el cancionero</p>
+        <p class="text-xs text-white/50 mt-1">{canciones.error}</p>
+        <button type="button" onclick={() => canciones.refrescar()} class="mt-3 text-xs font-bold text-dorado">Volver a intentar</button>
+      </div>
     {:else if cancionesInicio.length > 0}
       <div class="space-y-2">
         {#each cancionesInicio as cancion (cancion.id)}
