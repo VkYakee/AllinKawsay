@@ -87,7 +87,7 @@
 
   function agregarNotaSync() {
     if (!syncProject || !zampona.notas.length) return;
-    const note = zampona.notas[0]; const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
+    const note = zampona.notas.find(n => n.id === sampleSeleccionado) ?? zampona.notas[0]; const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
     const eventId = 'z-' + Date.now() + '-' + track.events.length;
     track.events = [...track.events, { id: eventId, kind: 'zampona-note', atUs: Math.round(player.posicionMs * 1000), sampleId: note.id, musicalEventId: eventId, gain: 0.8 }];
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
