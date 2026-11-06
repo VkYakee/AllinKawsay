@@ -156,7 +156,7 @@ function mapCancion(id: string, data: FirestoreData): Cancion {
       texto: typeof part.texto === 'string' ? part.texto : ''
     };
   }).filter((part) => part.texto.trim().length > 0);
-  const letraDesdePartes = letras.map((part) => part.texto).join('\n\n')
+  const letraDesdePartes = letras.map((part) => part.texto).join('\n\n');
   const letra = letraDesdePartes || (typeof data.letra === 'string' ? data.letra : '');
 
   return {
