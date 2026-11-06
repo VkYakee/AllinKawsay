@@ -104,8 +104,16 @@ class Player {
     this.syncProject = project;
     const issues = validateSyncProject(project);
     if (issues.length) throw new Error('Proyecto de sincronización inválido: ' + issues[0].message);
+    // El proyecto se conserva aunque el audio aún esté cargando o en pausa.
+    // No se debe marcar una generación como programada hasta disponer de la
+    // duración nativa y poder compilar toda la ventana de reproducción.
+    if (!this.playing || this.duracionMs <= 0) {
+      this.scheduledGeneration = -1;
+      return 0;
+    }
     const fromUs = Math.max(0, Math.round(this.posicionMs * 1000));
-    const compiled = compileScheduledSamples(project, fromUs, Math.max(fromUs, Math.round(this.duracionMs * 1000)));
+    const untilUs = Math.max(fromUs, Math.round(this.duracionMs * 1000));
+    const compiled = compileScheduledSamples(project, fromUs, untilUs);
     await reproductorService.programarNotas(this.generation, compiled.map(event => ({ at_ms: event.atMs, sample_id: event.sampleId, event_id: event.eventId, gain: event.gain })));
     this.scheduledGeneration = this.generation;
     return compiled.length;
