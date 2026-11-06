@@ -38,6 +38,9 @@ impl Default for ReproductorState {
 
 pub type ReproductorStateShare = Arc<Mutex<ReproductorState>>;
 
+#[derive(Debug, Clone)]
+pub struct ScheduledAudioNote { pub at_ms: u64, pub sample_id: String, pub event_id: String }
+
 struct SampleData {
     channels: u16,
     sample_rate: u32,
@@ -46,6 +49,7 @@ struct SampleData {
 
 pub enum ComandoAudio {
     Nota(String),
+    Programar { generation: u64, events: Vec<ScheduledAudioNote> },
     PlayCancion { cancion_id: String, path: PathBuf },
     Buscar(u64),
     Velocidad(f32),
@@ -62,6 +66,11 @@ pub struct AudioHandle {
 impl AudioHandle {
     pub fn tocar_nota(&self, id: &str) {
         let _ = self.tx.send(ComandoAudio::Nota(id.to_string()));
+    }
+
+    pub fn programar(&self, generation: u64, events: Vec<ScheduledAudioNote>) -> Result<(), String> {
+        if events.len() > 4096 { return Err("Máximo 4096 notas por lote".into()); }
+        self.tx.send(ComandoAudio::Programar { generation, events }).map_err(|e| e.to_string())
     }
 
     pub fn play_cancion(&self, cancion_id: String, path: PathBuf) {
@@ -134,6 +143,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
 
         let mut sink_cancion: Option<Sink> = None;
         let mut voces_activas: VecDeque<(Instant, Duration)> = VecDeque::new();
+        let mut scheduled: VecDeque<ScheduledAudioNote> = VecDeque::new();
 
         loop {
             let cmd = match rx.recv_timeout(Duration::from_millis(16)) {
@@ -144,6 +154,12 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
 
             if let Some(cmd) = cmd {
                 match cmd {
+                    ComandoAudio::Programar { generation, mut events } => {
+                        let current_generation = estado_thread.lock().unwrap().generation;
+                        if generation != current_generation { warn!("Lote de zampoña ignorado: generación obsoleta"); continue; }
+                        events.sort_by_key(|event| event.at_ms);
+                        scheduled = events.into();
+                    }
                     ComandoAudio::Nota(id) => {
                         let Some(sample) = samples.get(&id) else {
                             warn!("Nota no encontrada: {id}");
