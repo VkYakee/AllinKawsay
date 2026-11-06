@@ -36,6 +36,7 @@ Reemplazar el flujo de ensayo simplificado por un sistema musical determinista, 
 
 - [x] Crear un compilador puro de línea de tiempo, con duración por BPM, ajustes manuales y repetición BIS.
 - [x] Añadir búsqueda binaria del evento activo.
+- [x] Corregir el backend de audio: ahora refresca posición/duración cada 16 ms aunque no reciba comandos (necesario para usar el audio como reloj maestro).
 - [ ] Adaptar el store para consultar la posición real del reproductor y separar audio de animación.
 - [ ] Reconstruir captura/edición de tiempos y bloques de ensayo.
 - [ ] Reconstruir editor de numerofonía por celdas y entrada rápida desde texto/PDF.
