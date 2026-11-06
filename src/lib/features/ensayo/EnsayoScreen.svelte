@@ -7,6 +7,7 @@
   import ZamponaCanvas from '../zampona/ZamponaCanvas.svelte';
   import PartituraView from './PartituraView.svelte';
   import { ensayo } from '../../stores/ensayo.svelte';
+  import { player } from '../../stores/player.svelte';
   import { zampona } from '../../stores/zampona.svelte';
   import { canciones } from '../../stores/canciones.svelte';
   import { router } from '../../stores/router.svelte';
@@ -33,6 +34,7 @@
 
   onDestroy(() => {
     ensayo.stop();
+    if (player.current?.id === id) void player.stop();
     zampona.soltarTodo();
   });
 
@@ -54,10 +56,45 @@
   const estrofaNum = $derived((ensayo.eventoActual?.estrofa_idx ?? 0) + 1);
 
   const progreso = $derived(
-    ensayo.preparado && ensayo.preparado.duracion_total_ms > 0
-      ? Math.min(100, (ensayo.offsetMs / ensayo.preparado.duracion_total_ms) * 100)
+    player.duracionMs > 0
+      ? Math.min(100, (player.posicionMs / player.duracionMs) * 100)
       : 0
   );
+
+  // La partitura sigue el reloj consultado al reproductor nativo.
+  $effect(() => {
+    if (player.current?.id !== id) return;
+    ensayo.actualizarPosicion(player.posicionMs);
+    ensayo.velocidad = player.velocidad;
+    ensayo.estado = player.playing
+      ? 'playing'
+      : player.duracionMs > 0 && player.posicionMs >= player.duracionMs
+        ? 'finished'
+        : player.posicionMs > 0 ? 'paused' : 'idle';
+  });
+
+  async function iniciarEnsayo() {
+    if (!cancion?.audio_url) return;
+    if (player.current?.id === id) {
+      if (player.duracionMs > 0 && player.posicionMs >= player.duracionMs) {
+        await player.buscar(0);
+      }
+      await player.toggle();
+      return;
+    }
+    await player.play({
+      id: cancion.id,
+      titulo: cancion.titulo,
+      autor: cancion.autor,
+      imagenUrl: cancion.imagen_url,
+      audioUrl: cancion.audio_url
+    });
+  }
+
+  async function detenerEnsayo() {
+    if (player.current?.id === id) await player.stop();
+    ensayo.stop();
+  }
 
   function handleZamponaTap(nota: NotaZampona) {
     zampona.tocar(nota);
@@ -129,15 +166,15 @@
         <GlassIconButton
           icon="refresh"
           size="sm"
-          onTap={() => ensayo.stop()}
+          onTap={() => void detenerEnsayo()}
         />
 
         {#if ensayo.estado === 'playing'}
-          <GlassButton variant="primary" icon="pause" onTap={() => ensayo.pause()}>
+          <GlassButton variant="primary" icon="pause" onTap={() => void player.toggle()}>
             Pausa
           </GlassButton>
         {:else}
-          <GlassButton variant="primary" icon="play" onTap={() => ensayo.play()}>
+          <GlassButton variant="primary" icon="play" onTap={() => void iniciarEnsayo()}>
             {ensayo.estado === 'finished' ? 'Reiniciar' : 'Play'}
           </GlassButton>
         {/if}
@@ -152,9 +189,9 @@
             min="0.5"
             max="2"
             step="0.25"
-            value={ensayo.velocidad}
+            value={player.velocidad}
             oninput={(e) =>
-              ensayo.setVelocidad(parseFloat((e.target as HTMLInputElement).value))}
+              void player.setVelocidad(parseFloat((e.target as HTMLInputElement).value))}
             class="w-20 accent-dorado"
           />
         </div>

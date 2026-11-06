@@ -4,8 +4,11 @@ import {
   type EnsayoPreparado,
   type EventoEnsayo
 } from '../services/ensayo';
-import { zamponaService } from '../services/zampona';
 
+/**
+ * Estado visual de Ensayo. El reloj y el audio pertenecen al reproductor
+ * nativo; este store solo refleja su posición y nunca dispara muestras.
+ */
 class EnsayoStore {
   preparado = $state<EnsayoPreparado | null>(null);
   estado = $state<'idle' | 'playing' | 'paused' | 'finished'>('idle');
@@ -14,9 +17,6 @@ class EnsayoStore {
   idxActual = $state(-1);
   brillando = $state<Set<string>>(new Set());
   cargando = $state(false);
-
-  private rafId: number | null = null;
-  private lastTick = 0;
 
   get eventoActual(): EventoEnsayo | null {
     if (!this.preparado || this.idxActual < 0) return null;
@@ -39,56 +39,12 @@ class EnsayoStore {
     }
   }
 
-  play() {
-    if (!this.preparado || this.preparado.eventos.length === 0) return;
-    if (this.estado === 'finished') {
-      this.offsetMs = 0;
-      this.idxActual = -1;
-      this.brillando = new Set();
-    }
-    this.estado = 'playing';
-    this.lastTick = performance.now();
-    if (this.rafId !== null) cancelAnimationFrame(this.rafId);
-    this.rafId = requestAnimationFrame(this.tick);
-  }
-
-  pause() {
-    if (this.estado !== 'playing') return;
-    this.estado = 'paused';
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-    this.brillando = new Set();
-  }
-
-  stop() {
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-    this.estado = 'idle';
-    this.offsetMs = 0;
-    this.idxActual = -1;
-    this.brillando = new Set();
-  }
-
-  setVelocidad(v: number) {
-    this.velocidad = Math.max(0.25, Math.min(2, v));
-  }
-
-  private tick = () => {
-    if (this.estado !== 'playing' || !this.preparado) return;
-
-    const now = performance.now();
-    const delta = (now - this.lastTick) * this.velocidad;
-    this.lastTick = now;
-    this.offsetMs += delta;
-
+  /** Sincroniza la visualización con una posición obtenida del reproductor. */
+  actualizarPosicion(positionMs: number) {
+    if (!this.preparado) return;
+    this.offsetMs = Math.max(0, Number.isFinite(positionMs) ? positionMs : 0);
     const eventos = this.preparado.eventos;
-    const brillando = new Set<string>();
 
-    // Encuentra el último evento cuyo inicio ya ocurrió en O(log n).
     let izquierda = 0;
     let derecha = eventos.length - 1;
     let candidato = -1;
@@ -102,35 +58,31 @@ class EnsayoStore {
       }
     }
 
-    // Si hay tiempos manuales solapados, retrocede solo hasta hallar un
-    // intervalo activo. En el caso habitual se comprueba una sola celda.
     let activo = -1;
     for (let i = candidato; i >= 0; i--) {
-      if (eventos[i].fin_ms > this.offsetMs) { activo = i; break; }
-    }
-
-    if (activo >= 0) {
-      const ev = eventos[activo];
-      brillando.add(ev.nota_id);
-      if (activo !== this.idxActual) {
-        this.idxActual = activo;
-        zamponaService.tocar(ev.nota_id);
+      if (eventos[i].fin_ms > this.offsetMs) {
+        activo = i;
+        break;
       }
-    } else {
-      this.idxActual = -1;
     }
 
-    this.brillando = brillando;
+    this.idxActual = activo;
+    this.brillando = activo >= 0
+      ? new Set([eventos[activo].nota_id])
+      : new Set();
 
-    if (this.offsetMs >= this.preparado.duracion_total_ms) {
+    if (this.preparado.duracion_total_ms > 0 &&
+        this.offsetMs >= this.preparado.duracion_total_ms) {
       this.estado = 'finished';
-      this.brillando = new Set();
-      this.rafId = null;
-      return;
     }
+  }
 
-    this.rafId = requestAnimationFrame(this.tick);
-  };
+  stop() {
+    this.estado = 'idle';
+    this.offsetMs = 0;
+    this.idxActual = -1;
+    this.brillando = new Set();
+  }
 }
 
 export const ensayo = new EnsayoStore();

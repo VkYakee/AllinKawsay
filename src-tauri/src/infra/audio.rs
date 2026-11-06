@@ -279,7 +279,30 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                     }
 
                     ComandoAudio::Buscar(position_ms) => {
-                        { let mut state = estado_thread.lock().unwrap(); state.generation = state.generation.wrapping_add(1); }
+                        {
+                            let mut state = estado_thread.lock().unwrap();
+                            state.generation = state.generation.wrapping_add(1);
+                        }
+
+                        // Un seek invalida las notas de la posición anterior: no deben
+                        // continuar sonando después de saltar a otro punto de la canción.
+                        sink_zampona.stop();
+                        let (nuevo_mixer, nueva_fuente) =
+                            rodio::dynamic_mixer::mixer::<f32>(MIXER_CHANNELS, MIXER_SAMPLE_RATE);
+                        match Sink::try_new(&stream_handle) {
+                            Ok(nuevo_sink) => {
+                                nuevo_sink.append(nueva_fuente.mix(rodio::source::Zero::<f32>::new(
+                                    MIXER_CHANNELS,
+                                    MIXER_SAMPLE_RATE,
+                                )));
+                                nuevo_sink.play();
+                                zampona_mixer = nuevo_mixer;
+                                sink_zampona = nuevo_sink;
+                            }
+                            Err(e) => warn!("No se pudo reiniciar el mixer tras buscar: {e}"),
+                        }
+                        voces_activas.clear();
+
                         if let Some(sink) = &sink_cancion {
                             match sink.try_seek(Duration::from_millis(position_ms)) {
                                 Ok(()) => estado_thread.lock().unwrap().posicion_ms = position_ms,
