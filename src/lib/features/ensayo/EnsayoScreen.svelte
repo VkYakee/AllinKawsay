@@ -13,7 +13,7 @@
   import { router } from '../../stores/router.svelte';
   import type { NotaZampona } from '../../services/zampona';
   import { getOrCreateSyncProject, saveSyncProject } from '../../services/ensayo-sync-storage';
-  import type { SyncProject } from '../../domain/ensayo/sync-project';
+  import { orderedEvents, type SyncProject } from '../../domain/ensayo/sync-project';
 
   interface Props {
     id: string;
@@ -26,6 +26,7 @@
   let textoLetra = $state('');
   let seekPreview = $state(0);
   let seekDragging = $state(false);
+  let syncIdCounter = 0;
 
   onMount(() => {
     zampona.cargar();
@@ -104,6 +105,11 @@
         : player.posicionMs > 0 ? 'paused' : 'idle';
   });
 
+  function nuevoSyncEventId(prefix: string) {
+    syncIdCounter += 1;
+    return prefix + Date.now() + '-' + syncIdCounter;
+  }
+
   function guardarSyncProject() {
     if (!syncProject) return;
     saveSyncProject(syncProject);
@@ -175,7 +181,7 @@
     if (!syncProject) return;
     const track = syncProject.tracks.find(t => t.kind === 'marker'); if (!track) return;
     const atUs = Math.round(player.posicionMs * 1000);
-    track.events = [...track.events, { id: 'm-' + Date.now(), kind: 'section-marker', atUs, text: 'Marcador ' + (track.events.length + 1) }];
+    track.events = [...track.events, { id: nuevoSyncEventId('m-'), kind: 'section-marker', atUs, text: 'Marcador ' + (track.events.length + 1) }];
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function eliminarMarcador(eventId: string) {
@@ -187,7 +193,7 @@
   function agregarLineaLetra() {
     if (!syncProject || !textoLetra.trim()) return;
     const track = syncProject.tracks.find(t => t.kind === 'lyrics'); if (!track) return;
-    track.events = [...track.events, { id: 'l-' + Date.now(), kind: 'lyric-line', atUs: Math.round(player.posicionMs * 1000), text: textoLetra.trim(), durationUs: 2500000 }];
+    track.events = [...track.events, { id: nuevoSyncEventId('l-'), kind: 'lyric-line', atUs: Math.round(player.posicionMs * 1000), text: textoLetra.trim(), durationUs: 2500000 }];
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject(); textoLetra = '';
   }
   function moverLetra(eventId: string, deltaUs: number) {
@@ -278,7 +284,7 @@
         <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Línea temporal</span><span class="text-[10px] text-white/55 tabular-nums">{(player.posicionMs / 1000).toFixed(2)} s / {(player.duracionMs / 1000).toFixed(2)} s</span></div>
         <input class="w-full accent-dorado" type="range" min="0" max={Math.max(1, player.duracionMs)} step="10" value={Math.min(seekPreview, player.duracionMs)} oninput={(e) => { seekDragging = true; seekPreview = Number((e.currentTarget as HTMLInputElement).value); }} onchange={(e) => { const value = Number((e.currentTarget as HTMLInputElement).value); seekDragging = false; void player.buscar(value); }} disabled={!player.current || player.current.id !== id || player.duracionMs <= 0} aria-label="Posición del audio" />
         <div class="flex items-center justify-between gap-2"><span class="text-[10px] text-white/45">Mover cursor y confirmar para buscar</span><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarMarcador} disabled={!syncProject}>+ Marcador en cursor</button></div>
-        <div class="space-y-1 max-h-20 overflow-y-auto">{#each (syncProject?.tracks.find(t => t.kind === 'marker')?.events ?? []) as ev}<div class="flex justify-between items-center text-[10px] text-white/60"><span>{ev.text} · {(ev.atUs / 1000000).toFixed(2)} s</span><button class="text-red-300 px-2" onclick={() => eliminarMarcador(ev.id)} aria-label="Eliminar marcador">×</button></div>{/each}</div>
+        <div class="space-y-1 max-h-20 overflow-y-auto">{#each orderedEvents(syncProject?.tracks.find(t => t.kind === 'marker')?.events ?? []) as ev}<div class="flex justify-between items-center text-[10px] text-white/60"><span>{ev.text} · {(ev.atUs / 1000000).toFixed(2)} s</span><button class="text-red-300 px-2" onclick={() => eliminarMarcador(ev.id)} aria-label="Eliminar marcador">×</button></div>{/each}</div>
       </section>
       <section class="rounded-2xl border border-dorado/20 bg-black/25 p-3 space-y-2">
         <div class="flex items-center justify-between"><span class="text-xs font-bold text-dorado">Editor de sincronización</span><span class="text-[10px] text-white/50">{syncProject?.tracks.find(t => t.kind === 'zampona')?.events.length ?? 0} notas</span></div>
@@ -289,17 +295,17 @@
           <button class="rounded-lg bg-white/10 px-2 py-1.5 text-[10px] text-white" onclick={() => actualizarControlesPista('zampona', 'muted')}>{syncProject?.tracks.find(t => t.kind === 'zampona')?.muted ? 'Activar sonido' : 'Silenciar sonido'}</button>
         </div>
         <div class="flex gap-2 flex-wrap"><button class="rounded-lg bg-white/10 px-2 py-2 text-xs text-white" onclick={() => desplazarTodoSync(-500000)}>Todo −0,5 s</button><button class="rounded-lg bg-white/10 px-2 py-2 text-xs text-white" onclick={() => desplazarTodoSync(500000)}>Todo +0,5 s</button><select class="rounded-lg bg-black/40 px-2 py-2 text-xs text-white max-w-40" bind:value={sampleSeleccionado}><option value="">Muestra (primera)</option>{#each zampona.notas as nota}<option value={nota.id}>{nota.nota} · F{nota.fila}</option>{/each}</select><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarNotaSync} disabled={!syncProject || !zampona.notas.length}>+ Nota en cursor</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => { if (syncProject) guardarSyncProject(); }}>Guardar</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => void programarSync()} disabled={!player.current || player.current.id !== id}>Programar notas</button></div>
-        <div class="max-h-24 overflow-y-auto space-y-1">{#each (syncProject?.tracks.find(t => t.kind === 'zampona')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span class="truncate">{ev.sampleId} · {(ev.atUs / 1000000).toFixed(3)} s · {Math.round((ev.gain ?? 0.8) * 100)}%</span><div class="flex gap-1 shrink-0"><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, -50000)} aria-label="Mover 50 ms antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, 50000)} aria-label="Mover 50 ms después">+</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarGananciaSync(ev.id, -0.1)} aria-label="Bajar volumen">V−</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarGananciaSync(ev.id, 0.1)} aria-label="Subir volumen">V+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => eliminarNotaSync(ev.id)} aria-label="Eliminar nota">×</button></div></div>{/each}</div>
+        <div class="max-h-24 overflow-y-auto space-y-1">{#each orderedEvents(syncProject?.tracks.find(t => t.kind === 'zampona')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span class="truncate">{ev.sampleId} · {(ev.atUs / 1000000).toFixed(3)} s · {Math.round((ev.gain ?? 0.8) * 100)}%</span><div class="flex gap-1 shrink-0"><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, -50000)} aria-label="Mover 50 ms antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, 50000)} aria-label="Mover 50 ms después">+</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarGananciaSync(ev.id, -0.1)} aria-label="Bajar volumen">V−</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarGananciaSync(ev.id, 0.1)} aria-label="Subir volumen">V+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => eliminarNotaSync(ev.id)} aria-label="Eliminar nota">×</button></div></div>{/each}</div>
       </section>
       <section class="rounded-2xl border border-dorado/15 bg-black/20 p-3 space-y-2">
         <div class="flex items-center justify-between"><span class="text-xs font-bold text-dorado">Sincronización de la tabla</span><span class="text-[10px] text-white/45">{syncProject?.tracks.find(t => t.kind === 'notation')?.events.length ?? 0} celdas</span></div>
         <div class="flex items-center justify-between gap-2"><span class="text-[10px] text-white/55">Registra la celda iluminada al tiempo actual del audio.</span><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={registrarCeldaTabla} disabled={!syncProject || !ensayo.eventoActual}>+ Registrar celda</button></div>
-        <div class="max-h-24 overflow-y-auto space-y-1">{#each (syncProject?.tracks.find(t => t.kind === 'notation')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span>Est. {(ev.estrofaIndex ?? 0) + 1} · Col. {(ev.columnaIndex ?? 0) + 1} · F{ev.fila} · {(ev.atUs / 1000000).toFixed(3)} s</span><div class="flex gap-1"><button class="px-1 rounded bg-white/10" onclick={() => ajustarCelda(ev.id, -50000)} aria-label="Mover celda antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarCelda(ev.id, 50000)} aria-label="Mover celda después">+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => borrarCelda(ev.id)} aria-label="Eliminar celda">×</button></div></div>{/each}</div>
+        <div class="max-h-24 overflow-y-auto space-y-1">{#each orderedEvents(syncProject?.tracks.find(t => t.kind === 'notation')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span>Est. {(ev.estrofaIndex ?? 0) + 1} · Col. {(ev.columnaIndex ?? 0) + 1} · F{ev.fila} · {(ev.atUs / 1000000).toFixed(3)} s</span><div class="flex gap-1"><button class="px-1 rounded bg-white/10" onclick={() => ajustarCelda(ev.id, -50000)} aria-label="Mover celda antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarCelda(ev.id, 50000)} aria-label="Mover celda después">+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => borrarCelda(ev.id)} aria-label="Eliminar celda">×</button></div></div>{/each}</div>
       </section>
       <section class="rounded-2xl border border-dorado/15 bg-black/20 p-3 space-y-2">
         <div class="flex items-center justify-between"><span class="text-xs font-bold text-dorado">Sincronización de la letra</span><span class="text-[10px] text-white/45">{syncProject?.tracks.find(t => t.kind === 'lyrics')?.events.length ?? 0} líneas</span></div>
         <div class="flex gap-2"><input class="min-w-0 flex-1 rounded-lg bg-black/40 px-3 py-2 text-xs text-white placeholder:text-white/35" placeholder="Escribe la línea que se canta…" bind:value={textoLetra} /><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarLineaLetra} disabled={!textoLetra.trim() || !syncProject}>Añadir</button></div>
-        <div class="max-h-28 overflow-y-auto space-y-1">{#each (syncProject?.tracks.find(t => t.kind === 'lyrics')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span class="min-w-0 truncate">{ev.text} · {(ev.atUs / 1000000).toFixed(3)} s</span><div class="flex gap-1 shrink-0"><button class="px-1 rounded bg-white/10" onclick={() => moverLetra(ev.id, -100000)} aria-label="Mover letra antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => moverLetra(ev.id, 100000)} aria-label="Mover letra después">+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => eliminarLetra(ev.id)} aria-label="Eliminar línea">×</button></div></div>{/each}</div>
+        <div class="max-h-28 overflow-y-auto space-y-1">{#each orderedEvents(syncProject?.tracks.find(t => t.kind === 'lyrics')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span class="min-w-0 truncate">{ev.text} · {(ev.atUs / 1000000).toFixed(3)} s</span><div class="flex gap-1 shrink-0"><button class="px-1 rounded bg-white/10" onclick={() => moverLetra(ev.id, -100000)} aria-label="Mover letra antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => moverLetra(ev.id, 100000)} aria-label="Mover letra después">+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => eliminarLetra(ev.id)} aria-label="Eliminar línea">×</button></div></div>{/each}</div>
       </section>
       {#if letraActual}
         <div class="rounded-2xl border border-dorado/20 bg-black/30 px-4 py-3 text-center"><p class="text-[10px] uppercase tracking-[0.2em] text-dorado/65 mb-1">Letra sincronizada</p><p class="text-base font-bold text-white">{letraActual}</p></div>
