@@ -36,28 +36,36 @@
   let cargandoEdicion = $state(false);
   let error = $state('');
 
-  onMount(async () => {
-    if (editando) {
-      cargandoEdicion = true;
-      try {
-        const existente = eventos.buscar(id) ?? await eventosService.obtener(id);
-        if (!existente) {
-          error = 'No se encontró este evento. Vuelve al calendario e inténtalo de nuevo.';
-        } else {
-          titulo = existente.titulo;
-          descripcion = existente.descripcion;
-          lugar = existente.lugar;
-          fechaInput = toLocalInputValue(new Date(existente.fecha));
-          lat = existente.lat;
-          lng = existente.lng;
-        }
-      } catch (cause) {
-        error = cause instanceof Error ? cause.message : 'No se pudo cargar el evento.';
-      } finally {
-        cargandoEdicion = false;
+  async function cargarEvento() {
+    if (!editando) { initMap(); return; }
+    cargandoEdicion = true;
+    error = '';
+    try {
+      const existente = eventos.buscar(id) ?? await eventosService.obtener(id);
+      if (!existente) {
+        error = 'No se encontró este evento. Vuelve al calendario e inténtalo de nuevo.';
+      } else {
+        titulo = existente.titulo;
+        descripcion = existente.descripcion;
+        lugar = existente.lugar;
+        fechaInput = toLocalInputValue(new Date(existente.fecha));
+        lat = existente.lat;
+        lng = existente.lng;
+      }
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo cargar el evento.';
+    } finally {
+      cargandoEdicion = false;
+      initMap();
+      if (map && lat !== null && lng !== null) {
+        map.setView([lat, lng], 15);
+        setMarker(lat, lng);
       }
     }
-    initMap();
+  }
+
+  onMount(() => {
+    void cargarEvento();
   });
 
   onDestroy(() => {
@@ -195,9 +203,12 @@
     </GlassCard>
 
     {#if error}
-      <div class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
+      <div role="alert" class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
         <Icon name="alert-circle" size={16} class="text-red-400 shrink-0" />
-        <p class="text-xs text-red-300">{error}</p>
+        <p class="text-xs text-red-300 flex-1">{error}</p>
+        {#if editando && !cargandoEdicion}
+          <button type="button" onclick={cargarEvento} class="shrink-0 text-[11px] font-bold text-dorado">Reintentar</button>
+        {/if}
       </div>
     {/if}
 
