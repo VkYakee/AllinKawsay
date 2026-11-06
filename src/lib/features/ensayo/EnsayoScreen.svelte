@@ -21,7 +21,9 @@
 
   let { id }: Props = $props();
   let syncProject = $state<SyncProject | null>(null);
-  let syncStorageError = $state('');\n  let sampleSeleccionado = $state('');\n  let textoLetra = $state('');
+  let syncStorageError = $state('');
+  let sampleSeleccionado = $state('');
+  let textoLetra = $state('');
 
   onMount(() => {
     zampona.cargar();
