@@ -55,6 +55,7 @@
   });
 
   async function subirFotos(e: Event) {
+    if (subiendo || cargandoEdicion || guardando) return;
     const input = e.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     if (files.length === 0) return;
@@ -79,6 +80,7 @@
   }
 
   async function subirVideos(e: Event) {
+    if (subiendo || cargandoEdicion || guardando) return;
     const input = e.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     if (files.length === 0) return;
@@ -103,11 +105,11 @@
   }
 
   async function guardar() {
+    if (guardando) return;
     error = '';
     if (cargandoEdicion) { error = 'Espera a que termine de cargar el recuerdo.'; return; }
     if (!titulo.trim()) { error = 'El título es obligatorio'; return; }
     if (!fechaInput || Number.isNaN(new Date(`${fechaInput}T12:00:00`).getTime())) { error = 'La fecha del recuerdo no es válida.'; return; }
-    if (guardando) return;
     if (subiendo) { error = 'Espera a que terminen las subidas'; return; }
 
     guardando = true;
@@ -192,7 +194,7 @@
           Fotos ({fotos.length})
         </p>
         <label class="cursor-pointer">
-          <input type="file" accept="image/*" multiple onchange={subirFotos} class="hidden" disabled={subiendo} />
+          <input type="file" accept="image/*" multiple onchange={subirFotos} class="hidden" disabled={subiendo || cargandoEdicion || guardando} />
           <div class="glass-gold rounded-full px-3 py-1 border border-dorado/40 text-dorado text-[11px] font-bold">
             + Añadir
           </div>
@@ -205,6 +207,8 @@
               <img src={foto} alt="Foto {i + 1}" class="w-full h-full object-cover" />
               <button
                 type="button"
+                disabled={subiendo || guardando}
+                aria-label="Quitar foto"
                 onclick={() => (fotos = fotos.filter((_, j) => j !== i))}
                 class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 flex items-center justify-center text-white"
               >
@@ -239,6 +243,8 @@
               <p class="text-xs text-white/80 flex-1">Video {i + 1}</p>
               <button
                 type="button"
+                disabled={subiendo || guardando}
+                aria-label="Quitar video"
                 onclick={() => (videos = videos.filter((_, j) => j !== i))}
                 class="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center text-red-300"
               >
