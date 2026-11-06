@@ -20,12 +20,16 @@
   let fEmoji = $state('📁');
   let fOrden = $state(0);
   let guardando = $state(false);
+  let error = $state('');
 
   onMount(() => {
     if (!session.isAdmin) { router.back(); return; }
     const unsub = categoriasService.stream(
       (items) => { categorias = items; loading = false; },
-      () => (loading = false)
+      (cause) => {
+        loading = false;
+        error = cause instanceof Error ? cause.message : 'No se pudieron cargar las categorías.';
+      }
     );
     return unsub;
   });
@@ -49,6 +53,7 @@
   async function guardar() {
     if (!fNombre.trim() || guardando) return;
     guardando = true;
+    error = '';
     try {
       if (editando) {
         await categoriasService.actualizar(editando.id, fNombre, fEmoji, fOrden);
@@ -68,6 +73,8 @@
         );
       }
       modalAbierto = false;
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo guardar la categoría.';
     } finally {
       guardando = false;
     }
@@ -75,6 +82,7 @@
 
   async function eliminar(c: Categoria) {
     if (!confirm(`¿Eliminar la categoría ${c.emoji} ${c.nombre}?`)) return;
+    error = '';
     try {
       await categoriasService.eliminar(c.id);
       await actividadService.registrar(
@@ -83,7 +91,9 @@
         session.user?.uid ?? '',
         session.displayName
       );
-    } catch {}
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo eliminar la categoría.';
+    }
   }
 </script>
 
@@ -106,6 +116,9 @@
   </header>
 
   <div class="px-5 py-6 pb-32 space-y-4">
+    {#if error}
+      <div role="alert" class="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-xs text-red-200">{error}</div>
+    {/if}
     <p class="text-[10px] text-white/40 tracking-[0.2em] font-bold uppercase px-1">
       {categorias.length} {categorias.length === 1 ? 'categoría' : 'categorías'}
     </p>
