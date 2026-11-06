@@ -5,7 +5,7 @@ use crate::infra::audio::{AudioHandle, ReproductorState, ScheduledAudioNote};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-pub struct ScheduledNoteInput { pub at_ms: u64, pub sample_id: String, pub event_id: String }
+pub struct ScheduledNoteInput { pub at_ms: u64, pub sample_id: String, pub event_id: String, pub gain: f32 }
 
 #[tauri::command]
 pub async fn play_cancion(
@@ -84,6 +84,7 @@ pub async fn velocidad_cancion(speed: f32, audio: State<'_, AudioHandle>) -> Res
 #[tauri::command]
 pub async fn programar_notas(generation: u64, events: Vec<ScheduledNoteInput>, audio: State<'_, AudioHandle>) -> Result<(), String> {
     if events.len() > 4096 { return Err("Máximo 4096 notas por lote".into()); }
-    let batch = events.into_iter().map(|e| ScheduledAudioNote { at_ms: e.at_ms, sample_id: e.sample_id, event_id: e.event_id }).collect();
+    if events.iter().any(|event| !event.gain.is_finite() || !(0.0..=1.0).contains(&event.gain)) { return Err("La ganancia de cada nota debe estar entre 0 y 1".into()); }
+    let batch = events.into_iter().map(|e| ScheduledAudioNote { at_ms: e.at_ms, sample_id: e.sample_id, event_id: e.event_id, gain: e.gain }).collect();
     audio.programar(generation, batch)
 }
