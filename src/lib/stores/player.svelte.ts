@@ -20,7 +20,7 @@ class Player {
   generation = $state(0);
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
-  private pollInFlight = false;
+  private pollInFlight = false;\n  private syncProject: SyncProject | null = null;
 
   get isActive() {
     return this.current !== null;
@@ -94,14 +94,14 @@ class Player {
 
   async programarProyectoSync(project: SyncProject): Promise<number> {
     if (!this.current || project.songId !== this.current.id) throw new Error('Proyecto de sincronización no corresponde a canción activa.');
-    const issues = validateSyncProject(project);
+    this.syncProject = project;\n    const issues = validateSyncProject(project);
     if (issues.length) throw new Error('Proyecto de sincronización inválido: ' + issues[0].message);
     const compiled = compileScheduledSamples(project, 0, Math.max(0, Math.round(this.duracionMs * 1000)));
     await reproductorService.programarNotas(this.generation, compiled.map(event => ({ at_ms: event.atMs, sample_id: event.sampleId, event_id: event.eventId })));
     return compiled.length;
   }
 
-  async stop() {
+  private async reprogramSync() {\n    if (!this.syncProject || !this.current || !this.playing || this.duracionMs <= 0) return;\n    try { await this.programarProyectoSync(this.syncProject); } catch (error) { console.warn('No se pudo reprogramar sincronización:', error); }\n  }\n\n  async stop() {
     await reproductorService.detener();
     this.current = null;
     this.playing = false;
