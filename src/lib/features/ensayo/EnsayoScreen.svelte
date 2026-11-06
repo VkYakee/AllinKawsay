@@ -112,9 +112,14 @@
 
   function guardarSyncProject() {
     if (!syncProject) return;
-    saveSyncProject(syncProject);
-    // Los cambios realizados durante la reproducción reemplazan la cola futura
-    // automáticamente; no es necesario pulsar «Programar notas» cada vez.
+    try {
+      saveSyncProject(syncProject);
+      syncStorageError = '';
+    } catch (error) {
+      syncStorageError = error instanceof Error ? error.message : 'No se pudo guardar la sincronización';
+      return;
+    }
+    // Los cambios realizados durante la reproducción reemplazan la cola futura.
     if (player.current?.id === id && player.playing) {
       void player.programarProyectoSync(syncProject).catch(error => {
         syncStorageError = error instanceof Error ? error.message : 'No se pudo actualizar el scheduler';
@@ -140,7 +145,7 @@
   function agregarNotaSync() {
     if (!syncProject || !zampona.notas.length) return;
     const note = zampona.notas.find(n => n.id === sampleSeleccionado) ?? zampona.notas[0]; const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
-    const eventId = 'z-' + Date.now() + '-' + track.events.length;
+    const eventId = nuevoSyncEventId('z-');
     track.events = [...track.events, { id: eventId, kind: 'zampona-note', atUs: Math.round(player.posicionMs * 1000), sampleId: note.id, musicalEventId: eventId, gain: 0.8 }];
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
@@ -167,7 +172,7 @@
   function registrarCeldaTabla() {
     if (!syncProject || !ensayo.eventoActual) return;
     const ev = ensayo.eventoActual; const track = syncProject.tracks.find(t => t.kind === 'notation'); if (!track) return;
-    const eventId = 't-' + Date.now(); track.events = [...track.events, { id: eventId, kind: 'notation-cell', atUs: Math.round(player.posicionMs * 1000), estrofaIndex: ev.estrofa_idx, columnaIndex: ev.columna_idx, fila: ev.es_fila7 ? 7 : 6, musicalEventId: eventId }];
+    const eventId = nuevoSyncEventId('t-'); track.events = [...track.events, { id: eventId, kind: 'notation-cell', atUs: Math.round(player.posicionMs * 1000), estrofaIndex: ev.estrofa_idx, columnaIndex: ev.columna_idx, fila: ev.es_fila7 ? 7 : 6, musicalEventId: eventId }];
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function ajustarCelda(eventId: string, deltaUs: number) {
@@ -217,6 +222,7 @@
         await player.buscar(0);
       }
       await player.toggle();
+      if (player.playing && syncProject) await programarSync();
       return;
     }
     await player.play({
@@ -226,6 +232,9 @@
       imagenUrl: cancion.imagen_url,
       audioUrl: cancion.audio_url
     });
+    if (player.current?.id === id && player.playing && syncProject) {
+      await programarSync();
+    }
   }
 
   async function detenerEnsayo() {
