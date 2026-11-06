@@ -20,6 +20,7 @@
   let fEmoji = $state('📁');
   let fOrden = $state(0);
   let guardando = $state(false);
+  let categoriaEnProceso = $state<string | null>(null);
   let error = $state('');
   let unsubscribe: (() => void) | null = null;
 
@@ -58,27 +59,26 @@
     modalAbierto = true;
   }
 
+  async function registrarActividad(tipo: string, mensaje: string) {
+    try {
+      await actividadService.registrar(tipo, mensaje, session.user?.uid ?? '', session.displayName);
+    } catch {
+      // La categoría ya se guardó; el historial no debe simular un fallo de escritura.
+      error = 'El cambio se aplicó, pero no se pudo registrar en el historial.';
+    }
+  }
+
   async function guardar() {
-    if (!fNombre.trim() || guardando) return;
+    if (!fNombre.trim() || guardando || categoriaEnProceso) return;
     guardando = true;
     error = '';
     try {
       if (editando) {
         await categoriasService.actualizar(editando.id, fNombre, fEmoji, fOrden);
-        await actividadService.registrar(
-          'editar_categoria',
-          `Editó la categoría ${fEmoji} ${fNombre}`,
-          session.user?.uid ?? '',
-          session.displayName
-        );
+        await registrarActividad('editar_categoria', `Editó la categoría ${fEmoji} ${fNombre}`);
       } else {
         await categoriasService.crear(fNombre, fEmoji, fOrden);
-        await actividadService.registrar(
-          'crear_categoria',
-          `Creó la categoría ${fEmoji} ${fNombre}`,
-          session.user?.uid ?? '',
-          session.displayName
-        );
+        await registrarActividad('crear_categoria', `Creó la categoría ${fEmoji} ${fNombre}`);
       }
       modalAbierto = false;
     } catch (cause) {
@@ -89,18 +89,16 @@
   }
 
   async function eliminar(c: Categoria) {
-    if (!confirm(`¿Eliminar la categoría ${c.emoji} ${c.nombre}?`)) return;
+    if (guardando || categoriaEnProceso || !confirm(`¿Eliminar la categoría ${c.emoji} ${c.nombre}?`)) return;
+    categoriaEnProceso = c.id;
     error = '';
     try {
       await categoriasService.eliminar(c.id);
-      await actividadService.registrar(
-        'eliminar_categoria',
-        `Eliminó la categoría ${c.emoji} ${c.nombre}`,
-        session.user?.uid ?? '',
-        session.displayName
-      );
+      await registrarActividad('eliminar_categoria', `Eliminó la categoría ${c.emoji} ${c.nombre}`);
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'No se pudo eliminar la categoría.';
+    } finally {
+      categoriaEnProceso = null;
     }
   }
 </script>
@@ -161,6 +159,7 @@
               </div>
               <button
                 type="button"
+                disabled={guardando || categoriaEnProceso !== null}
                 onclick={() => abrirEditar(c)}
                 class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-dorado active:scale-90"
               >
@@ -168,6 +167,7 @@
               </button>
               <button
                 type="button"
+                disabled={guardando || categoriaEnProceso !== null}
                 onclick={() => eliminar(c)}
                 class="w-9 h-9 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 active:scale-90"
               >
