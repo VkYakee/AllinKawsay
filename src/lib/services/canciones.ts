@@ -81,19 +81,15 @@ function mapEstrofa(raw: unknown): Estrofa {
 
   if (Array.isArray(d.eventos)) {
     const columnas: Columna[] = [];
-    let fila: 6 | 7 = 6;
     for (const rawEvent of d.eventos) {
       const event = asRecord(rawEvent);
       const tipo = typeof event.tipo === 'number' ? event.tipo : 1;
       const valor = typeof event.valor === 'string' ? event.valor : '';
       if (tipo === 2) {
-        fila = valor === '/' ? 7 : 6;
       } else if (tipo === 0) {
         columnas.push({ nota7: valor, nota6: '' });
-        fila = 7;
       } else {
         columnas.push({ nota7: '', nota6: valor });
-        fila = 6;
       }
     }
     return { columnas, bis: d.bis === true };
