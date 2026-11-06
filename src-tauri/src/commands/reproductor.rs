@@ -129,7 +129,19 @@ pub async fn velocidad_cancion(speed: f32, audio: State<'_, AudioHandle>) -> Res
 #[tauri::command]
 pub async fn programar_notas(generation: u64, events: Vec<ScheduledNoteInput>, audio: State<'_, AudioHandle>) -> Result<(), String> {
     if events.len() > 4096 { return Err("Máximo 4096 notas por lote".into()); }
-    if events.iter().any(|event| !event.gain.is_finite() || !(0.0..=1.0).contains(&event.gain)) { return Err("La ganancia de cada nota debe estar entre 0 y 1".into()); }
+    const SAMPLES: [&str; 13] = [
+        "fila7_1", "fila7_2", "fila7_3", "fila7_4", "fila7_5", "fila7_6", "fila7_7",
+        "fila6_1", "fila6_2", "fila6_3", "fila6_4", "fila6_5", "fila6_6",
+    ];
+    if events.iter().any(|event| !SAMPLES.contains(&event.sample_id.as_str())) {
+        return Err("Identificador de muestra de zampoña inválido".into());
+    }
+    if events.iter().any(|event| event.event_id.trim().is_empty() || event.event_id.len() > 128) {
+        return Err("Cada nota debe tener un ID de evento válido (máximo 128 caracteres)".into());
+    }
+    if events.iter().any(|event| !event.gain.is_finite() || !(0.0..=1.0).contains(&event.gain)) {
+        return Err("La ganancia de cada nota debe estar entre 0 y 1".into());
+    }
     let batch = events.into_iter().map(|e| ScheduledAudioNote { at_ms: e.at_ms, sample_id: e.sample_id, event_id: e.event_id, gain: e.gain }).collect();
     audio.programar(generation, batch)
 }
