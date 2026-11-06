@@ -9,6 +9,7 @@
   import EditorNumerofonia from './EditorNumerofonia.svelte';
   import EditorLetra from './EditorLetra.svelte';
   import { cancionesService, type Estrofa } from '../../services/canciones';
+  import { categoriasService, type Categoria } from '../../services/categorias';
   import { canciones } from '../../stores/canciones.svelte';
   import { actividadService } from '../../services/actividad';
   import { session } from '../../stores/session.svelte';
@@ -30,6 +31,9 @@
   let descripcion = $state('');
   let letra = $state('');
   let tagsInput = $state('');
+  let categoriaId = $state('');
+  let categorias = $state<Categoria[]>([]);
+  let errorCategorias = $state('');
   let imagenUrl = $state('');
   let audioUrl = $state('');
   let videoUrl = $state('');
@@ -61,6 +65,7 @@
     descripcion = c.descripcion;
     letra = c.letra;
     tagsInput = c.tags.join(', ');
+    categoriaId = c.categoriaId;
     imagenUrl = c.imagen_url;
     audioUrl = c.audio_url;
     videoUrl = c.video_url;
@@ -71,6 +76,11 @@
   }
 
   onMount(async () => {
+    try {
+      categorias = await categoriasService.listar();
+    } catch (cause) {
+      errorCategorias = cause instanceof Error ? cause.message : 'No se pudieron cargar las categorías.';
+    }
     if (!editando) return;
     cargandoEdicion = true;
     try {
@@ -139,7 +149,7 @@
     try {
       const tags = tagsInput.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
       const input = {
-        titulo, autor, ritmo, region, descripcion, letra, tags,
+        titulo, autor, ritmo, region, descripcion, letra, tags, categoriaId,
         imagen_url: imagenUrl, audio_url: audioUrl, video_url: videoUrl,
         estrofas
       };
@@ -200,6 +210,19 @@
     </div>
 
     <GlassInput bind:value={tagsInput} label="Tags" placeholder="tradicional, altiplano" icon="star" />
+
+    <div class="space-y-1.5">
+      <label for="categoria-cancion" class="text-[11px] font-semibold tracking-[0.15em] uppercase text-dorado/80 px-1">Categoría</label>
+      <select id="categoria-cancion" bind:value={categoriaId} class="w-full h-12 rounded-xl border border-white/10 bg-[#211D1A] px-4 text-sm text-white outline-none focus:border-dorado/50">
+        <option value="">Sin categoría</option>
+        {#each categorias as categoria (categoria.id)}
+          <option value={categoria.id}>{categoria.emoji} {categoria.nombre}</option>
+        {/each}
+      </select>
+      {#if errorCategorias}
+        <p class="px-1 text-[11px] text-amber-200/80">No se pudieron cargar las categorías. Puedes guardar sin asignar una.</p>
+      {/if}
+    </div>
 
     <GlassCard variant="default" padding="md">
       <p class="text-[11px] font-semibold tracking-[0.15em] uppercase text-dorado/80 mb-2">Imagen de portada</p>
