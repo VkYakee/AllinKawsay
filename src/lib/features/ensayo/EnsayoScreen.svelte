@@ -297,7 +297,7 @@
         <div class="rounded-2xl border border-dorado/20 bg-black/30 px-4 py-3 text-center"><p class="text-[10px] uppercase tracking-[0.2em] text-dorado/65 mb-1">Letra sincronizada</p><p class="text-base font-bold text-white">{letraActual}</p></div>
       {/if}
       <div class="pt-1">
-        {#if estrofaActual}
+        {#if estrofaActual && (syncProject?.tracks.find(t => t.kind === 'notation')?.enabled ?? true)}
           <PartituraView estrofa={estrofaActual} {celdaActiva} numero={estrofaNum} />
         {/if}
       </div>
