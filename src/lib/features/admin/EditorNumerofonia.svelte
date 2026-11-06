@@ -52,9 +52,19 @@
     }));
   }
 
+  function leerFila(texto: string): string[] {
+    const limpio = texto.trim();
+    if (!limpio) return [];
+    // Con | se pueden declarar columnas vacías: 1|2||4.
+    // Sin | se conserva la entrada rápida tradicional separada por espacios.
+    return limpio.includes('|')
+      ? limpio.split('|').map((valor) => valor.trim())
+      : limpio.split(/\s+/).filter(Boolean);
+  }
+
   function importarFilas(idx: number) {
-    const arriba = fila7Texto.trim().split(/\s+/).filter(Boolean);
-    const abajo = fila6Texto.trim().split(/\s+/).filter(Boolean);
+    const arriba = leerFila(fila7Texto);
+    const abajo = leerFila(fila6Texto);
     const cantidad = Math.max(arriba.length, abajo.length);
     const columnas = Array.from({ length: cantidad }, (_, i) => ({
       nota7: arriba[i] ?? '',
@@ -125,12 +135,12 @@
       {#if importacionEstrofa === idx}
         <div class="rounded-xl bg-black/20 border border-white/10 p-3 space-y-2">
           <p class="text-xs font-bold text-white">Entrada rápida</p>
-          <p class="text-[10px] text-white/45">Separa cada columna con espacios. Las posiciones vacías se conservan.</p>
+          <p class="text-[10px] text-white/45">Separa con espacios para una secuencia rápida. Usa | para conservar columnas vacías (ej.: 1|2||4).</p>
           <label class="block text-[10px] text-dorado">Fila 7 · arriba
-            <textarea bind:value={fila7Texto} rows="2" placeholder="1 2 3 4 5" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm font-mono text-white"></textarea>
+            <textarea bind:value={fila7Texto} rows="2" placeholder="1 2 3 4 5  ·  o  1|2||4" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm font-mono text-white"></textarea>
           </label>
           <label class="block text-[10px] text-white/70">Fila 6 · abajo
-            <textarea bind:value={fila6Texto} rows="2" placeholder="5 6 7 6 5" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm font-mono text-white"></textarea>
+            <textarea bind:value={fila6Texto} rows="2" placeholder="5 6 7 6 5  ·  o  5||7|6" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm font-mono text-white"></textarea>
           </label>
           <div class="flex gap-2">
             <button type="button" onclick={() => importacionEstrofa = null} class="flex-1 rounded-lg py-2 text-xs text-white/50">Cancelar</button>
