@@ -159,8 +159,11 @@ export const authService = {
         }
         try {
           resolve(await cargarUsuarioFirestore(user));
-        } catch {
-          resolve(null);
+        } catch (error) {
+          // Un fallo temporal de Firestore no significa que Firebase Auth haya
+          // perdido la sesión. Se conserva el acceso básico sin privilegios.
+          console.warn('No se pudo leer el perfil de Firestore; se restaura como usuario público:', error);
+          resolve(mapUsuario(user.uid, {}, user.email ?? '', user.emailVerified));
         }
       });
     });
