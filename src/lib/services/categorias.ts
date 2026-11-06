@@ -1,5 +1,5 @@
 // src/lib/services/categorias.ts
-import { doc, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
+import { collection, doc, deleteDoc, getDocs, limit, query, updateDoc, where, orderBy } from 'firebase/firestore';
 import { getFirebaseDb } from '../config/firebase';
 import {
   getCol,
@@ -62,6 +62,13 @@ export const categoriasService = {
   },
 
   async eliminar(id: string): Promise<void> {
-    await deleteDoc(doc(getFirebaseDb(), 'categorias', id));
+    const db = getFirebaseDb();
+    const cancionesConCategoria = await getDocs(
+      query(collection(db, 'canciones'), where('categoriaId', '==', id), limit(1))
+    );
+    if (!cancionesConCategoria.empty) {
+      throw new Error('No se puede eliminar esta categoría porque todavía está asignada a una o más canciones. Reasigna esas canciones antes de eliminarla.');
+    }
+    await deleteDoc(doc(db, 'categorias', id));
   }
 };
