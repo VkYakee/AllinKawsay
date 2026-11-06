@@ -119,8 +119,9 @@
       syncStorageError = error instanceof Error ? error.message : 'No se pudo guardar la sincronización';
       return;
     }
-    // Los cambios realizados durante la reproducción reemplazan la cola futura.
-    if (player.current?.id === id && player.playing) {
+    // Mantiene el proyecto más reciente asociado al reproductor incluso en pausa;
+    // al reanudar, el motor vuelve a programar desde el reloj nativo.
+    if (player.current?.id === id) {
       void player.programarProyectoSync(syncProject).catch(error => {
         syncStorageError = error instanceof Error ? error.message : 'No se pudo actualizar el scheduler';
       });
