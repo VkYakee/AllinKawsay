@@ -10,7 +10,8 @@
 
   let archivos = $state(0);
   let limpiando = $state(false);
-  let limpiado = $state(false);
+  let archivosEliminados = $state<number | null>(null);
+  let error = $state('');
 
   onMount(async () => {
     archivos = await contarArchivosCache();
@@ -20,9 +21,11 @@
     if (!confirm('¿Limpiar caché? Se borrarán los archivos temporales descargados.')) return;
     limpiando = true;
     try {
-      await limpiarCache();
+      archivosEliminados = await limpiarCache();
       archivos = await contarArchivosCache();
-      limpiado = true;
+      error = '';
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudieron limpiar los archivos temporales.';
     } finally {
       limpiando = false;
     }
@@ -54,10 +57,16 @@
       </p>
     </GlassCard>
 
-    {#if limpiado}
+    {#if archivosEliminados !== null}
       <div class="glass rounded-2xl p-3 border border-emerald-500/40 flex items-center gap-2">
         <Icon name="check-circle" size={18} class="text-emerald-400 shrink-0" />
-        <p class="text-xs text-emerald-300 flex-1">Caché limpiada correctamente</p>
+        <p class="text-xs text-emerald-300 flex-1">Se eliminaron {archivosEliminados} archivos temporales.</p>
+      </div>
+    {/if}
+    {#if error}
+      <div class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
+        <Icon name="alert-circle" size={18} class="text-red-400 shrink-0" />
+        <p class="text-xs text-red-300 flex-1">{error}</p>
       </div>
     {/if}
 
@@ -66,7 +75,7 @@
     </GlassButton>
 
     <p class="text-[10px] text-white/30 text-center leading-relaxed px-4">
-      Los archivos se volverán a descargar cuando los necesites. No afecta al contenido en la nube.
+      Esta acción solo elimina archivos temporales con el prefijo interno de la aplicación. No borra canciones ni multimedia de Firebase o Cloudinary.
     </p>
   </div>
 </div>
