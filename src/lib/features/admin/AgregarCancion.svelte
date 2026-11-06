@@ -119,6 +119,15 @@
     }
   }
 
+  async function registrarActividad(tipo: string, mensaje: string) {
+    try {
+      await actividadService.registrar(tipo, mensaje, session.user?.uid ?? '', session.displayName);
+    } catch {
+      // La canción ya fue guardada; un fallo secundario no debe provocar un alta duplicada.
+      console.warn('No se pudo registrar la actividad de la canción.');
+    }
+  }
+
   async function guardar() {
     if (guardando) return;
     error = '';
@@ -128,11 +137,7 @@
 
     guardando = true;
     try {
-      const tags = tagsInput
-        .split(',')
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0);
-
+      const tags = tagsInput.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
       const input = {
         titulo, autor, ritmo, region, descripcion, letra, tags,
         imagen_url: imagenUrl, audio_url: audioUrl, video_url: videoUrl,
@@ -141,24 +146,10 @@
 
       if (editando) {
         await cancionesService.actualizar(id, input);
-        await actividadService.registrar(
-          'editar_cancion',
-          `Editó la canción "${titulo}"`,
-          session.user?.uid ?? '',
-          session.displayName
-        );
+        await registrarActividad('editar_cancion', `Editó la canción "${titulo}"`);
       } else {
-        await cancionesService.crear(
-          input,
-          session.user?.uid ?? '',
-          session.user?.nombre ?? 'Admin'
-        );
-        await actividadService.registrar(
-          'crear_cancion',
-          `Creó la canción "${titulo}"`,
-          session.user?.uid ?? '',
-          session.displayName
-        );
+        await cancionesService.crear(input, session.user?.uid ?? '', session.user?.nombre ?? 'Admin');
+        await registrarActividad('crear_cancion', `Creó la canción "${titulo}"`);
       }
       canciones.refrescar();
       router.back();
