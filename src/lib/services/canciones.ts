@@ -47,6 +47,7 @@ export interface CancionInput {
   video_url: string;
   letra: string;
   tags: string[];
+  categoriaId: string;
   estrofas: Estrofa[];
 }
 
@@ -172,6 +173,7 @@ export const cancionesService = {
         ? [{ titulo: '', texto: input.letra.trim() }]
         : [],
       tags: input.tags,
+      categoriaId: input.categoriaId,
       estrofas: input.estrofas,
       fechaEdicion: Timestamp.now()
     });
