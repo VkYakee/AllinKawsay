@@ -77,6 +77,7 @@ export function validateSyncProject(project: SyncProject): SyncValidationIssue[]
 
   const trackIds = new Set<string>();
   const eventIds = new Set<string>();
+  const regionIds = new Set<string>();
   for (const [trackIndex, track] of project.tracks.entries()) {
     const trackPath = `tracks[${trackIndex}]`;
     if (!track.id.trim() || trackIds.has(track.id)) {
@@ -95,6 +96,12 @@ export function validateSyncProject(project: SyncProject): SyncValidationIssue[]
       }
       if (event.durationUs !== undefined && !isSafeTime(event.durationUs)) {
         issues.push({ path: `${path}.durationUs`, message: 'La duración debe ser un entero no negativo.' });
+      }
+      if (event.durationUs !== undefined && isSafeTime(event.atUs) && isSafeTime(event.durationUs) && !Number.isSafeInteger(event.atUs + event.durationUs)) {
+        issues.push({ path: `${path}.durationUs`, message: 'El final del evento excede el rango seguro.' });
+      }
+      if (track.kind === 'zampona' && event.kind === 'zampona-note' && (!event.sampleId || !event.sampleId.trim())) {
+        issues.push({ path: `${path}.sampleId`, message: 'La nota de zampoña necesita una muestra válida.' });
       }
       if (event.gain !== undefined && (!Number.isFinite(event.gain) || event.gain < 0 || event.gain > 1)) {
         issues.push({ path: `${path}.gain`, message: 'La ganancia debe estar entre 0 y 1.' });
@@ -115,6 +122,8 @@ export function validateSyncProject(project: SyncProject): SyncValidationIssue[]
   }
 
   for (const [index, region] of project.regions.entries()) {
+    if (!region.id.trim() || regionIds.has(region.id)) issues.push({ path: `regions[${index}].id`, message: 'Id de región vacío o duplicado.' });
+    regionIds.add(region.id);
     if (!isSafeTime(region.startUs) || !isSafeTime(region.endUs) || region.endUs <= region.startUs) {
       issues.push({ path: `regions[${index}]`, message: 'El rango debe tener inicio y fin válidos, con fin posterior al inicio.' });
     }
@@ -209,7 +218,7 @@ export function compileScheduledSamples(
   const track = project.tracks.find((item) => item.kind === 'zampona');
   if (!track || !track.enabled || track.muted) return [];
 
-  return orderedEvents(track.events)
+  const compiled = orderedEvents(track.events)
     .filter((event) =>
       event.kind === 'zampona-note' &&
       event.sampleId &&
@@ -222,4 +231,7 @@ export function compileScheduledSamples(
       eventId: event.id,
       musicalEventId: event.musicalEventId
     }));
+  // Evita payloads enormes que bloqueen el hilo de comandos nativo.
+  if (compiled.length > 4096) throw new RangeError('La ventana contiene más de 4096 notas; reduzca el rango.');
+  return compiled;
 }
