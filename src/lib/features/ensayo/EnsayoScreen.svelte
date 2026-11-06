@@ -24,6 +24,8 @@
   let syncStorageError = $state('');
   let sampleSeleccionado = $state('');
   let textoLetra = $state('');
+  let seekPreview = $state(0);
+  let seekDragging = $state(false);
 
   onMount(() => {
     zampona.cargar();
@@ -74,6 +76,9 @@
   );
 
   // La partitura sigue el reloj consultado al reproductor nativo.
+  $effect(() => {
+    if (!seekDragging) seekPreview = player.posicionMs;
+  });
   $effect(() => {
     if (player.current?.id !== id) return;
     ensayo.actualizarPosicion(player.posicionMs);
@@ -231,7 +236,7 @@
       </div>
       <section class="rounded-2xl border border-dorado/15 bg-black/20 p-3 space-y-2">
         <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Línea temporal</span><span class="text-[10px] text-white/55 tabular-nums">{(player.posicionMs / 1000).toFixed(2)} s / {(player.duracionMs / 1000).toFixed(2)} s</span></div>
-        <input class="w-full accent-dorado" type="range" min="0" max={Math.max(1, player.duracionMs)} step="10" value={Math.min(player.posicionMs, player.duracionMs)} oninput={(e) => { const value = Number((e.currentTarget as HTMLInputElement).value); player.posicionMs = value; }} onchange={(e) => void player.buscar(Number((e.currentTarget as HTMLInputElement).value))} disabled={!player.current || player.current.id !== id || player.duracionMs <= 0} aria-label="Posición del audio" />
+        <input class="w-full accent-dorado" type="range" min="0" max={Math.max(1, player.duracionMs)} step="10" value={Math.min(seekPreview, player.duracionMs)} oninput={(e) => { seekDragging = true; seekPreview = Number((e.currentTarget as HTMLInputElement).value); }} onchange={(e) => { const value = Number((e.currentTarget as HTMLInputElement).value); seekDragging = false; void player.buscar(value); }} disabled={!player.current || player.current.id !== id || player.duracionMs <= 0} aria-label="Posición del audio" />
         <div class="flex items-center justify-between gap-2"><span class="text-[10px] text-white/45">Mover cursor y confirmar para buscar</span><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarMarcador} disabled={!syncProject}>+ Marcador en cursor</button></div>
         <div class="space-y-1 max-h-20 overflow-y-auto">{#each (syncProject?.tracks.find(t => t.kind === 'marker')?.events ?? []) as ev}<div class="flex justify-between items-center text-[10px] text-white/60"><span>{ev.text} · {(ev.atUs / 1000000).toFixed(2)} s</span><button class="text-red-300 px-2" onclick={() => eliminarMarcador(ev.id)} aria-label="Eliminar marcador">×</button></div>{/each}</div>
       </section>
