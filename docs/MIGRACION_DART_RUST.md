@@ -142,3 +142,6 @@ Esto no completa todavía la paridad del antiguo modelo: `setlist` y el flujo de
 - La subida Cloudinary tiene timeout de 120 segundos y mensajes diferenciados para red, cancelación, respuesta inválida y demora. No cambia el preset ni expone secretos.
 - La eliminación de categorías está protegida por transacción y bloquea el borrado si existe una canción con ese `categoriaId`; el administrador debe reasignarla primero.
 - El comando nativo que programa zampoña valida la lista cerrada de muestras `fila7_1..7`/`fila6_1..6`, el ID de evento (no vacío y máximo 128 caracteres) y la ganancia finita 0–1 antes de pasar datos al mixer.
+
+- Descarga nativa del audio: timeout de red 45 s y límite de 100 MiB (Content-Length y streaming); se borra el temporal si excede el tamaño o falla la escritura.
+- Servicio meteorológico: el timeout de 5 s se libera también cuando fetch falla, evitando timers residuales.
