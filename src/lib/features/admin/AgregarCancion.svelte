@@ -77,12 +77,17 @@
     }));
   }
 
-  onMount(async () => {
+  async function cargarCategorias() {
+    errorCategorias = '';
     try {
       categorias = await categoriasService.listar();
     } catch (cause) {
       errorCategorias = cause instanceof Error ? cause.message : 'No se pudieron cargar las categorías.';
     }
+  }
+
+  onMount(async () => {
+    await cargarCategorias();
     if (!editando) return;
     cargandoEdicion = true;
     try {
@@ -222,7 +227,10 @@
         {/each}
       </select>
       {#if errorCategorias}
-        <p class="px-1 text-[11px] text-amber-200/80">No se pudieron cargar las categorías. Puedes guardar sin asignar una.</p>
+        <div class="flex items-center justify-between gap-3 px-1">
+          <p class="text-[11px] text-amber-200/80">{errorCategorias}. Puedes guardar sin asignar una categoría.</p>
+          <button type="button" onclick={cargarCategorias} class="shrink-0 text-[11px] font-bold text-dorado">Reintentar</button>
+        </div>
       {/if}
     </div>
 
