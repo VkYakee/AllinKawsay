@@ -106,6 +106,8 @@
     error = '';
     if (cargandoEdicion) { error = 'Espera a que termine de cargar el recuerdo.'; return; }
     if (!titulo.trim()) { error = 'El título es obligatorio'; return; }
+    if (!fechaInput || Number.isNaN(new Date(`${fechaInput}T12:00:00`).getTime())) { error = 'La fecha del recuerdo no es válida.'; return; }
+    if (guardando) return;
     if (subiendo) { error = 'Espera a que terminen las subidas'; return; }
 
     guardando = true;
