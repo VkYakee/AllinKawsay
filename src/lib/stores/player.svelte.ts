@@ -20,7 +20,8 @@ class Player {
   generation = $state(0);
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
-  private pollInFlight = false;\n  private syncProject: SyncProject | null = null;
+  private pollInFlight = false;
+  private syncProject: SyncProject | null = null;
 
   get isActive() {
     return this.current !== null;
