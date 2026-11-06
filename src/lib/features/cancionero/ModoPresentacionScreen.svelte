@@ -2,6 +2,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '../../components/ui/Icon.svelte';
+  import PartituraView from '../ensayo/PartituraView.svelte';
   import { cancionesService, type Cancion } from '../../services/canciones';
   import { canciones } from '../../stores/canciones.svelte';
   import { router } from '../../stores/router.svelte';
@@ -13,6 +14,8 @@
   let { id }: Props = $props();
 
   let cancion = $state<Cancion | null>(null);
+  let cargando = $state(true);
+  let errorCarga = $state('');
   let scale = $state(1);
   let translateX = $state(0);
   let translateY = $state(0);
@@ -23,7 +26,14 @@
   let dragging = false;
 
   onMount(async () => {
-    cancion = canciones.buscar(id) ?? (await cancionesService.obtener(id));
+    try {
+      cancion = canciones.buscar(id) ?? (await cancionesService.obtener(id));
+      if (!cancion) errorCarga = 'No se encontró esta canción.';
+    } catch (cause) {
+      errorCarga = cause instanceof Error ? cause.message : 'No se pudo cargar la partitura.';
+    } finally {
+      cargando = false;
+    }
   });
 
   function zoom(e: WheelEvent) {
@@ -57,7 +67,6 @@
     translateY = 0;
   }
 
-  const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 </script>
 
 <div
@@ -94,53 +103,29 @@
   </div>
 
   <div class="flex-1 overflow-hidden touch-none" role="presentation">
-    {#if cancion}
+    {#if cargando}
+      <div class="h-full flex flex-col items-center justify-center gap-3"><div class="w-7 h-7 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div><p class="text-xs text-white/50">Cargando partitura…</p></div>
+    {:else if !cancion}
+      <div class="h-full flex flex-col items-center justify-center text-center px-6"><Icon name="alert-circle" size={32} class="text-red-300 mb-3" /><p class="text-sm font-bold text-white">No se pudo abrir la partitura</p><p class="text-xs text-white/50 mt-1">{errorCarga || 'Canción no encontrada'}</p></div>
+    {:else}
       <div
-        class="w-full h-full flex items-center justify-center p-4"
-        style="transform: scale({scale}) translate({translateX}px, {translateY}px); transition: {dragging
-          ? 'none'
-          : 'transform 0.15s ease'};"
+        class="w-full h-full overflow-y-auto flex flex-col items-center justify-start p-4"
+        style="transform: scale({scale}) translate({translateX}px, {translateY}px); transform-origin: center top; transition: {dragging ? 'none' : 'transform 0.15s ease'};"
       >
-        <div class="space-y-8 max-w-full">
+        <div class="w-full max-w-3xl space-y-5">
           <h1 class="text-3xl font-black text-dorado text-center tracking-tight">
             {cancion.titulo.toUpperCase()}
           </h1>
           {#if cancion.autor}
             <p class="text-base text-white/60 text-center italic">{cancion.autor}</p>
           {/if}
-
-          {#each cancion.estrofas as estrofa, idx}
-            <div class="space-y-2">
-              <p class="text-center text-dorado/60 text-[10px] uppercase tracking-[0.25em] font-bold">
-                Estrofa {romanos[idx] ?? idx + 1}
-                {#if estrofa.bis}· BIS{/if}
-              </p>
-              <div class="flex justify-center">
-                <div class="overflow-x-auto">
-                  <table class="border-collapse">
-                    <tbody>
-                      <tr>
-                        <td class="px-3 py-2 text-sm font-black text-dorado bg-granate rounded-tl-xl w-12 text-center">7</td>
-                        {#each estrofa.columnas as col}
-                          <td class="px-3 py-2 text-center text-2xl font-black text-white font-mono border-l border-white/10 min-w-[44px] tabular-nums">
-                            {col.nota7 || '·'}
-                          </td>
-                        {/each}
-                      </tr>
-                      <tr>
-                        <td class="px-3 py-2 text-sm font-black text-dorado bg-granate rounded-bl-xl w-12 text-center border-t border-white/10">6</td>
-                        {#each estrofa.columnas as col}
-                          <td class="px-3 py-2 text-center text-2xl font-black text-white font-mono border-l border-t border-white/10 min-w-[44px] tabular-nums">
-                            {col.nota6 || '·'}
-                          </td>
-                        {/each}
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          {/each}
+          {#if cancion.estrofas.length > 0}
+            {#each cancion.estrofas as estrofa, idx}
+              <PartituraView {estrofa} numero={idx + 1} />
+            {/each}
+          {:else}
+            <div class="rounded-2xl border border-dashed border-white/15 p-8 text-center"><Icon name="grid" size={28} class="text-dorado/60 mx-auto mb-2" /><p class="text-sm font-bold text-white">Esta canción aún no tiene partitura</p></div>
+          {/if}
         </div>
       </div>
     {/if}
