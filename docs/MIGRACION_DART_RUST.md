@@ -64,6 +64,15 @@ Por tanto, Dart ya no forma parte del camino normal de compilación de la rama r
 | `lib/**` pantallas/modelos | Referencia/pendiente según módulo | Comparar campo por campo y flujo por flujo antes de borrar |
 | `pubspec.yaml` y lockfile Flutter | Residual candidato | Retirar cuando termine la comparación de modelos y no queden scripts/workflows Flutter activos |
 
+## Correcciones incorporadas durante la continuación
+
+- La lectura Svelte conserva el orden histórico de las listas `fila6` y `fila7`, interpreta separadores de texto y conserva títulos de letras por partes. Al editar, los títulos se mantienen cuando el texto no cambia y se reasignan por párrafo cuando se reorganiza.
+- El borrado de categorías comprueba referencias desde canciones dentro de una transacción Firestore.
+- La carga a Cloudinary rechaza archivos vacíos y tipos MIME incompatibles, pero tolera `application/octet-stream` de selectores Android; los límites reales siguen dependiendo del preset del proveedor.
+- La descarga nativa de audio acepta únicamente HTTPS desde el recurso Cloudinary del proyecto, valida el ID de canción y escribe por fragmentos en vez de cargar todo el archivo en memoria.
+- El cliente valida los roles recibidos de Firestore y bloquea la interfaz a cuentas marcadas como suspendidas. Esto mejora la UX, pero no sustituye las reglas de seguridad del servidor.
+- La configuración efectiva de Firebase Security Rules no está versionada en este repositorio; debe revisarse en Firebase Console antes de considerar cerrada la auditoría de permisos.
+
 ## Reglas para retirar legado
 
 No eliminar carpetas completas por lenguaje. Cada bloque se clasifica por función y evidencia:
