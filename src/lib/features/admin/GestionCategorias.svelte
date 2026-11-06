@@ -21,17 +21,25 @@
   let fOrden = $state(0);
   let guardando = $state(false);
   let error = $state('');
+  let unsubscribe: (() => void) | null = null;
 
-  onMount(() => {
-    if (!session.isAdmin) { router.back(); return; }
-    const unsub = categoriasService.stream(
-      (items) => { categorias = items; loading = false; },
+  function conectar() {
+    unsubscribe?.();
+    loading = true;
+    error = '';
+    unsubscribe = categoriasService.stream(
+      (items) => { categorias = items; loading = false; error = ''; },
       (cause) => {
         loading = false;
         error = cause instanceof Error ? cause.message : 'No se pudieron cargar las categorías.';
       }
     );
-    return unsub;
+  }
+
+  onMount(() => {
+    if (!session.isAdmin) { router.back(); return; }
+    conectar();
+    return () => unsubscribe?.();
   });
 
   function abrirNueva() {
@@ -117,7 +125,7 @@
 
   <div class="px-5 py-6 pb-32 space-y-4">
     {#if error}
-      <div role="alert" class="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-xs text-red-200">{error}</div>
+      <div role="alert" class="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 flex items-center justify-between gap-3"><p class="text-xs text-red-200">{error}</p><button type="button" onclick={conectar} class="shrink-0 text-[11px] font-bold text-dorado">Reintentar</button></div>
     {/if}
     <p class="text-[10px] text-white/40 tracking-[0.2em] font-bold uppercase px-1">
       {categorias.length} {categorias.length === 1 ? 'categoría' : 'categorías'}
