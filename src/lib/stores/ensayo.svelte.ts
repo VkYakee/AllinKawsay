@@ -86,23 +86,38 @@ class EnsayoStore {
     this.offsetMs += delta;
 
     const eventos = this.preparado.eventos;
-    const dur = this.preparado.duracion_nota_ms;
     const brillando = new Set<string>();
 
-    for (let i = 0; i < eventos.length; i++) {
-      const ev = eventos[i];
-      if (
-        this.offsetMs >= ev.offset_ms &&
-        this.offsetMs < ev.offset_ms + dur
-      ) {
-        brillando.add(ev.nota_id);
-        if (i !== this.idxActual) {
-          this.idxActual = i;
-          zamponaService.tocar(ev.nota_id);
-        }
-        break;
+    // Encuentra el último evento cuyo inicio ya ocurrió en O(log n).
+    let izquierda = 0;
+    let derecha = eventos.length - 1;
+    let candidato = -1;
+    while (izquierda <= derecha) {
+      const medio = (izquierda + derecha) >>> 1;
+      if (eventos[medio].offset_ms <= this.offsetMs) {
+        candidato = medio;
+        izquierda = medio + 1;
+      } else {
+        derecha = medio - 1;
       }
-      if (ev.offset_ms > this.offsetMs) break;
+    }
+
+    // Si hay tiempos manuales solapados, retrocede solo hasta hallar un
+    // intervalo activo. En el caso habitual se comprueba una sola celda.
+    let activo = -1;
+    for (let i = candidato; i >= 0; i--) {
+      if (eventos[i].fin_ms > this.offsetMs) { activo = i; break; }
+    }
+
+    if (activo >= 0) {
+      const ev = eventos[activo];
+      brillando.add(ev.nota_id);
+      if (activo !== this.idxActual) {
+        this.idxActual = activo;
+        zamponaService.tocar(ev.nota_id);
+      }
+    } else {
+      this.idxActual = -1;
     }
 
     this.brillando = brillando;
