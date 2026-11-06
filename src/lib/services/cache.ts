@@ -4,19 +4,16 @@ const isTauri =
 
 const PREFIJO_CACHE = 'allin_';
 
+/** Cuenta únicamente temporales propios; los errores se propagan para no confundirlos con una caché vacía. */
 export async function contarArchivosCache(): Promise<number> {
   if (!isTauri) return 0;
-  try {
-    const { tempDir } = await import('@tauri-apps/api/path');
-    const { readDir } = await import('@tauri-apps/plugin-fs');
-    const dir = await tempDir();
-    const entries = await readDir(dir);
-    return entries.filter(
-      (e) => e.isFile && e.name?.startsWith(PREFIJO_CACHE)
-    ).length;
-  } catch {
-    return 0;
-  }
+  const { tempDir } = await import('@tauri-apps/api/path');
+  const { readDir } = await import('@tauri-apps/plugin-fs');
+  const dir = await tempDir();
+  const entries = await readDir(dir);
+  return entries.filter(
+    (e) => e.isFile && e.name?.startsWith(PREFIJO_CACHE)
+  ).length;
 }
 
 export async function limpiarCache(): Promise<number> {
