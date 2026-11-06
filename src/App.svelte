@@ -83,7 +83,18 @@
   }
 </script>
 
-{#if router.current === 'splash'}
+{#if session.user?.baneado}
+  <main class="app-background min-h-dvh flex items-center justify-center px-6 py-12">
+    <section class="glass glass-strong w-full max-w-sm rounded-3xl border border-red-400/20 p-7 text-center space-y-4" role="alert">
+      <div class="mx-auto w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
+        <span class="text-3xl" aria-hidden="true">⛔</span>
+      </div>
+      <h1 class="text-xl font-black text-white">Cuenta suspendida</h1>
+      <p class="text-sm leading-relaxed text-white/60">Esta cuenta está suspendida y no puede acceder a Allin Kawsay. Si crees que es un error, comunícate con la administración del conjunto.</p>
+      <button type="button" onclick={() => session.logout()} class="w-full rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white active:scale-[0.98]">Cerrar sesión</button>
+    </section>
+  </main>
+{:else if router.current === 'splash'}
   <SplashScreen onComplete={onSplashComplete} />
 {:else if router.current === 'login'}
   <LoginScreen />
