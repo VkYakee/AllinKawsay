@@ -20,6 +20,7 @@
   let filtro = $state<'todos' | 'activos' | 'baneados'>('activos');
   let query = $state('');
   let error = $state('');
+  let usuarioEnProceso = $state<string | null>(null);
 
   onMount(() => {
     if (!session.isAdmin) { router.back(); return; }
@@ -48,7 +49,8 @@
   });
 
   async function cambiarRol(u: Usuario, nuevoRol: Rol) {
-    if (u.uid === session.user?.uid) return;
+    if (u.uid === session.user?.uid || usuarioEnProceso) return;
+    usuarioEnProceso = u.uid;
     error = '';
     try {
       await usuariosService.cambiarRol(u.uid, nuevoRol);
@@ -60,11 +62,14 @@
       );
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'No se pudo cambiar el rol.';
+    } finally {
+      usuarioEnProceso = null;
     }
   }
 
   async function banear(u: Usuario) {
-    if (!confirm(`¿Suspender a ${u.nombre}?`)) return;
+    if (usuarioEnProceso || !confirm(`¿Suspender a ${u.nombre}?`)) return;
+    usuarioEnProceso = u.uid;
     error = '';
     try {
       await usuariosService.banear(u.uid);
@@ -76,10 +81,14 @@
       );
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'No se pudo suspender al usuario.';
+    } finally {
+      usuarioEnProceso = null;
     }
   }
 
   async function desbanear(u: Usuario) {
+    if (usuarioEnProceso) return;
+    usuarioEnProceso = u.uid;
     error = '';
     try {
       await usuariosService.desbanear(u.uid);
@@ -91,6 +100,8 @@
       );
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'No se pudo reactivar al usuario.';
+    } finally {
+      usuarioEnProceso = null;
     }
   }
 
@@ -192,6 +203,7 @@
                 <div class="shrink-0">
                   <select
                     value={u.rol}
+                    disabled={usuarioEnProceso !== null}
                     onchange={(e) => cambiarRol(u, (e.target as HTMLSelectElement).value as Rol)}
                     class="bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-[11px] text-white font-bold outline-none [color-scheme:dark]"
                   >
@@ -211,16 +223,18 @@
                 {#if u.baneado}
                   <button
                     type="button"
+                    disabled={usuarioEnProceso !== null}
                     onclick={() => desbanear(u)}
-                    class="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold uppercase tracking-wider active:scale-95 transition-transform"
+                    class="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold uppercase tracking-wider active:scale-95 transition-transform disabled:opacity-40"
                   >
                     Reactivar
                   </button>
                 {:else}
                   <button
                     type="button"
+                    disabled={usuarioEnProceso !== null}
                     onclick={() => banear(u)}
-                    class="text-[11px] px-3 py-1 rounded-full bg-red-500/15 text-red-400 font-bold uppercase tracking-wider active:scale-95 transition-transform"
+                    class="text-[11px] px-3 py-1 rounded-full bg-red-500/15 text-red-400 font-bold uppercase tracking-wider active:scale-95 transition-transform disabled:opacity-40"
                   >
                     Suspender
                   </button>
