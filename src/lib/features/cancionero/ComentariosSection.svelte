@@ -77,10 +77,10 @@
     const diff = Date.now() - d.getTime();
     const min = Math.floor(diff / 60000);
     if (min < 1) return 'Ahora';
-    if (min < 60) return \`Hace \${min} min\`;
+    if (min < 60) return `Hace ${min} min`;
     const h = Math.floor(min / 60);
-    if (h < 24) return \`Hace \${h} h\`;
-    return \`\${d.getDate()}/\${d.getMonth() + 1}\`;
+    if (h < 24) return `Hace ${h} h`;
+    return `${d.getDate()}/${d.getMonth() + 1}`;
   }
 
   function inicial(nombre: string): string {
