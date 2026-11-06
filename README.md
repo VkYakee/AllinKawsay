@@ -44,7 +44,7 @@ src-tauri/
 docs/
   UX_REDESIGN.md
   SINCRONIZADOR_ENSAYO_SPEC.md
-  ENSAYO_REBUILD.md
+  ENSAYO_REBUILD.md\n  MIGRACION_DART_RUST.md
 ```
 
 ## Desarrollo local
@@ -102,4 +102,4 @@ Los cambios deben conservar la compatibilidad con los documentos existentes de F
 
 - [Plan de rediseño UX](docs/UX_REDESIGN.md)
 - [Especificación del sincronizador Ensayo](docs/SINCRONIZADOR_ENSAYO_SPEC.md)
-- [Historial técnico de Ensayo](docs/ENSAYO_REBUILD.md)
+- [Historial técnico de Ensayo](docs/ENSAYO_REBUILD.md)\n- [Migración progresiva Dart a Rust](docs/MIGRACION_DART_RUST.md)
