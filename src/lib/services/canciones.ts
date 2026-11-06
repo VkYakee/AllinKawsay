@@ -33,6 +33,7 @@ export interface Cancion {
   estrofas: Estrofa[];
   letra: string;
   tags: string[];
+  categoriaId: string;
 }
 
 export interface CancionInput {
@@ -95,7 +96,8 @@ function mapCancion(id: string, data: FirestoreData): Cancion {
     letra,
     tags: Array.isArray(data.tags)
       ? data.tags.filter((t): t is string => typeof t === 'string')
-      : []
+      : [],
+    categoriaId: typeof data.categoriaId === 'string' ? data.categoriaId : ''
   };
 }
 
@@ -146,6 +148,7 @@ export const cancionesService = {
         ? [{ titulo: '', texto: input.letra.trim() }]
         : [],
       tags: input.tags,
+      categoriaId: input.categoriaId,
       estrofas: input.estrofas,
       reproducciones: 0,
       creadoPor: autorUid,
