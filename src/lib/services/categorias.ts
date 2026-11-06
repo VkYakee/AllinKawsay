@@ -1,5 +1,5 @@
 // src/lib/services/categorias.ts
-import { collection, doc, deleteDoc, getDocs, limit, query, updateDoc, where, orderBy } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, query, runTransaction, updateDoc, where, orderBy } from 'firebase/firestore';
 import { getFirebaseDb } from '../config/firebase';
 import {
   getCol,
@@ -63,12 +63,17 @@ export const categoriasService = {
 
   async eliminar(id: string): Promise<void> {
     const db = getFirebaseDb();
-    const cancionesConCategoria = await getDocs(
-      query(collection(db, 'canciones'), where('categoriaId', '==', id), limit(1))
-    );
-    if (!cancionesConCategoria.empty) {
-      throw new Error('No se puede eliminar esta categoría porque todavía está asignada a una o más canciones. Reasigna esas canciones antes de eliminarla.');
-    }
-    await deleteDoc(doc(db, 'categorias', id));
+    const categoriaRef = doc(db, 'categorias', id);
+    await runTransaction(db, async (transaction) => {
+      // La comprobación y el borrado forman una única operación transaccional:
+      // evita borrar la categoría entre la consulta y el delete.
+      const asignadas = await transaction.get(
+        query(collection(db, 'canciones'), where('categoriaId', '==', id), limit(1))
+      );
+      if (!asignadas.empty) {
+        throw new Error('No se puede eliminar esta categoría porque todavía está asignada a una o más canciones. Reasigna esas canciones antes de eliminarla.');
+      }
+      transaction.delete(categoriaRef);
+    });
   }
 };
