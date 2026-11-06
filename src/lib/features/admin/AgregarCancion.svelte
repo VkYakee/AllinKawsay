@@ -215,50 +215,48 @@
       {#if imagenUrl}
         <div class="relative rounded-2xl overflow-hidden mb-2">
           <img src={imagenUrl} alt="Portada" class="w-full h-40 object-cover" />
-          <button type="button" onclick={() => (imagenUrl = '')} class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 flex items-center justify-center text-white">
+          <button type="button" onclick={() => (imagenUrl = '')} aria-label="Quitar portada" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 flex items-center justify-center text-white">
             <Icon name="x" size={14} />
           </button>
         </div>
-      {:else}
-        <label class="block">
-          <input type="file" accept="image/*" onchange={subirImagen} class="hidden" disabled={subiendoImagen || cargandoEdicion || guardando} />
-          <div class="glass rounded-2xl h-32 flex flex-col items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95 transition-transform">
-            {#if subiendoImagen}
-              <div class="w-8 h-8 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div>
-              <p class="text-[11px] text-dorado/80">{Math.round(progresoImagen * 100)}%</p>
-            {:else}
-              <Icon name="image" size={24} class="text-dorado/60" />
-              <p class="text-[11px] text-white/50">Toca para subir imagen</p>
-            {/if}
-          </div>
-        </label>
       {/if}
+      <label class="block">
+        <input type="file" accept="image/*" onchange={subirImagen} class="hidden" disabled={subiendoImagen || cargandoEdicion || guardando} />
+        <div class="glass rounded-xl h-12 flex items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95 transition-transform">
+          {#if subiendoImagen}
+            <div class="w-5 h-5 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-[11px] text-dorado/80">{Math.round(progresoImagen * 100)}%</p>
+          {:else}
+            <Icon name="upload" size={16} class="text-dorado/70" />
+            <p class="text-[11px] text-white/70">{imagenUrl ? 'Reemplazar portada' : 'Subir portada'}</p>
+          {/if}
+        </div>
+      </label>
     </GlassCard>
 
     <GlassCard variant="default" padding="md">
       <p class="text-[11px] font-semibold tracking-[0.15em] uppercase text-dorado/80 mb-2">Audio (mp3/ogg)</p>
       {#if audioUrl}
-        <div class="glass rounded-2xl p-3 flex items-center gap-2 border border-white/10">
+        <div class="glass rounded-2xl p-3 flex items-center gap-2 border border-white/10 mb-2">
           <Icon name="volume" size={18} class="text-dorado" />
           <p class="text-xs text-white/80 flex-1 truncate">{audioUrl.split('/').pop()}</p>
-          <button type="button" onclick={() => (audioUrl = '')} class="w-7 h-7 rounded-full bg-red-500/20 flex items-center justify-center text-red-300">
+          <button type="button" onclick={() => (audioUrl = '')} aria-label="Quitar audio" class="w-7 h-7 rounded-full bg-red-500/20 flex items-center justify-center text-red-300">
             <Icon name="x" size={12} />
           </button>
         </div>
-      {:else}
-        <label class="block">
-          <input type="file" accept="audio/*" onchange={subirAudio} class="hidden" disabled={subiendoAudio || cargandoEdicion || guardando} />
-          <div class="glass rounded-2xl h-20 flex items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95 transition-transform">
-            {#if subiendoAudio}
-              <div class="w-6 h-6 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div>
-              <p class="text-[11px] text-dorado/80">{Math.round(progresoAudio * 100)}%</p>
-            {:else}
-              <Icon name="upload" size={18} class="text-dorado/60" />
-              <p class="text-[11px] text-white/50">Subir audio</p>
-            {/if}
-          </div>
-        </label>
       {/if}
+      <label class="block">
+        <input type="file" accept="audio/*" onchange={subirAudio} class="hidden" disabled={subiendoAudio || cargandoEdicion || guardando} />
+        <div class="glass rounded-xl h-12 flex items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95 transition-transform">
+          {#if subiendoAudio}
+            <div class="w-5 h-5 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-[11px] text-dorado/80">{Math.round(progresoAudio * 100)}%</p>
+          {:else}
+            <Icon name="upload" size={16} class="text-dorado/70" />
+            <p class="text-[11px] text-white/70">{audioUrl ? 'Reemplazar audio' : 'Subir audio'}</p>
+          {/if}
+        </div>
+      </label>
     </GlassCard>
 
     <GlassInput bind:value={videoUrl} label="Video YouTube" placeholder="https://youtu.be/..." icon="play" />
