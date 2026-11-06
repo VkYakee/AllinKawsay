@@ -9,21 +9,33 @@
   import { router } from '../../stores/router.svelte';
 
   let archivos = $state(0);
+  let cargando = $state(true);
   let limpiando = $state(false);
   let archivosEliminados = $state<number | null>(null);
   let error = $state('');
 
-  onMount(async () => {
-    archivos = await contarArchivosCache();
-  });
+  async function cargar() {
+    cargando = true;
+    error = '';
+    try {
+      archivos = await contarArchivosCache();
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudo consultar el almacenamiento temporal.';
+    } finally {
+      cargando = false;
+    }
+  }
+
+  onMount(cargar);
 
   async function limpiar() {
-    if (!confirm('¿Limpiar archivos temporales de la aplicación?')) return;
+    if (limpiando || cargando || !confirm('¿Limpiar archivos temporales de la aplicación?')) return;
     limpiando = true;
+    archivosEliminados = null;
+    error = '';
     try {
       archivosEliminados = await limpiarCache();
-      archivos = await contarArchivosCache();
-      error = '';
+      await cargar();
     } catch (e) {
       error = e instanceof Error ? e.message : 'No se pudieron limpiar los archivos temporales.';
     } finally {
@@ -53,7 +65,7 @@
         Archivos temporales técnicos de la aplicación. La descarga y conservación sin conexión de canciones, imágenes y videos todavía no está implementada en esta versión.
       </p>
       <p class="text-2xl font-black text-dorado text-center mt-4">
-        {archivos} {archivos === 1 ? 'archivo' : 'archivos'}
+        {cargando ? 'Consultando…' : `${archivos} ${archivos === 1 ? 'archivo' : 'archivos'}`}
       </p>
     </GlassCard>
 
@@ -64,9 +76,10 @@
       </div>
     {/if}
     {#if error}
-      <div class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
+      <div role="alert" class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
         <Icon name="alert-circle" size={18} class="text-red-400 shrink-0" />
         <p class="text-xs text-red-300 flex-1">{error}</p>
+        <button type="button" onclick={cargar} class="text-xs font-bold text-dorado">Reintentar</button>
       </div>
     {/if}
 
