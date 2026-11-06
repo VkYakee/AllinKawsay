@@ -23,13 +23,21 @@
 
   let cancion = $state<Cancion | null>(null);
   let loading = $state(true);
+  let errorCarga = $state('');
+  let notaError = $state('');
   let tabActivo = $state<'info' | 'letra' | 'comentarios'>('info');
   let notaEditando = $state(false);
   let notaTexto = $state('');
 
   onMount(async () => {
-    cancion = canciones.buscar(id) ?? (await cancionesService.obtener(id));
-    loading = false;
+    try {
+      cancion = canciones.buscar(id) ?? (await cancionesService.obtener(id));
+      if (!cancion) errorCarga = 'No se encontró esta canción.';
+    } catch (cause) {
+      errorCarga = cause instanceof Error ? cause.message : 'No se pudo cargar la canción.';
+    } finally {
+      loading = false;
+    }
   });
 
   const notaGuardada = $derived(
@@ -37,7 +45,7 @@
   );
 
   async function tocarPlay() {
-    if (!cancion) return;
+    if (!cancion?.audio_url) return;
     await player.play({
       id: cancion.id,
       titulo: cancion.titulo,
@@ -53,10 +61,13 @@
 
   async function guardarNota() {
     if (!session.user) return;
+    notaError = '';
     try {
       await notasService.guardar(session.user.uid, 'cancion', id, notaTexto);
       notaEditando = false;
-    } catch {}
+    } catch (cause) {
+      notaError = cause instanceof Error ? cause.message : 'No se pudo guardar la nota.';
+    }
   }
 
   async function eliminar() {
@@ -77,7 +88,6 @@
     }
   }
 
-  const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 </script>
 
 <div class="app-background min-h-dvh">
@@ -107,7 +117,7 @@
   {:else if !cancion}
     <div class="px-5 py-20 flex flex-col items-center text-center">
       <Icon name="alert-circle" size={48} class="text-red-400/60" />
-      <p class="text-white/60 mt-4">Canción no encontrada</p>
+      <p class="text-white/60 mt-4">{errorCarga || 'Canción no encontrada'}</p>
     </div>
   {:else}
     <div class="px-5 py-6 pb-40 space-y-4">
@@ -134,7 +144,7 @@
         {/if}
         <div class="flex items-center gap-2 mt-5">
           <div class="flex-1">
-            <GlassButton variant="primary" fullWidth icon="play" onTap={tocarPlay}>Escuchar</GlassButton>
+            <GlassButton variant="primary" fullWidth icon="play" disabled={!cancion.audio_url} onTap={tocarPlay}>{cancion.audio_url ? 'Escuchar' : 'Audio no disponible'}</GlassButton>
           </div>
         </div>
         <div class="flex items-center justify-center gap-1.5 mt-3">
@@ -180,6 +190,7 @@
                   class="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/30 p-4 resize-none"
                 ></textarea>
               </div>
+              {#if notaError}<p class="text-xs text-red-300 px-1">{notaError}</p>{/if}
               <div class="flex gap-2">
                 <div class="flex-1"><GlassButton variant="secondary" fullWidth onTap={() => (notaEditando = false)}>Cancelar</GlassButton></div>
                 <div class="flex-1"><GlassButton variant="primary" fullWidth icon="check" onTap={guardarNota}>Guardar</GlassButton></div>
