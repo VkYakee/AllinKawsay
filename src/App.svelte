@@ -41,7 +41,11 @@
   let updateChecked = false;
 
   onMount(async () => {
-    initOneSignal();
+    void initOneSignal().catch((error) => {
+      // Las notificaciones son una integración opcional: un fallo del SDK
+      // no debe generar un rechazo sin gestionar ni bloquear el arranque.
+      console.warn('OneSignal no está disponible en esta sesión:', error);
+    });
     try {
       unlistenBack = await listen('tauri://back-button', () => {
         if (router.history.length > 0) router.back();
