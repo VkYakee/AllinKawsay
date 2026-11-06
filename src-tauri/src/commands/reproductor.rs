@@ -5,6 +5,9 @@ use tauri::State;
 use crate::infra::audio::{AudioHandle, ReproductorState, ScheduledAudioNote};
 use serde::Deserialize;
 
+const MAX_AUDIO_BYTES: u64 = 100 * 1024 * 1024;
+const AUDIO_DOWNLOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(45);
+
 #[derive(Debug, Deserialize)]
 pub struct ScheduledNoteInput { pub at_ms: u64, pub sample_id: String, pub event_id: String, pub gain: f32 }
 
@@ -34,6 +37,7 @@ pub async fn play_cancion(
     // No permitir que una redirección de Cloudinary convierta la descarga en
     // una petición a otro host (protección SSRF para el comando nativo).
     let client = reqwest::Client::builder()
+        .timeout(AUDIO_DOWNLOAD_TIMEOUT)
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.url().scheme() == "https"
                 && attempt.url().host_str() == Some("res.cloudinary.com")
@@ -51,6 +55,9 @@ pub async fn play_cancion(
     if !response.status().is_success() {
         return Err(format!("HTTP {}", response.status()));
     }
+    if response.content_length().is_some_and(|size| size > MAX_AUDIO_BYTES) {
+        return Err("El audio supera el límite de 100 MiB".into());
+    }
 
     // Escribir por fragmentos evita cargar el audio completo en RAM.
     let tmp_dir = std::env::temp_dir();
@@ -62,6 +69,11 @@ pub async fn play_cancion(
         match response.chunk().await {
             Ok(Some(chunk)) => {
                 total_bytes = total_bytes.saturating_add(chunk.len() as u64);
+                if total_bytes > MAX_AUDIO_BYTES {
+                    drop(file);
+                    let _ = std::fs::remove_file(&path);
+                    return Err("El audio supera el límite de 100 MiB".into());
+                }
                 if let Err(e) = file.write_all(&chunk) {
                     let _ = std::fs::remove_file(&path);
                     return Err(format!("No se pudo guardar el audio: {e}"));
