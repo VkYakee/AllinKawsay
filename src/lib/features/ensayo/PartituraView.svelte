@@ -12,8 +12,9 @@
 </script>
 
 <div class="glass rounded-2xl p-3 sm:p-4 min-w-0">
-  <div class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase mb-2">
-    Estrofa {numero}
+  <div class="flex items-center justify-between gap-2 mb-2">
+    <div class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">Estrofa {numero}</div>
+    {#if estrofa.bis}<span class="inline-flex items-center gap-1 rounded-full bg-dorado/10 px-2 py-1 text-[9px] font-bold tracking-wider text-dorado"><span>↻</span>BIS</span>{/if}
   </div>
   {#if estrofa.columnas.length > 0}
     <table class="w-full table-fixed border-collapse">
