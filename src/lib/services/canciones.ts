@@ -21,6 +21,11 @@ export interface Estrofa {
   bis: boolean;
 }
 
+export interface Letra {
+  titulo: string;
+  texto: string;
+}
+
 export interface Cancion {
   id: string;
   titulo: string;
@@ -36,6 +41,7 @@ export interface Cancion {
   reproducciones: number;
   estrofas: Estrofa[];
   letra: string;
+  letras: Letra[];
   tags: string[];
   categoriaId: string;
 }
@@ -50,6 +56,7 @@ export interface CancionInput {
   audio_url: string;
   video_url: string;
   letra: string;
+  letrasOriginales?: Letra[];
   tags: string[];
   categoriaId: string;
   estrofas: Estrofa[];
@@ -139,11 +146,14 @@ function mapCancion(id: string, data: FirestoreData): Cancion {
   }
 
   const letrasRaw = Array.isArray(data.letras) ? data.letras : [];
-  const letraDesdePartes = letrasRaw
-    .map((raw) => asRecord(raw))
-    .map((part) => typeof part.texto === 'string' ? part.texto : '')
-    .filter((value) => value.trim().length > 0)
-    .join('\\n\\n');
+  const letras: Letra[] = letrasRaw.map((raw) => {
+    const part = asRecord(raw);
+    return {
+      titulo: typeof part.titulo === 'string' ? part.titulo : '',
+      texto: typeof part.texto === 'string' ? part.texto : ''
+    };
+  }).filter((part) => part.texto.trim().length > 0);
+  const letraDesdePartes = letras.map((part) => part.texto).join('\n\n');
   const letra = letraDesdePartes || (typeof data.letra === 'string' ? data.letra : '');
 
   return {
@@ -161,6 +171,7 @@ function mapCancion(id: string, data: FirestoreData): Cancion {
     reproducciones: typeof data.reproducciones === 'number' ? data.reproducciones : 0,
     estrofas,
     letra,
+    letras,
     tags: Array.isArray(data.tags)
       ? data.tags.filter((tag): tag is string => typeof tag === 'string')
       : [],
@@ -226,7 +237,13 @@ export const cancionesService = {
       audioUrl: input.audio_url,
       videoUrl: input.video_url.trim(),
       letra: input.letra.trim(),
-      letras: input.letra.trim() ? [{ titulo: '', texto: input.letra.trim() }] : [],
+      letras: (() => {
+        const original = input.letrasOriginales;
+        const originalTexto = original?.map((part) => part.texto).join('\n\n').trim();
+        return original && originalTexto === input.letra.trim()
+          ? original
+          : input.letra.trim() ? [{ titulo: '', texto: input.letra.trim() }] : [];
+      })(),
       tags: input.tags,
       categoriaId: input.categoriaId,
       estrofas: input.estrofas,
