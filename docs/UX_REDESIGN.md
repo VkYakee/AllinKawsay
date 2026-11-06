@@ -66,6 +66,7 @@ La validación debe permitir contenido parcial si el modelo lo admite. No bloque
 ## Trabajo ya iniciado en esta rama
 
 - Alta/edición de canción dividida en tres pasos: Datos, Partitura y Letra.
+- Editor visual de numerofonía por columnas, con campos independientes para fila 7/6, eliminación de columnas, BIS y entrada rápida por pegado de secuencias.
 - Se conserva la llamada existente a servicios de subida y persistencia.
 - La validación del título se ejecuta antes de avanzar; los campos opcionales siguen siendo opcionales.
 
