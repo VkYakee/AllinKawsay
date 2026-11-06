@@ -55,7 +55,8 @@
   const cancion = $derived(canciones.buscar(id));
 
   const celdaSyncActual = $derived.by(() => {
-    const events = syncProject?.tracks.find(t => t.kind === 'notation')?.events ?? [];
+    const notationTrack = syncProject?.tracks.find(t => t.kind === 'notation');
+    const events = notationTrack?.enabled ? notationTrack.events : [];
     const nowUs = Math.round(player.posicionMs * 1000);
     return events.filter(ev => ev.atUs <= nowUs).sort((a, b) => b.atUs - a.atUs)[0] ?? null;
   });
@@ -76,7 +77,8 @@
   const estrofaNum = $derived((celdaSyncActual?.estrofaIndex ?? ensayo.eventoActual?.estrofa_idx ?? 0) + 1);
 
   const letraActual = $derived.by(() => {
-    const events = syncProject?.tracks.find(t => t.kind === 'lyrics')?.events ?? [];
+    const lyricTrack = syncProject?.tracks.find(t => t.kind === 'lyrics');
+    const events = lyricTrack?.enabled ? lyricTrack.events : [];
     const nowUs = Math.round(player.posicionMs * 1000);
     return events.filter(ev => ev.atUs <= nowUs && ev.atUs + (ev.durationUs ?? 2500000) > nowUs).sort((a, b) => b.atUs - a.atUs)[0]?.text ?? '';
   });
@@ -102,6 +104,18 @@
         : player.posicionMs > 0 ? 'paused' : 'idle';
   });
 
+  function actualizarControlesPista(kind: 'notation' | 'lyrics' | 'zampona', change: 'enabled' | 'muted') {
+    if (!syncProject) return;
+    const track = syncProject.tracks.find(item => item.kind === kind);
+    if (!track) return;
+    if (change === 'enabled') track.enabled = !track.enabled;
+    else if (kind === 'zampona') track.muted = !track.muted;
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(item => item.id === track.id ? { ...track } : item), updatedAt: Date.now() };
+    saveSyncProject(syncProject);
+    if (player.current?.id === id && player.playing) {
+      void player.programarProyectoSync(syncProject).catch(error => { syncStorageError = error instanceof Error ? error.message : 'No se pudo actualizar el scheduler'; });
+    }
+  }
   function desplazarTodoSync(deltaUs: number) {
     if (!syncProject) return;
     const minimo = syncProject.tracks.flatMap(t => t.events).reduce((min, ev) => Math.min(min, ev.atUs), Number.MAX_SAFE_INTEGER);
@@ -260,6 +274,12 @@
       </section>
       <section class="rounded-2xl border border-dorado/20 bg-black/25 p-3 space-y-2">
         <div class="flex items-center justify-between"><span class="text-xs font-bold text-dorado">Editor de sincronización</span><span class="text-[10px] text-white/50">{syncProject?.tracks.find(t => t.kind === 'zampona')?.events.length ?? 0} notas</span></div>
+        <div class="flex flex-wrap gap-2">
+          <button class="rounded-lg bg-white/10 px-2 py-1.5 text-[10px] text-white" onclick={() => actualizarControlesPista('notation', 'enabled')}>Tabla: {syncProject?.tracks.find(t => t.kind === 'notation')?.enabled ? 'visible' : 'oculta'}</button>
+          <button class="rounded-lg bg-white/10 px-2 py-1.5 text-[10px] text-white" onclick={() => actualizarControlesPista('lyrics', 'enabled')}>Letra: {syncProject?.tracks.find(t => t.kind === 'lyrics')?.enabled ? 'visible' : 'oculta'}</button>
+          <button class="rounded-lg bg-white/10 px-2 py-1.5 text-[10px] text-white" onclick={() => actualizarControlesPista('zampona', 'enabled')}>Zampoña: {syncProject?.tracks.find(t => t.kind === 'zampona')?.enabled ? 'activa' : 'desactivada'}</button>
+          <button class="rounded-lg bg-white/10 px-2 py-1.5 text-[10px] text-white" onclick={() => actualizarControlesPista('zampona', 'muted')}>{syncProject?.tracks.find(t => t.kind === 'zampona')?.muted ? 'Activar sonido' : 'Silenciar sonido'}</button>
+        </div>
         <div class="flex gap-2 flex-wrap"><button class="rounded-lg bg-white/10 px-2 py-2 text-xs text-white" onclick={() => desplazarTodoSync(-500000)}>Todo −0,5 s</button><button class="rounded-lg bg-white/10 px-2 py-2 text-xs text-white" onclick={() => desplazarTodoSync(500000)}>Todo +0,5 s</button><select class="rounded-lg bg-black/40 px-2 py-2 text-xs text-white max-w-40" bind:value={sampleSeleccionado}><option value="">Muestra (primera)</option>{#each zampona.notas as nota}<option value={nota.id}>{nota.nota} · F{nota.fila}</option>{/each}</select><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarNotaSync} disabled={!syncProject || !zampona.notas.length}>+ Nota en cursor</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => { if (syncProject) saveSyncProject(syncProject); }}>Guardar</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => void programarSync()} disabled={!player.current || player.current.id !== id}>Programar notas</button></div>
         <div class="max-h-24 overflow-y-auto space-y-1">{#each (syncProject?.tracks.find(t => t.kind === 'zampona')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span class="truncate">{ev.sampleId} · {(ev.atUs / 1000000).toFixed(3)} s · {Math.round((ev.gain ?? 0.8) * 100)}%</span><div class="flex gap-1 shrink-0"><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, -50000)} aria-label="Mover 50 ms antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, 50000)} aria-label="Mover 50 ms después">+</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarGananciaSync(ev.id, -0.1)} aria-label="Bajar volumen">V−</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarGananciaSync(ev.id, 0.1)} aria-label="Subir volumen">V+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => eliminarNotaSync(ev.id)} aria-label="Eliminar nota">×</button></div></div>{/each}</div>
       </section>
