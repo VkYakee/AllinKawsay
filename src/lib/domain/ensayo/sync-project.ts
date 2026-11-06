@@ -200,6 +200,7 @@ export interface ScheduledSample {
   sampleId: string;
   eventId: string;
   musicalEventId?: string;
+  gain: number;
 }
 
 /**
@@ -229,7 +230,8 @@ export function compileScheduledSamples(
       atMs: Math.round(event.atUs / 1000),
       sampleId: event.sampleId!,
       eventId: event.id,
-      musicalEventId: event.musicalEventId
+      musicalEventId: event.musicalEventId,
+      gain: event.gain ?? 0.8
     }));
   // Evita payloads enormes que bloqueen el hilo de comandos nativo.
   if (compiled.length > 4096) throw new RangeError('La ventana contiene más de 4096 notas; reduzca el rango.');
