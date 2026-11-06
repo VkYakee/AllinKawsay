@@ -38,12 +38,9 @@ export function initOneSignal(): Promise<void> {
     const cargarSdk = (): Promise<void> => new Promise((resolveScript, rejectScript) => {
       const existing = document.querySelector<HTMLScriptElement>('script[src*="OneSignalSDK.page.js"]');
       if (existing) {
-        if (win.OneSignal) {
-          resolveScript();
-        } else {
-          existing.addEventListener('load', () => resolveScript(), { once: true });
-          existing.addEventListener('error', () => rejectScript(new Error('No se pudo cargar OneSignal')), { once: true });
-        }
+        // El evento load pudo ocurrir antes de esta llamada; la cola Deferred
+        // también funciona cuando el SDK ya está presente.
+        resolveScript();
         return;
       }
 
