@@ -7,9 +7,9 @@
 
   let { letra = $bindable(''), onCambio }: Props = $props();
 
-  let cantidadLineas = $derived(letra.length ? letra.split('\\n').length : 0);
+  let cantidadLineas = $derived(letra.length ? letra.split('\n').length : 0);
   let cantidadPalabras = $derived(
-    letra.trim() ? letra.trim().split(/\\s+/).length : 0
+    letra.trim() ? letra.trim().split(/\s+/).length : 0
   );
 </script>
 
