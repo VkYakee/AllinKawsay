@@ -79,6 +79,7 @@ class Player {
       this.playing = true;
       this.startPolling();
       this.generation = (await reproductorService.estado()).generation;
+      await this.reprogramSync();
     }
   }
 
@@ -87,6 +88,7 @@ class Player {
     this.posicionMs = Math.max(0, Math.min(this.duracionMs || positionMs, positionMs));
     const estado = await reproductorService.estado();
     this.generation = estado.generation;
+    await this.reprogramSync();
   }
 
   async setVelocidad(speed: number) {
@@ -94,6 +96,7 @@ class Player {
     this.velocidad = Math.max(0.25, Math.min(2, speed));
     const estado = await reproductorService.estado();
     this.generation = estado.generation;
+    await this.reprogramSync();
   }
 
   async programarProyectoSync(project: SyncProject): Promise<number> {
@@ -101,7 +104,8 @@ class Player {
     this.syncProject = project;
     const issues = validateSyncProject(project);
     if (issues.length) throw new Error('Proyecto de sincronización inválido: ' + issues[0].message);
-    const compiled = compileScheduledSamples(project, 0, Math.max(0, Math.round(this.duracionMs * 1000)));
+    const fromUs = Math.max(0, Math.round(this.posicionMs * 1000));
+    const compiled = compileScheduledSamples(project, fromUs, Math.max(fromUs, Math.round(this.duracionMs * 1000)));
     await reproductorService.programarNotas(this.generation, compiled.map(event => ({ at_ms: event.atMs, sample_id: event.sampleId, event_id: event.eventId })));
     this.scheduledGeneration = this.generation;
     return compiled.length;
