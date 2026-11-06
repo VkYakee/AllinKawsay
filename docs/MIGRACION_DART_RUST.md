@@ -90,6 +90,18 @@ La eliminación de una pieza debe acompañarse de:
 
 El modelo Dart de canción ya persistía `categoriaId`, pero el modelo/servicio Svelte 3.0 no lo conservaba al leer ni al guardar. Se restauró el campo en el servicio y en el formulario de alta/edición. Además, la eliminación de categorías ahora consulta si alguna canción sigue asignada y la bloquea cuando corresponde, evitando dejar referencias huérfanas.
 
+## Compatibilidad de datos recuperada
+
+En la revisión del 6 de noviembre de 2026 se amplió el mapper Svelte de canciones para aceptar formatos históricos que el modelo Dart ya reconocía:
+
+- `estrofas`, `compases` y `numerofoniaEstructurada` como fuentes alternativas de partitura.
+- Columnas directas, eventos, arreglos `fila7`/`fila6` y texto con separadores `/` y `\\`.
+- Tiempos por columna `timings7` y `timings6`.
+- `tipo` y `numerofonia` al leer documentos antiguos.
+- Partes de letra con título: si se editan otros campos o se deja intacto el texto combinado, se conservan sus títulos y divisiones. Si se modifica el texto en el editor actual, se guarda como una sola parte porque la interfaz todavía no edita títulos por separado.
+
+Esto no completa todavía la paridad del antiguo modelo: `setlist` y el flujo de edición de audio siguen fuera del alcance acordado para Ensayo y no deben reintroducirse. Los campos originales no se borran al editar una canción desde el formulario nuevo.
+
 ## Secuencia de limpieza
 
 1. Completar paridad funcional de módulos y servicios.
