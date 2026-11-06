@@ -5,7 +5,6 @@
   import GlassIconButton from '../../../components/ui/GlassIconButton.svelte';
   import Icon from '../../../components/ui/Icon.svelte';
   import { session } from '../../../stores/session.svelte';
-  import { player } from '../../../stores/player.svelte';
   import { canciones } from '../../../stores/canciones.svelte';
   import { eventos } from '../../../stores/eventos.svelte';
   import { router } from '../../../stores/router.svelte';
@@ -41,22 +40,13 @@
     }).format(new Date(iso));
   }
 
-  async function tocarCancion(c: (typeof canciones.all)[number]) {
-    if (!c.audio_url) {
-      router.go('cancion', { id: c.id });
+
+  function irEnsayo() {
+    if (!canciones.loaded) {
+      canciones.cargar();
+      onOpenCancionero();
       return;
     }
-    await player.play({
-      id: c.id,
-      titulo: c.titulo,
-      autor: c.autor,
-      imagenUrl: c.imagen_url,
-      audioUrl: c.audio_url
-    });
-  }
-
-  async function irEnsayo() {
-    if (!canciones.loaded) await canciones.cargar();
     const primera = canciones.all.find((song) => song.estrofas.length > 0) ?? canciones.all[0];
     if (primera) router.go('ensayo', { id: primera.id });
     else onOpenCancionero();
