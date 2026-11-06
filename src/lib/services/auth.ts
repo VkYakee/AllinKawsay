@@ -31,6 +31,12 @@ interface UsuarioFirestore {
   baneado?: boolean;
 }
 
+function normalizarRol(rol: unknown): AuthUser['rol'] {
+  return rol === 'miembro' || rol === 'admin' || rol === 'dev' || rol === 'publico'
+    ? rol
+    : 'publico';
+}
+
 function mapUsuario(
   uid: string,
   data: UsuarioFirestore,
@@ -41,7 +47,7 @@ function mapUsuario(
     uid,
     nombre: data.nombre ?? emailAuth.split('@')[0] ?? 'Usuario',
     email: data.email ?? emailAuth,
-    rol: (data.rol as AuthUser['rol']) ?? 'publico',
+    rol: normalizarRol(data.rol),
     foto_url: data.fotoUrl ?? '',
     baneado: data.baneado === true,
     email_verified: emailVerified
