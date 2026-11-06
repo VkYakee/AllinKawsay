@@ -104,6 +104,17 @@
         : player.posicionMs > 0 ? 'paused' : 'idle';
   });
 
+  function guardarSyncProject() {
+    if (!syncProject) return;
+    saveSyncProject(syncProject);
+    // Los cambios realizados durante la reproducción reemplazan la cola futura
+    // automáticamente; no es necesario pulsar «Programar notas» cada vez.
+    if (player.current?.id === id && player.playing) {
+      void player.programarProyectoSync(syncProject).catch(error => {
+        syncStorageError = error instanceof Error ? error.message : 'No se pudo actualizar el scheduler';
+      });
+    }
+  }
   function actualizarControlesPista(kind: 'notation' | 'lyrics' | 'zampona', change: 'enabled' | 'muted') {
     if (!syncProject) return;
     const track = syncProject.tracks.find(item => item.kind === kind);
@@ -111,85 +122,82 @@
     if (change === 'enabled') track.enabled = !track.enabled;
     else if (kind === 'zampona') track.muted = !track.muted;
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(item => item.id === track.id ? { ...track } : item), updatedAt: Date.now() };
-    saveSyncProject(syncProject);
-    if (player.current?.id === id && player.playing) {
-      void player.programarProyectoSync(syncProject).catch(error => { syncStorageError = error instanceof Error ? error.message : 'No se pudo actualizar el scheduler'; });
-    }
+    guardarSyncProject();
   }
   function desplazarTodoSync(deltaUs: number) {
     if (!syncProject) return;
     const minimo = syncProject.tracks.flatMap(t => t.events).reduce((min, ev) => Math.min(min, ev.atUs), Number.MAX_SAFE_INTEGER);
     if (minimo !== Number.MAX_SAFE_INTEGER && minimo + deltaUs < 0) return;
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(track => ({ ...track, events: track.events.map(ev => ({ ...ev, atUs: ev.atUs + deltaUs })) })), updatedAt: Date.now() };
-    saveSyncProject(syncProject);
+    guardarSyncProject();
   }
   function agregarNotaSync() {
     if (!syncProject || !zampona.notas.length) return;
     const note = zampona.notas.find(n => n.id === sampleSeleccionado) ?? zampona.notas[0]; const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
     const eventId = 'z-' + Date.now() + '-' + track.events.length;
     track.events = [...track.events, { id: eventId, kind: 'zampona-note', atUs: Math.round(player.posicionMs * 1000), sampleId: note.id, musicalEventId: eventId, gain: 0.8 }];
-    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function moverNotaSync(eventId: string, deltaUs: number) {
     if (!syncProject) return;
     const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
     track.events = track.events.map(ev => ev.id === eventId ? { ...ev, atUs: Math.max(0, ev.atUs + deltaUs) } : ev);
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() };
-    saveSyncProject(syncProject);
+    guardarSyncProject();
   }
   function ajustarGananciaSync(eventId: string, delta: number) {
     if (!syncProject) return;
     const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
     track.events = track.events.map(ev => ev.id === eventId ? { ...ev, gain: Math.max(0, Math.min(1, (ev.gain ?? 0.8) + delta)) } : ev);
-    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function eliminarNotaSync(eventId: string) {
     if (!syncProject) return;
     const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
     track.events = track.events.filter(ev => ev.id !== eventId);
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() };
-    saveSyncProject(syncProject);
+    guardarSyncProject();
   }
   function registrarCeldaTabla() {
     if (!syncProject || !ensayo.eventoActual) return;
     const ev = ensayo.eventoActual; const track = syncProject.tracks.find(t => t.kind === 'notation'); if (!track) return;
     const eventId = 't-' + Date.now(); track.events = [...track.events, { id: eventId, kind: 'notation-cell', atUs: Math.round(player.posicionMs * 1000), estrofaIndex: ev.estrofa_idx, columnaIndex: ev.columna_idx, fila: ev.es_fila7 ? 7 : 6, musicalEventId: eventId }];
-    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function ajustarCelda(eventId: string, deltaUs: number) {
     if (!syncProject) return; const track = syncProject.tracks.find(t => t.kind === 'notation'); if (!track) return;
-    track.events = track.events.map(ev => ev.id === eventId ? { ...ev, atUs: Math.max(0, ev.atUs + deltaUs) } : ev); syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    track.events = track.events.map(ev => ev.id === eventId ? { ...ev, atUs: Math.max(0, ev.atUs + deltaUs) } : ev); syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function borrarCelda(eventId: string) {
-    if (!syncProject) return; const track = syncProject.tracks.find(t => t.kind === 'notation'); if (!track) return; track.events = track.events.filter(ev => ev.id !== eventId); syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    if (!syncProject) return; const track = syncProject.tracks.find(t => t.kind === 'notation'); if (!track) return; track.events = track.events.filter(ev => ev.id !== eventId); syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function agregarMarcador() {
     if (!syncProject) return;
     const track = syncProject.tracks.find(t => t.kind === 'marker'); if (!track) return;
     const atUs = Math.round(player.posicionMs * 1000);
     track.events = [...track.events, { id: 'm-' + Date.now(), kind: 'section-marker', atUs, text: 'Marcador ' + (track.events.length + 1) }];
-    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function eliminarMarcador(eventId: string) {
     if (!syncProject) return;
     const track = syncProject.tracks.find(t => t.kind === 'marker'); if (!track) return;
     track.events = track.events.filter(ev => ev.id !== eventId);
-    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function agregarLineaLetra() {
     if (!syncProject || !textoLetra.trim()) return;
     const track = syncProject.tracks.find(t => t.kind === 'lyrics'); if (!track) return;
     track.events = [...track.events, { id: 'l-' + Date.now(), kind: 'lyric-line', atUs: Math.round(player.posicionMs * 1000), text: textoLetra.trim(), durationUs: 2500000 }];
-    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject); textoLetra = '';
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject(); textoLetra = '';
   }
   function moverLetra(eventId: string, deltaUs: number) {
     if (!syncProject) return; const track = syncProject.tracks.find(t => t.kind === 'lyrics'); if (!track) return;
     track.events = track.events.map(ev => ev.id === eventId ? { ...ev, atUs: Math.max(0, ev.atUs + deltaUs) } : ev);
-    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   function eliminarLetra(eventId: string) {
     if (!syncProject) return; const track = syncProject.tracks.find(t => t.kind === 'lyrics'); if (!track) return;
-    track.events = track.events.filter(ev => ev.id !== eventId); syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
+    track.events = track.events.filter(ev => ev.id !== eventId); syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; guardarSyncProject();
   }
   async function programarSync() {
     if (!syncProject || !player.current || player.current.id !== id) return;
@@ -280,7 +288,7 @@
           <button class="rounded-lg bg-white/10 px-2 py-1.5 text-[10px] text-white" onclick={() => actualizarControlesPista('zampona', 'enabled')}>Zampoña: {syncProject?.tracks.find(t => t.kind === 'zampona')?.enabled ? 'activa' : 'desactivada'}</button>
           <button class="rounded-lg bg-white/10 px-2 py-1.5 text-[10px] text-white" onclick={() => actualizarControlesPista('zampona', 'muted')}>{syncProject?.tracks.find(t => t.kind === 'zampona')?.muted ? 'Activar sonido' : 'Silenciar sonido'}</button>
         </div>
-        <div class="flex gap-2 flex-wrap"><button class="rounded-lg bg-white/10 px-2 py-2 text-xs text-white" onclick={() => desplazarTodoSync(-500000)}>Todo −0,5 s</button><button class="rounded-lg bg-white/10 px-2 py-2 text-xs text-white" onclick={() => desplazarTodoSync(500000)}>Todo +0,5 s</button><select class="rounded-lg bg-black/40 px-2 py-2 text-xs text-white max-w-40" bind:value={sampleSeleccionado}><option value="">Muestra (primera)</option>{#each zampona.notas as nota}<option value={nota.id}>{nota.nota} · F{nota.fila}</option>{/each}</select><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarNotaSync} disabled={!syncProject || !zampona.notas.length}>+ Nota en cursor</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => { if (syncProject) saveSyncProject(syncProject); }}>Guardar</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => void programarSync()} disabled={!player.current || player.current.id !== id}>Programar notas</button></div>
+        <div class="flex gap-2 flex-wrap"><button class="rounded-lg bg-white/10 px-2 py-2 text-xs text-white" onclick={() => desplazarTodoSync(-500000)}>Todo −0,5 s</button><button class="rounded-lg bg-white/10 px-2 py-2 text-xs text-white" onclick={() => desplazarTodoSync(500000)}>Todo +0,5 s</button><select class="rounded-lg bg-black/40 px-2 py-2 text-xs text-white max-w-40" bind:value={sampleSeleccionado}><option value="">Muestra (primera)</option>{#each zampona.notas as nota}<option value={nota.id}>{nota.nota} · F{nota.fila}</option>{/each}</select><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarNotaSync} disabled={!syncProject || !zampona.notas.length}>+ Nota en cursor</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => { if (syncProject) guardarSyncProject(); }}>Guardar</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => void programarSync()} disabled={!player.current || player.current.id !== id}>Programar notas</button></div>
         <div class="max-h-24 overflow-y-auto space-y-1">{#each (syncProject?.tracks.find(t => t.kind === 'zampona')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span class="truncate">{ev.sampleId} · {(ev.atUs / 1000000).toFixed(3)} s · {Math.round((ev.gain ?? 0.8) * 100)}%</span><div class="flex gap-1 shrink-0"><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, -50000)} aria-label="Mover 50 ms antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, 50000)} aria-label="Mover 50 ms después">+</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarGananciaSync(ev.id, -0.1)} aria-label="Bajar volumen">V−</button><button class="px-1 rounded bg-white/10" onclick={() => ajustarGananciaSync(ev.id, 0.1)} aria-label="Subir volumen">V+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => eliminarNotaSync(ev.id)} aria-label="Eliminar nota">×</button></div></div>{/each}</div>
       </section>
       <section class="rounded-2xl border border-dorado/15 bg-black/20 p-3 space-y-2">
