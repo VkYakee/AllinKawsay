@@ -90,6 +90,20 @@
     track.events = [...track.events, { id: eventId, kind: 'zampona-note', atUs: Math.round(player.posicionMs * 1000), sampleId: note.id, musicalEventId: eventId, gain: 0.8 }];
     syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() }; saveSyncProject(syncProject);
   }
+  function moverNotaSync(eventId: string, deltaUs: number) {
+    if (!syncProject) return;
+    const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
+    track.events = track.events.map(ev => ev.id === eventId ? { ...ev, atUs: Math.max(0, ev.atUs + deltaUs) } : ev);
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() };
+    saveSyncProject(syncProject);
+  }
+  function eliminarNotaSync(eventId: string) {
+    if (!syncProject) return;
+    const track = syncProject.tracks.find(t => t.kind === 'zampona'); if (!track) return;
+    track.events = track.events.filter(ev => ev.id !== eventId);
+    syncProject = { ...syncProject, tracks: syncProject.tracks.map(t => t.id === track.id ? track : t), updatedAt: Date.now() };
+    saveSyncProject(syncProject);
+  }
   async function programarSync() {
     if (!syncProject || !player.current || player.current.id !== id) return;
     try { const count = await player.programarProyectoSync(syncProject); syncStorageError = 'Scheduler: ' + count + ' notas'; }
@@ -168,7 +182,7 @@
       <section class="rounded-2xl border border-dorado/20 bg-black/25 p-3 space-y-2">
         <div class="flex items-center justify-between"><span class="text-xs font-bold text-dorado">Editor de sincronización</span><span class="text-[10px] text-white/50">{syncProject?.tracks.find(t => t.kind === 'zampona')?.events.length ?? 0} notas</span></div>
         <div class="flex gap-2 flex-wrap"><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarNotaSync} disabled={!syncProject || !zampona.notas.length}>+ Nota en cursor</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => { if (syncProject) saveSyncProject(syncProject); }}>Guardar</button><button class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white" onclick={() => void programarSync()} disabled={!player.current || player.current.id !== id}>Programar notas</button></div>
-        <div class="max-h-24 overflow-y-auto space-y-1">{#each (syncProject?.tracks.find(t => t.kind === 'zampona')?.events ?? []) as ev}<div class="flex justify-between text-[10px] text-white/60"><span>{ev.sampleId} · {ev.id}</span><span>{(ev.atUs / 1000000).toFixed(2)} s</span></div>{/each}</div>
+        <div class="max-h-24 overflow-y-auto space-y-1">{#each (syncProject?.tracks.find(t => t.kind === 'zampona')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span class="truncate">{ev.sampleId} · {(ev.atUs / 1000000).toFixed(3)} s</span><div class="flex gap-1 shrink-0"><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, -50000)} aria-label="Mover 50 ms antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => moverNotaSync(ev.id, 50000)} aria-label="Mover 50 ms después">+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => eliminarNotaSync(ev.id)} aria-label="Eliminar nota">×</button></div></div>{/each}</div>
       </section>
       <div class="pt-1">
         {#if estrofaActual}
