@@ -8,7 +8,7 @@
   import Icon from '../../components/ui/Icon.svelte';
   import EditorNumerofonia from './EditorNumerofonia.svelte';
   import EditorLetra from './EditorLetra.svelte';
-  import { cancionesService, type Estrofa } from '../../services/canciones';
+  import { cancionesService, type Estrofa, type Letra } from '../../services/canciones';
   import { categoriasService, type Categoria } from '../../services/categorias';
   import { canciones } from '../../stores/canciones.svelte';
   import { actividadService } from '../../services/actividad';
@@ -30,6 +30,7 @@
   let region = $state('');
   let descripcion = $state('');
   let letra = $state('');
+  let letrasOriginales = $state<Letra[]>([]);
   let tagsInput = $state('');
   let categoriaId = $state('');
   let categorias = $state<Categoria[]>([]);
@@ -64,6 +65,7 @@
     region = c.region;
     descripcion = c.descripcion;
     letra = c.letra;
+    letrasOriginales = c.letras.map((parte) => ({ ...parte }));
     tagsInput = c.tags.join(', ');
     categoriaId = c.categoriaId;
     imagenUrl = c.imagen_url;
@@ -149,7 +151,7 @@
     try {
       const tags = tagsInput.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
       const input = {
-        titulo, autor, ritmo, region, descripcion, letra, tags, categoriaId,
+        titulo, autor, ritmo, region, descripcion, letra, letrasOriginales, tags, categoriaId,
         imagen_url: imagenUrl, audio_url: audioUrl, video_url: videoUrl,
         estrofas
       };
