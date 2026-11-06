@@ -102,7 +102,7 @@
     </button>
   </div>
 
-  <div class="flex-1 overflow-hidden touch-none" role="presentation">
+  <div class="flex-1 overflow-hidden {scale > 1 ? 'touch-none' : 'touch-pan-y'}" role="presentation">
     {#if cargando}
       <div class="h-full flex flex-col items-center justify-center gap-3"><div class="w-7 h-7 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div><p class="text-xs text-white/50">Cargando partitura…</p></div>
     {:else if !cancion}
