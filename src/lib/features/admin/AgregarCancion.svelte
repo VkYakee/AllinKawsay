@@ -1,5 +1,6 @@
 <!-- src/lib/features/admin/AgregarCancion.svelte -->
 <script lang="ts">
+  import { onMount } from 'svelte';
   import GlassInput from '../../components/ui/GlassInput.svelte';
   import GlassButton from '../../components/ui/GlassButton.svelte';
   import GlassCard from '../../components/ui/GlassCard.svelte';
@@ -37,6 +38,7 @@
   const pasos = ['Datos', 'Partitura', 'Letra'];
   function avanzar() {
     error = '';
+    if (cargandoEdicion) { error = 'Espera a que termine de cargar la canción.'; return; }
     if (paso === 0 && !titulo.trim()) { error = 'Primero escribe el nombre de la canción.'; return; }
     if (paso < pasos.length - 1) paso += 1;
   }
@@ -47,24 +49,40 @@
   let progresoImagen = $state(0);
   let progresoAudio = $state(0);
   let guardando = $state(false);
+  let cargandoEdicion = $state(false);
   let error = $state('');
 
-  $effect(() => {
-    if (editando && canciones.all.length > 0 && titulo === '') {
-      const c = canciones.buscar(id);
-      if (c) {
-        titulo = c.titulo;
-        autor = c.autor;
-        ritmo = c.ritmo;
-        region = c.region;
-        descripcion = c.descripcion;
-        letra = c.letra;
-        tagsInput = c.tags.join(', ');
-        imagenUrl = c.imagen_url;
-        audioUrl = c.audio_url;
-        videoUrl = c.video_url;
-        estrofas = c.estrofas.length > 0 ? [...c.estrofas] : [];
+  function aplicarCancion(c: NonNullable<Awaited<ReturnType<typeof cancionesService.obtener>>>) {
+    titulo = c.titulo;
+    autor = c.autor;
+    ritmo = c.ritmo;
+    region = c.region;
+    descripcion = c.descripcion;
+    letra = c.letra;
+    tagsInput = c.tags.join(', ');
+    imagenUrl = c.imagen_url;
+    audioUrl = c.audio_url;
+    videoUrl = c.video_url;
+    estrofas = c.estrofas.map((estrofa) => ({
+      bis: estrofa.bis,
+      columnas: estrofa.columnas.map((columna) => ({ ...columna }))
+    }));
+  }
+
+  onMount(async () => {
+    if (!editando) return;
+    cargandoEdicion = true;
+    try {
+      const existente = canciones.buscar(id) ?? await cancionesService.obtener(id);
+      if (!existente) {
+        error = 'No se encontró esta canción. Vuelve al cancionero e inténtalo de nuevo.';
+        return;
       }
+      aplicarCancion(existente);
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo cargar la canción para editar.';
+    } finally {
+      cargandoEdicion = false;
     }
   });
 
@@ -102,6 +120,7 @@
 
   async function guardar() {
     error = '';
+    if (cargandoEdicion) { error = 'Espera a que termine de cargar la canción.'; return; }
     if (!titulo.trim()) { error = 'El título es obligatorio'; return; }
     if (subiendoImagen || subiendoAudio) { error = 'Espera a que terminen las subidas'; return; }
 
@@ -163,6 +182,9 @@
   </header>
 
   <div class="px-5 py-6 pb-10 space-y-4">
+    {#if cargandoEdicion}
+      <div class="glass rounded-2xl border border-dorado/20 px-4 py-3 flex items-center gap-3"><div class="w-5 h-5 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div><p class="text-xs text-white/70">Cargando los datos de la canción…</p></div>
+    {/if}
     <div class="grid grid-cols-3 gap-2" aria-label="Progreso de canción">
       {#each pasos as nombre, indice}
         <button type="button" onclick={() => { if (indice < paso || (indice === 1 && titulo.trim())) paso = indice; }} class="text-left space-y-2" aria-current={paso === indice ? 'step' : undefined}>
@@ -307,7 +329,7 @@
     {:else}
       <div class="space-y-2">
         <GlassButton variant="secondary" fullWidth onTap={retroceder}>Volver a la partitura</GlassButton>
-        <GlassButton variant="primary" fullWidth icon="check" loading={guardando} onTap={guardar}>
+        <GlassButton variant="primary" fullWidth icon="check" loading={guardando || cargandoEdicion} onTap={guardar}>
           {editando ? 'Guardar cambios' : 'Crear canción'}
         </GlassButton>
       </div>
