@@ -233,7 +233,22 @@
       {/if}
 
       {#if tabActivo === 'letra'}
-        {#if cancion.letra}
+        {#if cancion.letras.length > 0}
+          <div class="space-y-3">
+            {#each cancion.letras as parte, idx}
+              <GlassCard padding="xl">
+                {#if parte.titulo.trim()}
+                  <h3 class="text-[11px] font-bold tracking-[0.2em] uppercase text-dorado text-center mb-4">{parte.titulo}</h3>
+                {:else if cancion.letras.length > 1}
+                  <h3 class="text-[10px] font-bold tracking-[0.18em] uppercase text-dorado/60 text-center mb-4">Letra {idx + 1}</h3>
+                {/if}
+                <div class="whitespace-pre-line text-center text-[15px] leading-[1.8] text-white/85 italic font-medium">
+                  {parte.texto}
+                </div>
+              </GlassCard>
+            {/each}
+          </div>
+        {:else if cancion.letra}
           <GlassCard padding="xl">
             <div class="whitespace-pre-line text-center text-[15px] leading-[1.8] text-white/85 italic font-medium">
               {cancion.letra}
