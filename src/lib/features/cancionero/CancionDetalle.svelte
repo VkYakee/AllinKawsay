@@ -6,6 +6,7 @@
   import GlassIconButton from '../../components/ui/GlassIconButton.svelte';
   import Icon from '../../components/ui/Icon.svelte';
   import ComentariosSection from './ComentariosSection.svelte';
+  import PartituraView from '../ensayo/PartituraView.svelte';
   import { cancionesService, type Cancion } from '../../services/canciones';
   import { notasService } from '../../services/notas';
   import { actividadService } from '../../services/actividad';
@@ -22,13 +23,21 @@
 
   let cancion = $state<Cancion | null>(null);
   let loading = $state(true);
+  let errorCarga = $state('');
+  let notaError = $state('');
   let tabActivo = $state<'info' | 'letra' | 'comentarios'>('info');
   let notaEditando = $state(false);
   let notaTexto = $state('');
 
   onMount(async () => {
-    cancion = canciones.buscar(id) ?? (await cancionesService.obtener(id));
-    loading = false;
+    try {
+      cancion = canciones.buscar(id) ?? (await cancionesService.obtener(id));
+      if (!cancion) errorCarga = 'No se encontró esta canción.';
+    } catch (cause) {
+      errorCarga = cause instanceof Error ? cause.message : 'No se pudo cargar la canción.';
+    } finally {
+      loading = false;
+    }
   });
 
   const notaGuardada = $derived(
@@ -36,7 +45,7 @@
   );
 
   async function tocarPlay() {
-    if (!cancion) return;
+    if (!cancion?.audio_url) return;
     await player.play({
       id: cancion.id,
       titulo: cancion.titulo,
@@ -52,10 +61,13 @@
 
   async function guardarNota() {
     if (!session.user) return;
+    notaError = '';
     try {
       await notasService.guardar(session.user.uid, 'cancion', id, notaTexto);
       notaEditando = false;
-    } catch {}
+    } catch (cause) {
+      notaError = cause instanceof Error ? cause.message : 'No se pudo guardar la nota.';
+    }
   }
 
   async function eliminar() {
@@ -76,7 +88,6 @@
     }
   }
 
-  const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 </script>
 
 <div class="app-background min-h-dvh">
@@ -106,7 +117,7 @@
   {:else if !cancion}
     <div class="px-5 py-20 flex flex-col items-center text-center">
       <Icon name="alert-circle" size={48} class="text-red-400/60" />
-      <p class="text-white/60 mt-4">Canción no encontrada</p>
+      <p class="text-white/60 mt-4">{errorCarga || 'Canción no encontrada'}</p>
     </div>
   {:else}
     <div class="px-5 py-6 pb-40 space-y-4">
@@ -133,7 +144,7 @@
         {/if}
         <div class="flex items-center gap-2 mt-5">
           <div class="flex-1">
-            <GlassButton variant="primary" fullWidth icon="play" onTap={tocarPlay}>Escuchar</GlassButton>
+            <GlassButton variant="primary" fullWidth icon="play" disabled={!cancion.audio_url} onTap={tocarPlay}>{cancion.audio_url ? 'Escuchar' : 'Audio no disponible'}</GlassButton>
           </div>
         </div>
         <div class="flex items-center justify-center gap-1.5 mt-3">
@@ -179,6 +190,7 @@
                   class="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/30 p-4 resize-none"
                 ></textarea>
               </div>
+              {#if notaError}<p class="text-xs text-red-300 px-1">{notaError}</p>{/if}
               <div class="flex gap-2">
                 <div class="flex-1"><GlassButton variant="secondary" fullWidth onTap={() => (notaEditando = false)}>Cancelar</GlassButton></div>
                 <div class="flex-1"><GlassButton variant="primary" fullWidth icon="check" onTap={guardarNota}>Guardar</GlassButton></div>
@@ -202,32 +214,7 @@
               <h3 class="text-[11px] font-bold text-dorado tracking-[0.25em] uppercase">Partitura</h3>
             </div>
             {#each cancion.estrofas as estrofa, idx}
-              <GlassCard padding="lg">
-                <div class="flex items-center justify-between mb-3">
-                  <p class="text-[10px] text-dorado/70 tracking-[0.25em] font-bold uppercase">Estrofa {romanos[idx] ?? idx + 1}</p>
-                  {#if estrofa.bis}
-                    <div class="flex items-center gap-1 text-dorado"><Icon name="refresh" size={12} /><span class="text-[10px] font-bold tracking-wider">BIS</span></div>
-                  {/if}
-                </div>
-                <div class="overflow-x-auto -mx-1 px-1">
-                  <table class="border-collapse">
-                    <tbody>
-                      <tr>
-                        <td class="px-2 h-10 text-[11px] font-black text-dorado bg-granate rounded-tl-lg w-8 text-center">7</td>
-                        {#each estrofa.columnas as col}
-                          <td class="px-2 h-10 text-center text-[15px] font-black text-white font-mono border-l border-white/10 min-w-[34px] tabular-nums">{col.nota7 || '·'}</td>
-                        {/each}
-                      </tr>
-                      <tr>
-                        <td class="px-2 h-10 text-[11px] font-black text-dorado bg-granate rounded-bl-lg w-8 text-center border-t border-white/10">6</td>
-                        {#each estrofa.columnas as col}
-                          <td class="px-2 h-10 text-center text-[15px] font-black text-white font-mono border-l border-t border-white/10 min-w-[34px] tabular-nums">{col.nota6 || '·'}</td>
-                        {/each}
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </GlassCard>
+              <PartituraView {estrofa} numero={idx + 1} />
             {/each}
           </div>
         {/if}
@@ -246,7 +233,22 @@
       {/if}
 
       {#if tabActivo === 'letra'}
-        {#if cancion.letra}
+        {#if cancion.letras.length > 0}
+          <div class="space-y-3">
+            {#each cancion.letras as parte, idx}
+              <GlassCard padding="xl">
+                {#if parte.titulo.trim()}
+                  <h3 class="text-[11px] font-bold tracking-[0.2em] uppercase text-dorado text-center mb-4">{parte.titulo}</h3>
+                {:else if cancion.letras.length > 1}
+                  <h3 class="text-[10px] font-bold tracking-[0.18em] uppercase text-dorado/60 text-center mb-4">Letra {idx + 1}</h3>
+                {/if}
+                <div class="whitespace-pre-line text-center text-[15px] leading-[1.8] text-white/85 italic font-medium">
+                  {parte.texto}
+                </div>
+              </GlassCard>
+            {/each}
+          </div>
+        {:else if cancion.letra}
           <GlassCard padding="xl">
             <div class="whitespace-pre-line text-center text-[15px] leading-[1.8] text-white/85 italic font-medium">
               {cancion.letra}

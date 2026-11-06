@@ -31,8 +31,12 @@ export async function obtenerClima(lat: number, lng: number): Promise<Clima | nu
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
+    let res: Response;
+    try {
+      res = await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!res.ok) return null;
 

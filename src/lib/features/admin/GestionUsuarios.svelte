@@ -19,12 +19,17 @@
   let loading = $state(true);
   let filtro = $state<'todos' | 'activos' | 'baneados'>('activos');
   let query = $state('');
+  let error = $state('');
+  let usuarioEnProceso = $state<string | null>(null);
 
   onMount(() => {
     if (!session.isAdmin) { router.back(); return; }
     const unsub = usuariosService.stream(
-      (items) => { usuarios = items; loading = false; },
-      () => (loading = false)
+      (items) => { usuarios = items; loading = false; error = ''; },
+      (cause) => {
+        loading = false;
+        error = cause instanceof Error ? cause.message : 'No se pudieron cargar los usuarios.';
+      }
     );
     return unsub;
   });
@@ -43,42 +48,60 @@
     return lista;
   });
 
-  async function cambiarRol(u: Usuario, nuevoRol: Rol) {
-    if (u.uid === session.user?.uid) return;
+  async function registrarActividad(tipo: string, mensaje: string) {
     try {
-      await usuariosService.cambiarRol(u.uid, nuevoRol);
       await actividadService.registrar(
-        'cambiar_rol',
-        `Cambió el rol de ${u.nombre} a ${rolLabel(nuevoRol)}`,
+        tipo,
+        mensaje,
         session.user?.uid ?? '',
         session.displayName
       );
-    } catch {}
+    } catch {
+      // El cambio de usuario ya se aplicó; el historial es secundario.
+      error = 'El cambio se aplicó, pero no se pudo registrar en el historial.';
+    }
+  }
+
+  async function cambiarRol(u: Usuario, nuevoRol: Rol) {
+    if (u.uid === session.user?.uid || usuarioEnProceso) return;
+    usuarioEnProceso = u.uid;
+    error = '';
+    try {
+      await usuariosService.cambiarRol(u.uid, nuevoRol);
+      await registrarActividad('cambiar_rol', `Cambió el rol de ${u.nombre} a ${rolLabel(nuevoRol)}`);
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo cambiar el rol.';
+    } finally {
+      usuarioEnProceso = null;
+    }
   }
 
   async function banear(u: Usuario) {
-    if (!confirm(`¿Suspender a ${u.nombre}?`)) return;
+    if (usuarioEnProceso || !confirm(`¿Suspender a ${u.nombre}?`)) return;
+    usuarioEnProceso = u.uid;
+    error = '';
     try {
       await usuariosService.banear(u.uid);
-      await actividadService.registrar(
-        'banear_usuario',
-        `Suspendió a ${u.nombre}`,
-        session.user?.uid ?? '',
-        session.displayName
-      );
-    } catch {}
+      await registrarActividad('banear_usuario', `Suspendió a ${u.nombre}`);
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo suspender al usuario.';
+    } finally {
+      usuarioEnProceso = null;
+    }
   }
 
   async function desbanear(u: Usuario) {
+    if (usuarioEnProceso) return;
+    usuarioEnProceso = u.uid;
+    error = '';
     try {
       await usuariosService.desbanear(u.uid);
-      await actividadService.registrar(
-        'desbanear_usuario',
-        `Reactivó a ${u.nombre}`,
-        session.user?.uid ?? '',
-        session.displayName
-      );
-    } catch {}
+      await registrarActividad('desbanear_usuario', `Reactivó a ${u.nombre}`);
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo reactivar al usuario.';
+    } finally {
+      usuarioEnProceso = null;
+    }
   }
 
   function inicial(n: string): string {
@@ -98,6 +121,9 @@
   </header>
 
   <div class="px-5 py-6 pb-32 space-y-4">
+    {#if error}
+      <div role="alert" class="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-xs text-red-200">{error}</div>
+    {/if}
     <div class="glass rounded-2xl border border-white/10">
       <div class="flex items-center gap-2 px-4 h-12">
         <Icon name="search" size={16} class="text-dorado/70" />
@@ -176,6 +202,7 @@
                 <div class="shrink-0">
                   <select
                     value={u.rol}
+                    disabled={usuarioEnProceso !== null}
                     onchange={(e) => cambiarRol(u, (e.target as HTMLSelectElement).value as Rol)}
                     class="bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-[11px] text-white font-bold outline-none [color-scheme:dark]"
                   >
@@ -195,16 +222,18 @@
                 {#if u.baneado}
                   <button
                     type="button"
+                    disabled={usuarioEnProceso !== null}
                     onclick={() => desbanear(u)}
-                    class="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold uppercase tracking-wider active:scale-95 transition-transform"
+                    class="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold uppercase tracking-wider active:scale-95 transition-transform disabled:opacity-40"
                   >
                     Reactivar
                   </button>
                 {:else}
                   <button
                     type="button"
+                    disabled={usuarioEnProceso !== null}
                     onclick={() => banear(u)}
-                    class="text-[11px] px-3 py-1 rounded-full bg-red-500/15 text-red-400 font-bold uppercase tracking-wider active:scale-95 transition-transform"
+                    class="text-[11px] px-3 py-1 rounded-full bg-red-500/15 text-red-400 font-bold uppercase tracking-wider active:scale-95 transition-transform disabled:opacity-40"
                   >
                     Suspender
                   </button>

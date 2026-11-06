@@ -9,20 +9,35 @@
   import { router } from '../../stores/router.svelte';
 
   let archivos = $state(0);
+  let cargando = $state(true);
   let limpiando = $state(false);
-  let limpiado = $state(false);
+  let archivosEliminados = $state<number | null>(null);
+  let error = $state('');
 
-  onMount(async () => {
-    archivos = await contarArchivosCache();
-  });
+  async function cargar() {
+    cargando = true;
+    error = '';
+    try {
+      archivos = await contarArchivosCache();
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudo consultar el almacenamiento temporal.';
+    } finally {
+      cargando = false;
+    }
+  }
+
+  onMount(cargar);
 
   async function limpiar() {
-    if (!confirm('¿Limpiar caché? Se borrarán los archivos temporales descargados.')) return;
+    if (limpiando || cargando || !confirm('¿Limpiar archivos temporales de la aplicación?')) return;
     limpiando = true;
+    archivosEliminados = null;
+    error = '';
     try {
-      await limpiarCache();
-      archivos = await contarArchivosCache();
-      limpiado = true;
+      archivosEliminados = await limpiarCache();
+      await cargar();
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudieron limpiar los archivos temporales.';
     } finally {
       limpiando = false;
     }
@@ -47,17 +62,24 @@
       </div>
       <h2 class="text-lg font-black text-white text-center mb-1">Caché de archivos</h2>
       <p class="text-xs text-white/60 text-center leading-relaxed">
-        Archivos temporales descargados de canciones, imágenes y videos.
+        Archivos temporales técnicos de la aplicación. La descarga y conservación sin conexión de canciones, imágenes y videos todavía no está implementada en esta versión.
       </p>
       <p class="text-2xl font-black text-dorado text-center mt-4">
-        {archivos} {archivos === 1 ? 'archivo' : 'archivos'}
+        {cargando ? 'Consultando…' : `${archivos} ${archivos === 1 ? 'archivo' : 'archivos'}`}
       </p>
     </GlassCard>
 
-    {#if limpiado}
+    {#if archivosEliminados !== null}
       <div class="glass rounded-2xl p-3 border border-emerald-500/40 flex items-center gap-2">
         <Icon name="check-circle" size={18} class="text-emerald-400 shrink-0" />
-        <p class="text-xs text-emerald-300 flex-1">Caché limpiada correctamente</p>
+        <p class="text-xs text-emerald-300 flex-1">Se eliminaron {archivosEliminados} archivos temporales.</p>
+      </div>
+    {/if}
+    {#if error}
+      <div role="alert" class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
+        <Icon name="alert-circle" size={18} class="text-red-400 shrink-0" />
+        <p class="text-xs text-red-300 flex-1">{error}</p>
+        <button type="button" onclick={cargar} class="text-xs font-bold text-dorado">Reintentar</button>
       </div>
     {/if}
 
@@ -66,7 +88,7 @@
     </GlassButton>
 
     <p class="text-[10px] text-white/30 text-center leading-relaxed px-4">
-      Los archivos se volverán a descargar cuando los necesites. No afecta al contenido en la nube.
+      Esta acción solo elimina archivos temporales con el prefijo interno de la aplicación. No borra canciones ni multimedia de Firebase o Cloudinary.
     </p>
   </div>
 </div>

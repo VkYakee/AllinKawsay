@@ -1,0 +1,104 @@
+name: Validate Android Build
+
+on:
+  pull_request:
+    branches: ["3.0"]
+  push:
+    branches:
+      - "3.0"
+      - "rebuild/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Compile Android debug APK (no release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Setup NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+
+      - name: Expose NDK
+        run: echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: npm install --include=optional --no-audit --no-fund
+
+      - name: Build web frontend
+        run: npm run build
+
+      - name: Generate app icons
+        run: |
+          set -e
+          mkdir -p src-tauri/icons assets
+          if [ ! -f android_config/icono.png ]; then
+            echo "No se encontró android_config/icono.png"
+            exit 1
+          fi
+          cp android_config/icono.png assets/logo.png
+          npm run tauri icon assets/logo.png
+
+      - name: Initialize Tauri Android project
+        run: npm run tauri android init
+
+      - name: Compile Android debug APK
+        run: npm run tauri android build -- --apk --debug --target aarch64
+
+      - name: Locate APK
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)"
+          if [ -z "$APK" ]; then
+            echo "No se generó ningún APK"
+            exit 1
+          fi
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          echo "APK generado: $APK"
+          ls -lh "$APK"
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allinkawsay-android-debug-${{ github.run_number }}
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 7

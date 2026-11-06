@@ -1,142 +1,178 @@
 <!-- src/lib/features/home/tabs/InicioTab.svelte -->
 <script lang="ts">
+  import { onMount } from 'svelte';
   import GlassCard from '../../../components/ui/GlassCard.svelte';
   import GlassIconButton from '../../../components/ui/GlassIconButton.svelte';
   import Icon from '../../../components/ui/Icon.svelte';
   import { session } from '../../../stores/session.svelte';
-  import { player } from '../../../stores/player.svelte';
   import { canciones } from '../../../stores/canciones.svelte';
+  import { eventos } from '../../../stores/eventos.svelte';
   import { router } from '../../../stores/router.svelte';
 
-  const proximoEvento = {
-    titulo: 'Fiesta Patronal',
-    fecha: '15 de Octubre',
-    hora: '19:00',
-    lugar: 'Plaza de Armas, Juliaca'
-  };
-
-  let ultimas = $state([
-    { id: 'c1', titulo: 'Adiós Conima', autor: 'Anónimo', ritmo: 'Huayño' },
-    { id: 'c2', titulo: 'Aguila Negra', autor: 'Anónimo', ritmo: 'Huayño' },
-    { id: 'c3', titulo: 'Fiesta de mi Pueblo', autor: 'Anónimo', ritmo: 'Carnaval' }
-  ]);
-
-  async function cargar() {
-    if (canciones.all.length === 0) await canciones.cargar();
-    if (canciones.all.length > 0) {
-      ultimas = canciones.all.slice(0, 3).map((c) => ({
-        id: c.id,
-        titulo: c.titulo,
-        autor: c.autor,
-        ritmo: c.ritmo
-      }));
-    }
-  }
-  cargar();
-
-  async function tocarCancion(c: (typeof ultimas)[number]) {
-    const full = canciones.buscar(c.id);
-    player.play({
-      id: c.id,
-      titulo: c.titulo,
-      autor: c.autor,
-      imagenUrl: full?.imagen_url ?? '',
-      audioUrl: full?.audio_url ?? ''
-    });
+  interface Props {
+    onOpenCancionero: () => void;
+    onOpenEventos: () => void;
   }
 
-  async function irEnsayo() {
-    if (canciones.all.length === 0) {
-      await canciones.cargar();
+  let { onOpenCancionero, onOpenEventos }: Props = $props();
+
+  onMount(() => {
+    if (!canciones.loaded) canciones.cargar();
+    if (!eventos.loaded) eventos.cargar();
+  });
+
+  const cancionesInicio = $derived(canciones.all.slice(0, 3));
+  const proximoEvento = $derived(eventos.proximos[0] ?? null);
+
+  function fechaEvento(iso: string): string {
+    const date = new Date(iso);
+    return new Intl.DateTimeFormat('es-PE', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    }).format(date);
+  }
+
+  function horaEvento(iso: string): string {
+    return new Intl.DateTimeFormat('es-PE', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(iso));
+  }
+
+
+  function irEnsayo() {
+    if (!canciones.loaded) {
+      canciones.cargar();
+      onOpenCancionero();
+      return;
     }
-    const primera = canciones.all[0];
+    const primera = canciones.all.find((song) => song.estrofas.length > 0) ?? canciones.all[0];
     if (primera) router.go('ensayo', { id: primera.id });
+    else onOpenCancionero();
   }
 </script>
 
-<div class="px-5 py-6 space-y-5 pb-40">
-  <div class="flex items-center justify-between">
+<div class="px-5 py-6 space-y-6 pb-40">
+  <header class="flex items-center justify-between gap-3">
     <div class="min-w-0">
-      <p class="text-[11px] text-dorado/60 tracking-[0.25em] font-bold uppercase">Bienvenido</p>
-      <h2 class="text-3xl font-black text-white tracking-tight mt-1 truncate">
+      <p class="text-[11px] text-dorado/60 tracking-[0.25em] font-bold uppercase">Allin Kawsay · Música y comunidad</p>
+      <h1 class="text-3xl font-black text-white tracking-tight mt-1 truncate">
         Hola, {session.displayName} 👋
-      </h2>
+      </h1>
+      <p class="text-xs text-white/45 mt-1">Sigamos compartiendo nuestra música.</p>
     </div>
     <div class="flex items-center gap-2 shrink-0">
       <GlassIconButton icon="search" onTap={() => router.go('buscar')} />
-      <GlassIconButton icon="bell" variant="gold" />
+      <GlassIconButton icon="calendar" variant="gold" onTap={onOpenEventos} />
     </div>
-  </div>
+  </header>
 
-  <GlassCard variant="granate" padding="xl" onTap={() => {}}>
-    <div class="flex items-center gap-2 mb-3">
-      <div class="w-7 h-7 rounded-full bg-dorado/25 flex items-center justify-center">
-        <Icon name="calendar" size={14} class="text-dorado" />
+  <section class="space-y-3">
+    <div class="flex items-center justify-between px-1">
+      <p class="text-[10px] text-dorado tracking-[0.22em] font-bold uppercase">Agenda del conjunto</p>
+      <button type="button" onclick={onOpenEventos} class="text-[10px] text-white/45 font-semibold uppercase tracking-wider">Ver eventos</button>
+    </div>
+    {#if eventos.loading && !eventos.loaded}
+      <div class="glass rounded-3xl h-36 animate-pulse"></div>
+    {:else if eventos.error}
+      <div class="glass rounded-3xl p-5 border border-red-400/20">
+        <p class="text-sm font-bold text-white">No se pudo consultar la agenda</p>
+        <p class="text-xs text-white/50 mt-1">{eventos.error}</p>
+        <button type="button" onclick={() => eventos.refrescar()} class="mt-3 text-xs font-bold text-dorado">Volver a intentar</button>
       </div>
-      <p class="text-[10px] text-dorado tracking-[0.25em] font-bold uppercase">Próximo evento</p>
-    </div>
-    <h3 class="text-2xl font-black text-white tracking-tight leading-tight">{proximoEvento.titulo}</h3>
-    <p class="text-sm text-white/70 mt-2 font-medium">{proximoEvento.fecha} · {proximoEvento.hora}</p>
-    <div class="flex items-center gap-1 mt-1.5">
-      <Icon name="map-pin" size={12} class="text-dorado/70" />
-      <p class="text-xs text-white/50">{proximoEvento.lugar}</p>
-    </div>
-  </GlassCard>
+    {:else if proximoEvento}
+      <button type="button" onclick={() => router.go('evento', { id: proximoEvento.id })} class="w-full text-left glass glass-granate rounded-3xl p-5 border border-dorado/20 active:scale-[0.99] transition-transform">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-8 h-8 rounded-full bg-dorado/15 flex items-center justify-center"><Icon name="calendar" size={16} class="text-dorado" /></span>
+          <span class="text-[10px] text-dorado tracking-[0.2em] font-bold uppercase">Próxima actividad</span>
+          <span class="ml-auto text-[10px] text-white/45">Ver detalle ↗</span>
+        </div>
+        <h2 class="text-2xl font-black text-white leading-tight">{proximoEvento.titulo}</h2>
+        <p class="text-sm text-dorado/90 mt-2 capitalize">{fechaEvento(proximoEvento.fecha)} · {horaEvento(proximoEvento.fecha)}</p>
+        {#if proximoEvento.lugar}
+          <p class="text-xs text-white/55 mt-1 flex items-center gap-1"><Icon name="map-pin" size={12} />{proximoEvento.lugar}</p>
+        {/if}
+      </button>
+    {:else}
+      <div class="glass rounded-3xl p-5 border border-white/10 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-2xl bg-dorado/10 flex items-center justify-center shrink-0"><Icon name="calendar" size={20} class="text-dorado/70" /></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-bold text-white">Todavía no hay actividades próximas</p>
+          <p class="text-xs text-white/45 mt-1">Cuando se publique un evento, aparecerá aquí.</p>
+        </div>
+        <button type="button" onclick={onOpenEventos} class="text-dorado text-xs font-bold">Ver</button>
+      </div>
+    {/if}
+  </section>
 
-  <div class="grid grid-cols-2 gap-3">
+  <section class="grid grid-cols-2 gap-3">
     <GlassCard variant="gold" padding="lg" onTap={() => router.go('zampona')}>
-      <div class="w-10 h-10 rounded-full bg-dorado/25 flex items-center justify-center mb-3">
-        <Icon name="piano" size={20} class="text-dorado" />
-      </div>
-      <p class="text-base font-bold text-dorado">Zampoña</p>
-      <p class="text-[11px] text-white/50 mt-0.5">Toca en vivo</p>
+      <div class="w-11 h-11 rounded-2xl bg-dorado/20 flex items-center justify-center mb-4"><Icon name="music" size={21} class="text-dorado" /></div>
+      <p class="text-base font-bold text-dorado">Mini zampoña</p>
+      <p class="text-[11px] text-white/50 mt-1">Explora y practica notas</p>
     </GlassCard>
     <GlassCard variant="granate" padding="lg" onTap={irEnsayo}>
-      <div class="w-10 h-10 rounded-full bg-dorado/25 flex items-center justify-center mb-3">
-        <Icon name="play" size={20} class="text-dorado" />
-      </div>
-      <p class="text-base font-bold text-dorado">Ensayo</p>
-      <p class="text-[11px] text-white/50 mt-0.5">Aprende paso a paso</p>
+      <div class="w-11 h-11 rounded-2xl bg-dorado/20 flex items-center justify-center mb-4"><Icon name="play" size={21} class="text-dorado" /></div>
+      <p class="text-base font-bold text-white">Modo ensayo</p>
+      <p class="text-[11px] text-white/55 mt-1">Practica con el cancionero</p>
     </GlassCard>
-  </div>
+  </section>
 
-  <div class="grid grid-cols-2 gap-3">
-    <GlassCard padding="lg" onTap={() => router.go('historia')}>
-      <div class="w-10 h-10 rounded-full bg-dorado/15 flex items-center justify-center mb-3">
-        <Icon name="star" size={20} class="text-dorado" fill />
-      </div>
-      <p class="text-base font-bold text-white">Historia</p>
-      <p class="text-[11px] text-white/50 mt-0.5">Nuestra trayectoria</p>
-    </GlassCard>
-    <GlassCard padding="lg" onTap={() => router.go('compartir-app')}>
-      <div class="w-10 h-10 rounded-full bg-dorado/15 flex items-center justify-center mb-3">
-        <Icon name="share" size={20} class="text-dorado" />
-      </div>
-      <p class="text-base font-bold text-white">Compartir</p>
-      <p class="text-[11px] text-white/50 mt-0.5">Invita al grupo</p>
-    </GlassCard>
-  </div>
-
-  <div class="space-y-3 pt-1">
+  <section class="space-y-3">
     <div class="flex items-center justify-between px-1">
-      <h3 class="text-[11px] font-bold text-dorado tracking-[0.25em] uppercase">Últimas canciones</h3>
-      <button type="button" onclick={() => router.go('home')} class="text-[10px] text-white/40 tracking-wider font-semibold uppercase active:scale-95 transition-transform">
-        Ver todo →
-      </button>
+      <div>
+        <p class="text-[10px] text-dorado tracking-[0.22em] font-bold uppercase">Biblioteca musical</p>
+        <h2 class="text-xl font-black text-white mt-1">Explora el cancionero</h2>
+      </div>
+      <button type="button" onclick={onOpenCancionero} class="text-xs text-dorado font-bold">Ver todo →</button>
     </div>
-    {#each ultimas as cancion (cancion.id)}
-      <GlassCard padding="md" onTap={() => tocarCancion(cancion)}>
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-granate to-granate-dark flex items-center justify-center shadow-md shadow-granate/30">
-            <Icon name="music" size={20} class="text-dorado" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-bold text-white truncate">{cancion.titulo}</p>
-            <p class="text-[11px] text-white/50 truncate mt-0.5">{cancion.ritmo}</p>
-          </div>
-          <Icon name="chevron-right" size={16} class="text-dorado/50 shrink-0" />
-        </div>
-      </GlassCard>
-    {/each}
-  </div>
+    {#if canciones.loading && !canciones.loaded}
+      <div class="space-y-2">{#each Array(3) as _}<div class="glass rounded-2xl h-[76px] animate-pulse"></div>{/each}</div>
+    {:else if canciones.error}
+      <div class="glass rounded-2xl p-5 border border-red-400/20">
+        <p class="text-sm font-bold text-white">No se pudo cargar el cancionero</p>
+        <p class="text-xs text-white/50 mt-1">{canciones.error}</p>
+        <button type="button" onclick={() => canciones.refrescar()} class="mt-3 text-xs font-bold text-dorado">Volver a intentar</button>
+      </div>
+    {:else if cancionesInicio.length > 0}
+      <div class="space-y-2">
+        {#each cancionesInicio as cancion (cancion.id)}
+          <GlassCard padding="md" onTap={() => router.go('cancion', { id: cancion.id })}>
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-granate to-granate-dark flex items-center justify-center shrink-0">
+                <Icon name="music" size={20} class="text-dorado" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-white truncate">{cancion.titulo}</p>
+                <p class="text-[11px] text-white/45 truncate mt-1">{cancion.autor || 'Autor no registrado'} · {cancion.ritmo || 'Ritmo por definir'}</p>
+              </div>
+              <Icon name="chevron-right" size={16} class="text-dorado/50" />
+            </div>
+          </GlassCard>
+        {/each}
+      </div>
+    {:else}
+      <div class="glass rounded-3xl p-6 text-center">
+        <Icon name="music" size={26} class="text-dorado/60 mx-auto mb-2" />
+        <p class="text-sm font-bold text-white">El cancionero está esperando sus primeras canciones</p>
+        <p class="text-xs text-white/45 mt-1">Las partituras y melodías aparecerán aquí.</p>
+        <button type="button" onclick={onOpenCancionero} class="mt-3 text-xs text-dorado font-bold">Abrir cancionero</button>
+      </div>
+    {/if}
+  </section>
+
+  <section class="glass rounded-3xl p-5 border border-white/10">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-dorado/10 flex items-center justify-center"><Icon name="user" size={20} class="text-dorado" /></div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold text-white">Nuestra historia sigue creciendo</p>
+        <p class="text-xs text-white/45 mt-1">Revisa recuerdos, eventos y actividades del conjunto.</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mt-4">
+      <button type="button" onclick={() => router.go('historia')} class="rounded-xl bg-white/5 py-3 text-xs font-bold text-white/75">Historia del grupo</button>
+      <button type="button" onclick={() => router.go('compartir-app')} class="rounded-xl bg-white/5 py-3 text-xs font-bold text-white/75">Compartir Allin Kawsay</button>
+    </div>
+  </section>
 </div>

@@ -33,21 +33,39 @@
   let marker: L.Marker | null = null;
 
   let guardando = $state(false);
+  let cargandoEdicion = $state(false);
   let error = $state('');
 
-  onMount(() => {
-    if (editando) {
-      const e = eventos.buscar(id);
-      if (e) {
-        titulo = e.titulo;
-        descripcion = e.descripcion;
-        lugar = e.lugar;
-        fechaInput = toLocalInputValue(new Date(e.fecha));
-        lat = e.lat;
-        lng = e.lng;
+  async function cargarEvento() {
+    if (!editando) { initMap(); return; }
+    cargandoEdicion = true;
+    error = '';
+    try {
+      const existente = eventos.buscar(id) ?? await eventosService.obtener(id);
+      if (!existente) {
+        error = 'No se encontró este evento. Vuelve al calendario e inténtalo de nuevo.';
+      } else {
+        titulo = existente.titulo;
+        descripcion = existente.descripcion;
+        lugar = existente.lugar;
+        fechaInput = toLocalInputValue(new Date(existente.fecha));
+        lat = existente.lat;
+        lng = existente.lng;
+      }
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo cargar el evento.';
+    } finally {
+      cargandoEdicion = false;
+      initMap();
+      if (map && lat !== null && lng !== null) {
+        map.setView([lat, lng], 15);
+        setMarker(lat, lng);
       }
     }
-    setTimeout(initMap, 50);
+  }
+
+  onMount(() => {
+    void cargarEvento();
   });
 
   onDestroy(() => {
@@ -58,7 +76,7 @@
     if (!mapEl || map) return;
     map = L.map(mapEl, {
       center: [lat ?? -15.4994, lng ?? -70.1333],
-      zoom: lat ? 15 : 13,
+      zoom: lat !== null && lng !== null ? 15 : 13,
       zoomControl: false,
       attributionControl: false
     });
@@ -86,7 +104,9 @@
   }
 
   async function guardar() {
+    if (guardando) return;
     error = '';
+    if (cargandoEdicion) { error = 'Espera a que termine de cargar el evento.'; return; }
     if (!titulo.trim()) { error = 'El título es obligatorio'; return; }
     if (!fechaInput) { error = 'La fecha es obligatoria'; return; }
     const fecha = new Date(fechaInput);
@@ -128,6 +148,9 @@
   </header>
 
   <div class="px-5 py-6 pb-10 space-y-4">
+    {#if cargandoEdicion}
+      <div class="glass rounded-2xl border border-dorado/20 px-4 py-3 flex items-center gap-3"><div class="w-5 h-5 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div><p class="text-xs text-white/70">Cargando los datos del evento…</p></div>
+    {/if}
     <GlassInput bind:value={titulo} label="Título *" placeholder="Fiesta patronal" icon="calendar" />
     <GlassInput bind:value={lugar} label="Lugar" placeholder="Plaza de Armas, Juliaca" icon="map-pin" />
 
@@ -180,13 +203,16 @@
     </GlassCard>
 
     {#if error}
-      <div class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
+      <div role="alert" class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
         <Icon name="alert-circle" size={16} class="text-red-400 shrink-0" />
-        <p class="text-xs text-red-300">{error}</p>
+        <p class="text-xs text-red-300 flex-1">{error}</p>
+        {#if editando && !cargandoEdicion}
+          <button type="button" onclick={cargarEvento} class="shrink-0 text-[11px] font-bold text-dorado">Reintentar</button>
+        {/if}
       </div>
     {/if}
 
-    <GlassButton variant="primary" fullWidth icon="check" loading={guardando} onTap={guardar}>
+    <GlassButton variant="primary" fullWidth icon="check" loading={guardando || cargandoEdicion} onTap={guardar}>
       {editando ? 'Guardar cambios' : 'Crear evento'}
     </GlassButton>
   </div>

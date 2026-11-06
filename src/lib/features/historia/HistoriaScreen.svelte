@@ -8,27 +8,43 @@
   import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
 
-  let historia = $state<Historia>({
+  const historiaVacia = (): Historia => ({
     contenido: '',
     actualizadoPor: '',
     fechaActualizacion: null
   });
-  let loading = $state(true);
 
-  onMount(() => {
-    const unsub = historiaService.stream(
+  let historia = $state<Historia>(historiaVacia());
+  let loading = $state(true);
+  let error = $state('');
+  let unsubscribe: (() => void) | null = null;
+
+  function conectar() {
+    unsubscribe?.();
+    loading = true;
+    error = '';
+    unsubscribe = historiaService.stream(
       (h) => {
         historia = h;
         loading = false;
+        error = '';
       },
-      () => (loading = false)
+      (e) => {
+        loading = false;
+        error = e?.message || 'No se pudo cargar la historia. Comprueba tu conexión.';
+      }
     );
-    return unsub;
+  }
+
+  onMount(() => {
+    conectar();
+    return () => unsubscribe?.();
   });
 
   function fechaBonita(iso: string | null): string {
     if (!iso) return '';
     const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
     return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
   }
 </script>
@@ -50,6 +66,15 @@
   <div class="px-5 py-6 pb-32">
     {#if loading}
       <div class="glass rounded-3xl h-64 animate-pulse"></div>
+    {:else if error}
+      <div class="glass rounded-3xl border border-red-500/30 p-6 text-center">
+        <Icon name="alert-circle" size={30} class="text-red-400 mx-auto mb-3" />
+        <p class="text-sm font-bold text-white">No se pudo cargar la historia</p>
+        <p class="text-xs text-white/55 mt-2">{error}</p>
+        <button class="mt-5 rounded-xl bg-dorado/15 border border-dorado/30 px-5 py-3 text-sm font-bold text-dorado" onclick={conectar}>
+          Reintentar
+        </button>
+      </div>
     {:else if !historia.contenido}
       <div class="flex flex-col items-center text-center py-16">
         <div class="w-20 h-20 rounded-full bg-dorado/15 flex items-center justify-center mb-4">

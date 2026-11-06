@@ -31,6 +31,12 @@ interface UsuarioFirestore {
   baneado?: boolean;
 }
 
+function normalizarRol(rol: unknown): AuthUser['rol'] {
+  return rol === 'miembro' || rol === 'admin' || rol === 'dev' || rol === 'publico'
+    ? rol
+    : 'publico';
+}
+
 function mapUsuario(
   uid: string,
   data: UsuarioFirestore,
@@ -41,7 +47,7 @@ function mapUsuario(
     uid,
     nombre: data.nombre ?? emailAuth.split('@')[0] ?? 'Usuario',
     email: data.email ?? emailAuth,
-    rol: (data.rol as AuthUser['rol']) ?? 'publico',
+    rol: normalizarRol(data.rol),
     foto_url: data.fotoUrl ?? '',
     baneado: data.baneado === true,
     email_verified: emailVerified
@@ -159,8 +165,11 @@ export const authService = {
         }
         try {
           resolve(await cargarUsuarioFirestore(user));
-        } catch {
-          resolve(null);
+        } catch (error) {
+          // Un fallo temporal de Firestore no significa que Firebase Auth haya
+          // perdido la sesión. Se conserva el acceso básico sin privilegios.
+          console.warn('No se pudo leer el perfil de Firestore; se restaura como usuario público:', error);
+          resolve(mapUsuario(user.uid, {}, user.email ?? '', user.emailVerified));
         }
       });
     });

@@ -16,23 +16,37 @@
   let texto = $state('');
   let enviando = $state(false);
   let cargando = $state(true);
+  let error = $state('');
+  let unsubscribe: (() => void) | null = null;
 
-  onMount(() => {
-    const unsub = comentariosService.stream(
+  function conectar() {
+    unsubscribe?.();
+    cargando = true;
+    error = '';
+    unsubscribe = comentariosService.stream(
       cancionId,
       (items) => {
         comentarios = items;
         cargando = false;
+        error = '';
       },
-      () => (cargando = false)
+      (cause) => {
+        cargando = false;
+        error = cause instanceof Error ? cause.message : 'No se pudieron cargar los comentarios.';
+      }
     );
-    return unsub;
+  }
+
+  onMount(() => {
+    conectar();
+    return () => unsubscribe?.();
   });
 
   async function enviar() {
     const limpio = texto.trim();
     if (!limpio || enviando || !session.user) return;
     enviando = true;
+    error = '';
     try {
       await comentariosService.crear(
         cancionId,
@@ -41,21 +55,26 @@
         session.user.nombre
       );
       texto = '';
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo publicar el comentario.';
     } finally {
       enviando = false;
     }
   }
 
   async function eliminar(id: string) {
+    error = '';
     try {
       await comentariosService.eliminar(cancionId, id);
-    } catch {}
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo eliminar el comentario.';
+    }
   }
 
   function fechaBonita(iso: string): string {
     const d = new Date(iso);
-    const ahora = new Date();
-    const diff = ahora.getTime() - d.getTime();
+    if (Number.isNaN(d.getTime())) return 'Fecha desconocida';
+    const diff = Date.now() - d.getTime();
     const min = Math.floor(diff / 60000);
     if (min < 1) return 'Ahora';
     if (min < 60) return `Hace ${min} min`;
@@ -70,6 +89,18 @@
 </script>
 
 <div class="space-y-3">
+  {#if error}
+    <div role="alert" class="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 flex items-start gap-3">
+      <Icon name="alert-circle" size={16} class="text-red-300 shrink-0 mt-0.5" />
+      <div class="flex-1 min-w-0">
+        <p class="text-xs text-red-200">{error}</p>
+        {#if !cargando && comentarios.length === 0}
+          <button type="button" onclick={conectar} class="mt-2 text-[11px] font-bold text-dorado">Reintentar carga</button>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
   {#if cargando}
     <div class="glass rounded-2xl h-20 animate-pulse"></div>
   {:else if comentarios.length === 0}
@@ -101,6 +132,7 @@
             <button
               type="button"
               onclick={() => eliminar(c.id)}
+              aria-label="Eliminar comentario"
               class="w-8 h-8 rounded-full flex items-center justify-center text-red-400/60 hover:text-red-400 active:scale-90 shrink-0"
             >
               <Icon name="trash" size={14} />
@@ -122,6 +154,7 @@
           }
         }}
         rows="1"
+        aria-label="Escribir comentario"
         placeholder="Escribe un comentario..."
         class="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-white/30 font-medium px-2 py-2 resize-none min-h-[40px] max-h-[120px]"
       ></textarea>
@@ -129,6 +162,7 @@
         type="button"
         onclick={enviar}
         disabled={!texto.trim() || enviando}
+        aria-label="Publicar comentario"
         class="w-10 h-10 rounded-full bg-gradient-to-br from-dorado to-dorado-dark flex items-center justify-center shrink-0 active:scale-90 disabled:opacity-40 transition-transform"
       >
         {#if enviando}

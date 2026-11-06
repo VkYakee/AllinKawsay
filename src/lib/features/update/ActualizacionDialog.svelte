@@ -12,7 +12,18 @@
   let { info, onCerrar }: Props = $props();
 
   function descargar() {
-    if (info.url) window.open(info.url, '_blank');
+    let destino: URL;
+    try {
+      destino = new URL(info.url);
+    } catch {
+      console.warn('URL de actualización inválida');
+      return;
+    }
+    if (destino.protocol !== 'https:' || !destino.hostname || destino.username || destino.password) {
+      console.warn('Se bloqueó una URL de actualización no segura');
+      return;
+    }
+    window.open(destino.href, '_blank', 'noopener,noreferrer');
     onCerrar();
   }
 </script>

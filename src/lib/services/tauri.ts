@@ -36,7 +36,9 @@ let mockEstado = {
   reproduciendo: false,
   cargando: false,
   posicion_ms: 0,
-  duracion_ms: 0
+  duracion_ms: 0,
+  velocidad: 1,
+  generation: 0
 };
 let mockTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -79,7 +81,9 @@ async function mockAudio<T>(
         reproduciendo: true,
         cargando: true,
         posicion_ms: 0,
-        duracion_ms: 0
+        duracion_ms: 0,
+        velocidad: 1,
+        generation: mockEstado.generation + 1
       };
 
       audio.addEventListener('loadedmetadata', () => {
@@ -89,6 +93,7 @@ async function mockAudio<T>(
 
       audio.addEventListener('ended', () => {
         mockEstado.reproduciendo = false;
+        mockEstado.posicion_ms = mockEstado.duracion_ms;
       });
 
       try {
@@ -110,12 +115,32 @@ async function mockAudio<T>(
     case 'pausar_cancion':
       mockAudioEl?.pause();
       mockEstado.reproduciendo = false;
+      mockEstado.generation += 1;
       return undefined as T;
 
     case 'reanudar_cancion':
       await mockAudioEl?.play().catch(() => {});
-      mockEstado.reproduciendo = true;
+      mockEstado.reproduciendo = !!mockAudioEl && !mockAudioEl.paused;
+      mockEstado.generation += 1;
       return undefined as T;
+
+    case 'buscar_cancion': {
+      const positionMs = Math.max(0, Number(args?.positionMs) || 0);
+      if (mockAudioEl) {
+        mockAudioEl.currentTime = positionMs / 1000;
+        mockEstado.posicion_ms = Math.round(mockAudioEl.currentTime * 1000);
+      }
+      mockEstado.generation += 1;
+      return undefined as T;
+    }
+
+    case 'velocidad_cancion': {
+      const speed = Math.max(0.25, Math.min(2, Number(args?.speed) || 1));
+      if (mockAudioEl) mockAudioEl.playbackRate = speed;
+      mockEstado.velocidad = speed;
+      mockEstado.generation += 1;
+      return undefined as T;
+    }
 
     case 'detener_cancion':
       if (mockTimer) {
@@ -129,7 +154,9 @@ async function mockAudio<T>(
         reproduciendo: false,
         cargando: false,
         posicion_ms: 0,
-        duracion_ms: 0
+        duracion_ms: 0,
+        velocidad: 1,
+        generation: mockEstado.generation + 1
       };
       return undefined as T;
 

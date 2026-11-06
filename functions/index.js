@@ -99,7 +99,7 @@ exports.webhookMercadoPago = functions
       });
 
       // Registrar log de auditoría
-      await db.collection("pagos_log").add({
+      await db.collection("pagos_log").doc(paymentId.toString()).set({
         mpPaymentId: paymentId.toString(),
         montoCentimos,
         email,
@@ -107,7 +107,7 @@ exports.webhookMercadoPago = functions
         metadata,
         pagoCompleto: pago,
         fecha: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      }, { merge: true });
 
       // ═══════════════════════════════════════════════════════
       // RUTEO SEGÚN EL TIPO DE COMPRA
@@ -155,15 +155,19 @@ async function activarPlan(email, tipo, pago) {
   const hasta = new Date();
   hasta.setDate(hasta.getDate() + duracion);
 
-  await userDoc.ref.update({
-    "suscripcion.plan": tipo,
-    "suscripcion.activa": true,
-    "suscripcion.hasta": admin.firestore.Timestamp.fromDate(hasta),
-    "suscripcion.aprobadaPor": "mercadopago_webhook",
-    "suscripcion.fechaActivacion": admin.firestore.FieldValue.serverTimestamp(),
-    "suscripcion.ultimoCheck": admin.firestore.FieldValue.serverTimestamp(),
-    "suscripcion.ultimoPagoId": pago.id.toString(),
-    "suscripcion.ultimoMontoCentimos": Math.round((pago.transaction_amount || 0) * 100),
+  await db.runTransaction(async (tx) => {
+    const actual = await tx.get(userDoc.ref);
+    if (actual.get("suscripcion.ultimoPagoId") === pago.id.toString()) return;
+    tx.update(userDoc.ref, {
+      "suscripcion.plan": tipo,
+      "suscripcion.activa": true,
+      "suscripcion.hasta": admin.firestore.Timestamp.fromDate(hasta),
+      "suscripcion.aprobadaPor": "mercadopago_webhook",
+      "suscripcion.fechaActivacion": admin.firestore.FieldValue.serverTimestamp(),
+      "suscripcion.ultimoCheck": admin.firestore.FieldValue.serverTimestamp(),
+      "suscripcion.ultimoPagoId": pago.id.toString(),
+      "suscripcion.ultimoMontoCentimos": Math.round((pago.transaction_amount || 0) * 100),
+    });
   });
 
   functions.logger.info("Plan activado:", { email, tipo, hasta });
@@ -174,14 +178,19 @@ async function activarPlan(email, tipo, pago) {
 // ═══════════════════════════════════════════════════════════
 
 async function registrarDonacion(email, tipo, montoCentimos, paymentId) {
-  await db.collection("donaciones").add({
-    email: email || "anonimo",
-    tipo,
-    montoCentimos,
-    mpPaymentId: paymentId.toString(),
-    verificada: true,
-    fecha: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  const ref = db.collection("donaciones").doc(paymentId.toString());
+  try {
+    await ref.create({
+      email: email || "anonimo",
+      tipo,
+      montoCentimos,
+      mpPaymentId: paymentId.toString(),
+      verificada: true,
+      fecha: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    if (error.code !== 6 && error.code !== "already-exists") throw error;
+  }
 
   functions.logger.info("Donación registrada:", { email, tipo, montoCentimos });
 }

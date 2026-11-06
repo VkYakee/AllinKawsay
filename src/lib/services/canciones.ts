@@ -12,6 +12,8 @@ import {
 export interface Columna {
   nota7: string;
   nota6: string;
+  timings7?: number[];
+  timings6?: number[];
 }
 
 export interface Estrofa {
@@ -19,12 +21,19 @@ export interface Estrofa {
   bis: boolean;
 }
 
+export interface Letra {
+  titulo: string;
+  texto: string;
+}
+
 export interface Cancion {
   id: string;
   titulo: string;
   autor: string;
+  tipo: string;
   ritmo: string;
   region: string;
+  numerofonia: string;
   imagen_url: string;
   audio_url: string;
   video_url: string;
@@ -32,7 +41,9 @@ export interface Cancion {
   reproducciones: number;
   estrofas: Estrofa[];
   letra: string;
+  letras: Letra[];
   tags: string[];
+  categoriaId: string;
 }
 
 export interface CancionInput {
@@ -45,57 +56,137 @@ export interface CancionInput {
   audio_url: string;
   video_url: string;
   letra: string;
+  letrasOriginales?: Letra[];
   tags: string[];
+  categoriaId: string;
   estrofas: Estrofa[];
 }
 
+function asRecord(raw: unknown): Record<string, unknown> {
+  return raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+}
+
 function mapColumna(raw: unknown): Columna {
-  const d = (raw ?? {}) as Record<string, unknown>;
+  const d = asRecord(raw);
+  const timings = (value: unknown) => Array.isArray(value)
+    ? value.filter((n): n is number => typeof n === 'number' && Number.isFinite(n)).map(Math.trunc)
+    : [];
   return {
     nota7: typeof d.nota7 === 'string' ? d.nota7 : '',
-    nota6: typeof d.nota6 === 'string' ? d.nota6 : ''
+    nota6: typeof d.nota6 === 'string' ? d.nota6 : '',
+    timings7: timings(d.timings7),
+    timings6: timings(d.timings6)
   };
 }
 
+/** Admite el esquema actual y los formatos históricos que leía el modelo Dart. */
 function mapEstrofa(raw: unknown): Estrofa {
-  const d = (raw ?? {}) as Record<string, unknown>;
-  const columnas = Array.isArray(d.columnas) ? d.columnas.map(mapColumna) : [];
-  return { columnas, bis: d.bis === true };
+  const d = asRecord(raw);
+  if (Array.isArray(d.columnas)) {
+    return { columnas: d.columnas.map(mapColumna), bis: d.bis === true };
+  }
+
+  if (Array.isArray(d.eventos)) {
+    const columnas: Columna[] = [];
+    for (const rawEvent of d.eventos) {
+      const event = asRecord(rawEvent);
+      const tipo = typeof event.tipo === 'number' ? event.tipo : 1;
+      const valor = typeof event.valor === 'string' ? event.valor : '';
+      if (tipo === 0) {
+        columnas.push({ nota7: valor, nota6: '' });
+      } else if (tipo !== 2) {
+        columnas.push({ nota7: '', nota6: valor });
+      }
+    }
+    return { columnas, bis: d.bis === true };
+  }
+
+  if (Array.isArray(d.fila7) || Array.isArray(d.fila6)) {
+    const arriba = Array.isArray(d.fila7) ? d.fila7 : [];
+    const abajo = Array.isArray(d.fila6) ? d.fila6 : [];
+    // El modelo Dart histórico concatenaba primero la fila 6 y después la 7.
+    // Mantener ese orden evita desplazar partituras antiguas al migrarlas.
+    const columnas: Columna[] = [
+      ...abajo.filter((nota): nota is string => typeof nota === 'string')
+        .map((nota) => ({ nota7: '', nota6: nota })),
+      ...arriba.filter((nota): nota is string => typeof nota === 'string')
+        .map((nota) => ({ nota7: nota, nota6: '' }))
+    ];
+    return { columnas, bis: d.bis === true };
+  }
+
+  if (typeof d.texto === 'string') {
+    const columnas: Columna[] = [];
+    let fila: 6 | 7 = 6;
+    for (const match of d.texto.matchAll(/[0-9.]+|\/|\\/g)) {
+      const token = match[0];
+      if (token === '/') fila = 7;
+      else if (token === '\\') fila = 6;
+      else columnas.push(fila === 7
+        ? { nota7: token, nota6: '' }
+        : { nota7: '', nota6: token });
+    }
+    return { columnas, bis: d.bis === true };
+  }
+
+  return { columnas: [], bis: d.bis === true };
+}
+
+function separarLetra(texto: string, originales: Letra[] = []): Letra[] {
+  return texto.trim()
+    ? texto.trim().split(/\n\s*\n+/).map((parte, index) => ({
+        titulo: originales[index]?.titulo ?? '',
+        texto: parte.trim()
+      })).filter((parte) => parte.texto.length > 0)
+    : [];
 }
 
 function mapCancion(id: string, data: FirestoreData): Cancion {
-  const estrofasRaw = Array.isArray(data.estrofas) ? data.estrofas : [];
+  const rawEstrofas = Array.isArray(data.estrofas)
+    ? data.estrofas
+    : Array.isArray(data.compases)
+      ? data.compases
+      : Array.isArray(data.numerofoniaEstructurada)
+        ? data.numerofoniaEstructurada
+        : [];
+  let estrofas = rawEstrofas.map(mapEstrofa);
+
+  // Algunos documentos antiguos solo guardan numerofonia como texto plano.
+  if (estrofas.length === 0 && typeof data.numerofonia === 'string' && data.numerofonia.trim()) {
+    estrofas = [mapEstrofa({ texto: data.numerofonia })];
+  }
+
   const letrasRaw = Array.isArray(data.letras) ? data.letras : [];
-  const letra =
-    letrasRaw.length > 0
-      ? letrasRaw
-          .map((l) => {
-            const obj = (l ?? {}) as Record<string, unknown>;
-            return typeof obj.texto === 'string' ? obj.texto : '';
-          })
-          .filter((t) => t.trim().length > 0)
-          .join('\n\n')
-      : typeof data.letra === 'string'
-        ? data.letra
-        : '';
+  const letras: Letra[] = letrasRaw.map((raw) => {
+    const part = asRecord(raw);
+    return {
+      titulo: typeof part.titulo === 'string' ? part.titulo : '',
+      texto: typeof part.texto === 'string' ? part.texto : ''
+    };
+  }).filter((part) => part.texto.trim().length > 0);
+  const letraDesdePartes = letras.map((part) => part.texto).join('\n\n');
+  const letra = letraDesdePartes || (typeof data.letra === 'string' ? data.letra : '');
 
   return {
     id,
     titulo: typeof data.titulo === 'string' ? data.titulo : '',
     autor: typeof data.autor === 'string' ? data.autor : '',
+    tipo: typeof data.tipo === 'string' ? data.tipo : 'original',
     ritmo: typeof data.ritmo === 'string' ? data.ritmo : '',
     region: typeof data.region === 'string' ? data.region : '',
+    numerofonia: typeof data.numerofonia === 'string' ? data.numerofonia : '',
     imagen_url: typeof data.imagenUrl === 'string' ? data.imagenUrl : '',
     audio_url: typeof data.audioUrl === 'string' ? data.audioUrl : '',
     video_url: typeof data.videoUrl === 'string' ? data.videoUrl : '',
     descripcion: typeof data.descripcion === 'string' ? data.descripcion : '',
-    reproducciones:
-      typeof data.reproducciones === 'number' ? data.reproducciones : 0,
-    estrofas: estrofasRaw.map(mapEstrofa),
+    reproducciones: typeof data.reproducciones === 'number' ? data.reproducciones : 0,
+    estrofas,
     letra,
+    letras,
     tags: Array.isArray(data.tags)
-      ? data.tags.filter((t): t is string => typeof t === 'string')
-      : []
+      ? data.tags.filter((tag): tag is string => typeof tag === 'string')
+      : [],
+    categoriaId: typeof data.categoriaId === 'string' ? data.categoriaId : ''
   };
 }
 
@@ -104,19 +195,11 @@ export const cancionesService = {
     return getCol('canciones', mapCancion);
   },
 
-  stream(
-    onData: (items: Cancion[]) => void,
-    onError: (err: Error) => void
-  ): () => void {
-    return streamCol(
-      'canciones',
-      mapCancion,
-      (items) => {
-        items.sort((a, b) => a.titulo.localeCompare(b.titulo));
-        onData(items);
-      },
-      onError
-    );
+  stream(onData: (items: Cancion[]) => void, onError: (err: Error) => void): () => void {
+    return streamCol('canciones', mapCancion, (items) => {
+      items.sort((a, b) => a.titulo.localeCompare(b.titulo));
+      onData(items);
+    }, onError);
   },
 
   async obtener(id: string): Promise<Cancion | null> {
@@ -135,6 +218,7 @@ export const cancionesService = {
     return addDocument('canciones', {
       titulo: input.titulo.trim(),
       autor: input.autor.trim(),
+      tipo: 'original',
       ritmo: input.ritmo.trim(),
       region: input.region.trim(),
       descripcion: input.descripcion.trim(),
@@ -142,10 +226,9 @@ export const cancionesService = {
       audioUrl: input.audio_url,
       videoUrl: input.video_url.trim(),
       letra: input.letra.trim(),
-      letras: input.letra.trim()
-        ? [{ titulo: '', texto: input.letra.trim() }]
-        : [],
+      letras: separarLetra(input.letra),
       tags: input.tags,
+      categoriaId: input.categoriaId,
       estrofas: input.estrofas,
       reproducciones: 0,
       creadoPor: autorUid,
@@ -165,10 +248,15 @@ export const cancionesService = {
       audioUrl: input.audio_url,
       videoUrl: input.video_url.trim(),
       letra: input.letra.trim(),
-      letras: input.letra.trim()
-        ? [{ titulo: '', texto: input.letra.trim() }]
-        : [],
+      letras: (() => {
+        const original = input.letrasOriginales;
+        const originalTexto = original?.map((part) => part.texto).join('\n\n').trim();
+        return original && originalTexto === input.letra.trim()
+          ? original
+          : separarLetra(input.letra, original);
+      })(),
       tags: input.tags,
+      categoriaId: input.categoriaId,
       estrofas: input.estrofas,
       fechaEdicion: Timestamp.now()
     });

@@ -15,12 +15,13 @@
 
   let actividades = $state<Actividad[]>([]);
   let loading = $state(true);
+  let error = $state('');
 
   onMount(() => {
     if (!session.isAdmin) { router.back(); return; }
     const unsub = actividadService.stream(
-      (items) => { actividades = items; loading = false; },
-      () => (loading = false),
+      (items) => { actividades = items; loading = false; error = ''; },
+      (cause) => { loading = false; error = cause instanceof Error ? cause.message : 'No se pudo cargar el historial.'; },
       200
     );
     return unsub;
@@ -39,6 +40,9 @@
   </header>
 
   <div class="px-5 py-6 pb-32 space-y-3">
+    {#if error}
+      <div role="alert" class="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-xs text-red-200">{error}</div>
+    {/if}
     <p class="text-[10px] text-white/40 tracking-[0.2em] font-bold uppercase px-1">
       {actividades.length} {actividades.length === 1 ? 'acción' : 'acciones'}
     </p>

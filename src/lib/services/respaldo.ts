@@ -83,7 +83,12 @@ export const respaldoService = {
     const a = document.createElement('a');
     a.href = url;
     a.download = nombre;
+    a.style.display = 'none';
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    // No revocar en el mismo ciclo: WebView/Android puede iniciar la descarga
+    // de forma asíncrona y perder el Blob si la URL desaparece inmediatamente.
+    window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 };

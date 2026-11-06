@@ -14,7 +14,7 @@
   const tabs: TabItem[] = [
     { id: 'inicio', icon: 'home', activeIcon: 'home', label: 'Inicio' },
     { id: 'cancionero', icon: 'music', activeIcon: 'music', label: 'Música' },
-    { id: 'eventos', icon: 'calendar', activeIcon: 'calendar', label: 'Eventos', badge: 2 },
+    { id: 'eventos', icon: 'calendar', activeIcon: 'calendar', label: 'Eventos',  },
     { id: 'recuerdos', icon: 'image', activeIcon: 'image', label: 'Recuerdos' },
     { id: 'perfil', icon: 'user', activeIcon: 'user', label: 'Perfil' }
   ];
@@ -24,7 +24,7 @@
 
 <div class="app-background min-h-dvh">
   {#if activeTab === 'inicio'}
-    <InicioTab />
+    <InicioTab onOpenCancionero={() => (activeTab = 'cancionero')} onOpenEventos={() => (activeTab = 'eventos')} />
   {:else if activeTab === 'cancionero'}
     <CancioneroTab />
   {:else if activeTab === 'eventos'}

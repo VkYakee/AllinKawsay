@@ -1,7 +1,6 @@
 <!-- src/lib/features/recuerdos/RecuerdosTab.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import GlassIconButton from '../../components/ui/GlassIconButton.svelte';
   import Icon from '../../components/ui/Icon.svelte';
   import RecuerdoCard from './RecuerdoCard.svelte';
   import { recuerdos } from '../../stores/recuerdos.svelte';
@@ -31,8 +30,6 @@
       >
         <Icon name="plus" size={22} class="text-granate-dark" />
       </button>
-    {:else}
-      <GlassIconButton icon="image" variant="gold" />
     {/if}
   </div>
 
@@ -48,6 +45,13 @@
       {#each Array(4) as _}
         <div class="glass rounded-3xl h-[260px] animate-pulse"></div>
       {/each}
+    </div>
+  {:else if recuerdos.error}
+    <div class="glass rounded-2xl p-6 border border-red-400/20 text-center">
+      <Icon name="alert-circle" size={24} class="text-red-300 mx-auto mb-3" />
+      <p class="text-sm font-bold text-white">No pudimos cargar los recuerdos</p>
+      <p class="text-xs text-white/50 mt-1">{recuerdos.error}</p>
+      <button type="button" onclick={() => recuerdos.refrescar()} class="mt-4 rounded-full bg-dorado/15 px-4 py-2 text-xs font-bold text-dorado">Intentar de nuevo</button>
     </div>
   {:else if recuerdos.all.length === 0}
     <div class="glass rounded-2xl p-8 flex flex-col items-center text-center">

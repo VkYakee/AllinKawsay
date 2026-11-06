@@ -2,7 +2,6 @@
 <script lang="ts">
   import GlassCard from '../../components/ui/GlassCard.svelte';
   import GlassButton from '../../components/ui/GlassButton.svelte';
-  import GlassIconButton from '../../components/ui/GlassIconButton.svelte';
   import Icon from '../../components/ui/Icon.svelte';
   import { session } from '../../stores/session.svelte';
   import { router } from '../../stores/router.svelte';
@@ -47,7 +46,6 @@
       <p class="text-[11px] text-dorado/60 tracking-[0.25em] font-bold uppercase">Mi cuenta</p>
       <h2 class="text-3xl font-black text-white tracking-tight mt-1">Perfil</h2>
     </div>
-    <GlassIconButton icon="settings" variant="gold" />
   </div>
 
   <GlassCard variant="granate" padding="xl">
@@ -87,35 +85,11 @@
     </button>
   {/if}
 
-  <div class="grid grid-cols-3 gap-2">
-    <GlassCard padding="md">
-      <div class="flex flex-col items-center text-center">
-        <div class="w-9 h-9 rounded-full bg-dorado/15 flex items-center justify-center mb-2">
-          <Icon name="heart" size={16} class="text-dorado" fill />
-        </div>
-        <p class="text-xl font-black text-white leading-none">0</p>
-        <p class="text-[9px] text-white/40 tracking-wider font-bold uppercase mt-1">Favoritos</p>
-      </div>
-    </GlassCard>
-    <GlassCard padding="md">
-      <div class="flex flex-col items-center text-center">
-        <div class="w-9 h-9 rounded-full bg-dorado/15 flex items-center justify-center mb-2">
-          <Icon name="play" size={16} class="text-dorado" fill />
-        </div>
-        <p class="text-xl font-black text-white leading-none">0</p>
-        <p class="text-[9px] text-white/40 tracking-wider font-bold uppercase mt-1">Escuchadas</p>
-      </div>
-    </GlassCard>
-    <GlassCard padding="md">
-      <div class="flex flex-col items-center text-center">
-        <div class="w-9 h-9 rounded-full bg-dorado/15 flex items-center justify-center mb-2">
-          <Icon name="star" size={16} class="text-dorado" fill />
-        </div>
-        <p class="text-xl font-black text-white leading-none">0</p>
-        <p class="text-[9px] text-white/40 tracking-wider font-bold uppercase mt-1">Logros</p>
-      </div>
-    </GlassCard>
-  </div>
+  <section class="glass rounded-3xl p-5 border border-white/10">
+    <p class="text-[10px] text-dorado tracking-[0.22em] font-bold uppercase">Tu espacio</p>
+    <h3 class="text-lg font-black text-white mt-1">Tu cuenta está lista para participar</h3>
+    <p class="text-xs text-white/50 mt-2 leading-relaxed">Consulta las canciones, acompaña las actividades y comparte los recuerdos del conjunto desde las pestañas inferiores.</p>
+  </section>
 
   <div class="space-y-2">
     {#each menu as m}

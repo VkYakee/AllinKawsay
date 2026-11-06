@@ -1,5 +1,6 @@
 <!-- src/lib/features/admin/AgregarRecuerdo.svelte -->
 <script lang="ts">
+  import { onMount } from 'svelte';
   import GlassInput from '../../components/ui/GlassInput.svelte';
   import GlassButton from '../../components/ui/GlassButton.svelte';
   import GlassCard from '../../components/ui/GlassCard.svelte';
@@ -29,22 +30,41 @@
   let progreso = $state(0);
   let textoSubida = $state('');
   let guardando = $state(false);
+  let cargandoEdicion = $state(false);
   let error = $state('');
+  let falloCarga = $state(false);
 
-  $effect(() => {
-    if (editando && recuerdos.all.length > 0 && titulo === '') {
-      const r = recuerdos.buscar(id);
-      if (r) {
-        titulo = r.titulo;
-        descripcion = r.descripcion;
-        fechaInput = r.fecha.slice(0, 10);
-        fotos = [...r.fotos];
-        videos = [...r.videos];
+  async function cargarRecuerdo() {
+    if (!editando) return;
+    cargandoEdicion = true;
+    error = '';
+    falloCarga = false;
+    try {
+      const existente = recuerdos.buscar(id) ?? await recuerdosService.obtener(id);
+      if (!existente) {
+        error = 'No se encontró este recuerdo. Vuelve a la galería e inténtalo de nuevo.';
+        falloCarga = true;
+        return;
       }
+      titulo = existente.titulo;
+      descripcion = existente.descripcion;
+      fechaInput = existente.fecha.slice(0, 10);
+      fotos = [...existente.fotos];
+      videos = [...existente.videos];
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'No se pudo cargar el recuerdo.';
+      falloCarga = true;
+    } finally {
+      cargandoEdicion = false;
     }
+  }
+
+  onMount(() => {
+    void cargarRecuerdo();
   });
 
   async function subirFotos(e: Event) {
+    if (subiendo || cargandoEdicion || guardando) return;
     const input = e.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     if (files.length === 0) return;
@@ -69,6 +89,7 @@
   }
 
   async function subirVideos(e: Event) {
+    if (subiendo || cargandoEdicion || guardando) return;
     const input = e.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     if (files.length === 0) return;
@@ -93,8 +114,11 @@
   }
 
   async function guardar() {
+    if (guardando) return;
     error = '';
+    if (cargandoEdicion) { error = 'Espera a que termine de cargar el recuerdo.'; return; }
     if (!titulo.trim()) { error = 'El título es obligatorio'; return; }
+    if (!fechaInput || Number.isNaN(new Date(`${fechaInput}T12:00:00`).getTime())) { error = 'La fecha del recuerdo no es válida.'; return; }
     if (subiendo) { error = 'Espera a que terminen las subidas'; return; }
 
     guardando = true;
@@ -135,6 +159,14 @@
   </header>
 
   <div class="px-5 py-6 pb-10 space-y-4">
+    {#if cargandoEdicion}
+      <div class="glass rounded-2xl border border-dorado/20 px-4 py-3 flex items-center gap-3"><div class="w-5 h-5 border-2 border-dorado border-t-transparent rounded-full animate-spin"></div><p class="text-xs text-white/70">Cargando los datos del recuerdo…</p></div>
+    {:else if editando && falloCarga}
+      <div role="alert" class="glass rounded-2xl border border-red-500/30 p-4 flex items-center gap-3">
+        <p class="text-xs text-red-200 flex-1">{error}</p>
+        <button type="button" onclick={cargarRecuerdo} class="text-[11px] font-bold text-dorado">Reintentar</button>
+      </div>
+    {/if}
     <GlassInput bind:value={titulo} label="Título *" placeholder="Fiesta Patronal 2026" icon="image" />
 
     <div class="flex flex-col gap-1.5">
@@ -176,7 +208,7 @@
           Fotos ({fotos.length})
         </p>
         <label class="cursor-pointer">
-          <input type="file" accept="image/*" multiple onchange={subirFotos} class="hidden" disabled={subiendo} />
+          <input type="file" accept="image/*" multiple onchange={subirFotos} class="hidden" disabled={subiendo || cargandoEdicion || guardando} />
           <div class="glass-gold rounded-full px-3 py-1 border border-dorado/40 text-dorado text-[11px] font-bold">
             + Añadir
           </div>
@@ -189,6 +221,8 @@
               <img src={foto} alt="Foto {i + 1}" class="w-full h-full object-cover" />
               <button
                 type="button"
+                disabled={subiendo || guardando}
+                aria-label="Quitar foto"
                 onclick={() => (fotos = fotos.filter((_, j) => j !== i))}
                 class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 flex items-center justify-center text-white"
               >
@@ -223,6 +257,8 @@
               <p class="text-xs text-white/80 flex-1">Video {i + 1}</p>
               <button
                 type="button"
+                disabled={subiendo || guardando}
+                aria-label="Quitar video"
                 onclick={() => (videos = videos.filter((_, j) => j !== i))}
                 class="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center text-red-300"
               >
@@ -244,14 +280,14 @@
       </div>
     {/if}
 
-    {#if error}
+    {#if error && !falloCarga}
       <div class="glass rounded-2xl p-3 border border-red-500/40 flex items-center gap-2">
         <Icon name="alert-circle" size={16} class="text-red-400 shrink-0" />
         <p class="text-xs text-red-300">{error}</p>
       </div>
     {/if}
 
-    <GlassButton variant="primary" fullWidth icon="check" loading={guardando} onTap={guardar}>
+    <GlassButton variant="primary" fullWidth icon="check" loading={guardando || cargandoEdicion} onTap={guardar}>
       {editando ? 'Guardar cambios' : 'Crear recuerdo'}
     </GlassButton>
   </div>
