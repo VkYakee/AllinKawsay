@@ -134,3 +134,10 @@ Esto no completa todavía la paridad del antiguo modelo: `setlist` y el flujo de
 6. Validar compilación Android Tauri e integraciones después de cada bloque significativo.
 
 **Estado:** auditoría inicial; no se elimina todavía `lib/` ni el manifiesto Flutter porque siguen siendo material de comparación para completar la migración sin perder compatibilidad.
+
+
+## Correcciones de fiabilidad — continuación
+
+- El contador de temporales ahora propaga fallos de lectura; la pantalla de caché muestra error y permite reintentar en vez de presentar falsamente cero archivos.
+- La subida Cloudinary tiene timeout de 120 segundos y mensajes diferenciados para red, cancelación, respuesta inválida y demora. No cambia el preset ni expone secretos.
+- La eliminación de categorías está protegida por transacción y bloquea el borrado si existe una canción con ese `categoriaId`; el administrador debe reasignarla primero.
