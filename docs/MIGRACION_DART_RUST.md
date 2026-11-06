@@ -102,6 +102,14 @@ En la revisión del 6 de noviembre de 2026 se amplió el mapper Svelte de cancio
 
 Esto no completa todavía la paridad del antiguo modelo: `setlist` y el flujo de edición de audio siguen fuera del alcance acordado para Ensayo y no deben reintroducirse. Los campos originales no se borran al editar una canción desde el formulario nuevo.
 
+## Integraciones y residuos Android
+
+- **Firebase:** la app 3.0 usa Firebase JS SDK en `src/lib/config/firebase.ts` y `src/lib/services/*`; `firebase/google-services.json` y los servicios Dart no forman parte de ese cliente. La clave `apiKey` del SDK web identifica el proyecto, no sustituye las reglas de seguridad de Firestore.
+- **Cloudinary:** la app 3.0 ya usa subida directa con preset unsigned desde `src/lib/services/cloudinary.ts`. El servicio Dart no debe seguir ampliándose. Mantener límites y permisos en la configuración de Cloudinary; no introducir secretos de API en el cliente.
+- **OneSignal:** el cliente activo carga el SDK web en `src/App.svelte`. El servicio Dart antiguo también enviaba REST desde el dispositivo leyendo `restApiKey` de Firestore; no migrar ese envío al cliente nuevo ni exponer esa clave. Para notificaciones administrativas se necesita una función de servidor segura. La compatibilidad de push nativo en Android/Tauri queda pendiente de validación en dispositivo.
+- **Android:** `validate-android.yml` compila mediante `tauri android init/build`. El workflow todavía copia `android_config/icono.png` para generar los iconos Tauri; por ello no se puede eliminar `android_config/` completo. Los Gradle, manifiestos y `MainActivity.kt` de esa carpeta son candidatos a limpieza individual tras confirmar que ningún script los consume.
+- **Dart:** `pubspec.yaml` y `lib/` no participan en el workflow Android activo, pero continúan como referencia de modelos y formatos. No se eliminan hasta cerrar la comparación funcional y de datos.
+
 ## Secuencia de limpieza
 
 1. Completar paridad funcional de módulos y servicios.
