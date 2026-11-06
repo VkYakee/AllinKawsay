@@ -22,6 +22,7 @@ class Player {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private pollInFlight = false;
   private syncProject: SyncProject | null = null;
+  private scheduledGeneration = -1;
 
   get isActive() {
     return this.current !== null;
@@ -100,6 +101,7 @@ class Player {
     if (issues.length) throw new Error('Proyecto de sincronización inválido: ' + issues[0].message);
     const compiled = compileScheduledSamples(project, 0, Math.max(0, Math.round(this.duracionMs * 1000)));
     await reproductorService.programarNotas(this.generation, compiled.map(event => ({ at_ms: event.atMs, sample_id: event.sampleId, event_id: event.eventId })));
+    this.scheduledGeneration = this.generation;
     return compiled.length;
   }
 
@@ -111,6 +113,8 @@ class Player {
   async stop() {
     await reproductorService.detener();
     this.current = null;
+    this.syncProject = null;
+    this.scheduledGeneration = -1;
     this.playing = false;
     this.loading = false;
     this.posicionMs = 0;
@@ -132,6 +136,9 @@ class Player {
         this.duracionMs = estado.duracion_ms;
         this.velocidad = estado.velocidad;
         this.generation = estado.generation;
+        if (this.playing && this.syncProject && this.duracionMs > 0 && this.scheduledGeneration !== this.generation) {
+          void this.reprogramSync();
+        }
 
         // Si el backend dice que terminó y no hay progreso, limpia el estado
         if (
