@@ -98,9 +98,10 @@ export function compilarLineaTiempo(
           const duracionMs = Number.isFinite(ajuste?.duracionMs) && ajuste!.duracionMs! > 0
             ? ajuste!.duracionMs!
             : duracionBase;
-          const inicioMs = Number.isFinite(ajuste?.inicioMs) && ajuste!.inicioMs! >= 0
+          const inicioManual = repeticion === 0 && Number.isFinite(ajuste?.inicioMs) && ajuste!.inicioMs! >= 0
             ? ajuste!.inicioMs!
-            : cursorMs;
+            : undefined;
+          const inicioMs = inicioManual ?? cursorMs;
 
           eventos.push({
             id: `${estrofaIndex}:${columnaIndex}:${celda.fila}:${repeticion}`,
@@ -149,6 +150,11 @@ export function buscarEventoActivo(
   }
 
   if (candidato < 0) return null;
-  const evento = eventos[candidato];
-  return tiempoMs < evento.finMs ? evento : null;
+  // Puede haber solapamientos intencionales por tiempos manuales. Si el evento
+  // más reciente ya terminó, buscamos hacia atrás otro intervalo todavía activo.
+  for (let i = candidato; i >= 0; i--) {
+    const evento = eventos[i];
+    if (evento.finMs > tiempoMs) return evento;
+  }
+  return null;
 }
