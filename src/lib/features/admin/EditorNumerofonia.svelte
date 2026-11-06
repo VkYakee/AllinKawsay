@@ -8,7 +8,7 @@
   }
 
   let { estrofas = $bindable([]), onCambio }: Props = $props();
-  let importacionAbierta = $state(false);
+  let importacionEstrofa = $state<number | null>(null);
   let fila7Texto = $state('');
   let fila6Texto = $state('');
 
@@ -63,14 +63,14 @@
     publicar(estrofas.map((e, i) => i === idx ? { ...e, columnas } : e));
     fila7Texto = '';
     fila6Texto = '';
-    importacionAbierta = false;
+    importacionEstrofa = null;
   }
 
   function abrirImportacion(idx: number) {
     const estrofa = estrofas[idx];
     fila7Texto = estrofa.columnas.map(c => c.nota7).join(' ');
     fila6Texto = estrofa.columnas.map(c => c.nota6).join(' ');
-    importacionAbierta = true;
+    importacionEstrofa = idx;
   }
 </script>
 
@@ -122,7 +122,7 @@
         <button type="button" onclick={() => abrirImportacion(idx)} class="flex-1 rounded-xl bg-white/5 border border-white/10 py-3 text-xs font-bold text-white/70">Pegar secuencia</button>
       </div>
 
-      {#if importacionAbierta}
+      {#if importacionEstrofa === idx}
         <div class="rounded-xl bg-black/20 border border-white/10 p-3 space-y-2">
           <p class="text-xs font-bold text-white">Entrada rápida</p>
           <p class="text-[10px] text-white/45">Separa cada columna con espacios. Las posiciones vacías se conservan.</p>
@@ -133,7 +133,7 @@
             <textarea bind:value={fila6Texto} rows="2" placeholder="5 6 7 6 5" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm font-mono text-white"></textarea>
           </label>
           <div class="flex gap-2">
-            <button type="button" onclick={() => importacionAbierta = false} class="flex-1 rounded-lg py-2 text-xs text-white/50">Cancelar</button>
+            <button type="button" onclick={() => importacionEstrofa = null} class="flex-1 rounded-lg py-2 text-xs text-white/50">Cancelar</button>
             <button type="button" onclick={() => importarFilas(idx)} class="flex-1 rounded-lg bg-dorado/15 py-2 text-xs font-bold text-dorado">Aplicar columnas</button>
           </div>
         </div>
