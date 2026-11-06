@@ -48,7 +48,8 @@ function validarTipo(file: File, familia: 'image' | 'audio' | 'video'): void {
   if (file.size <= 0) throw new Error('El archivo está vacío.');
   // Algunos selectores Android no informan MIME; en ese caso Cloudinary
   // conserva la validación final y no bloqueamos una selección legítima.
-  if (file.type && !file.type.toLowerCase().startsWith(`${familia}/`)) {
+  const mime = file.type.toLowerCase();
+  if (mime && mime !== 'application/octet-stream' && !mime.startsWith(`${familia}/`)) {
     throw new Error(`Selecciona un archivo de tipo ${familia === 'image' ? 'imagen' : familia === 'audio' ? 'audio' : 'video'}.`);
   }
 }
