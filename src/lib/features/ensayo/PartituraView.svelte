@@ -33,7 +33,7 @@
             <td
               class="h-10 sm:h-11 px-0.5 text-center text-[clamp(0.55rem,2.5vw,1rem)] font-black font-mono border-l border-white/10 tabular-nums transition-colors duration-150 {activa ? 'text-dorado bg-dorado/20 shadow-[inset_0_0_12px_rgba(245,208,97,0.35)]' : 'text-white/85'}"
             >
-              <span class="block truncate">{col.nota7 || '·'}</span>
+              <span class="block break-all leading-tight">{col.nota7 || '·'}</span>
             </td>
           {/each}
         </tr>
@@ -46,7 +46,7 @@
             <td
               class="h-10 sm:h-11 px-0.5 text-center text-[clamp(0.55rem,2.5vw,1rem)] font-black font-mono border-l border-t border-white/10 tabular-nums transition-colors duration-150 {activa ? 'text-dorado bg-dorado/20 shadow-[inset_0_0_12px_rgba(245,208,97,0.35)]' : 'text-white/85'}"
             >
-              <span class="block truncate">{col.nota6 || '·'}</span>
+              <span class="block break-all leading-tight">{col.nota6 || '·'}</span>
             </td>
           {/each}
         </tr>
