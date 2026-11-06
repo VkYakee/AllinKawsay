@@ -167,13 +167,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                         };
 
                         let now = Instant::now();
-                        while let Some((started, duration)) = voces_activas.front() {
-                            if now.duration_since(*started) >= *duration {
-                                voces_activas.pop_front();
-                            } else {
-                                break;
-                            }
-                        }
+                        prune_voices(&mut voces_activas, now);
 
                         // Límite explícito para que una ráfaga no acumule voces ilimitadas.
                         if voces_activas.len() >= MAX_ZAMPONA_VOICES {
@@ -390,7 +384,13 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                 state.posicion_ms = position.as_millis() as u64;
                 if sink.empty() && state.reproduciendo { state.reproduciendo = false; scheduled.clear(); }
             }
-            let (clock_ms, playing) = { let st = estado_thread.lock().unwrap(); (st.posicion_ms, st.reproduciendo) };
+            let now = Instant::now();
+            prune_voices(&mut voces_activas, now);
+            let (clock_ms, playing) = if let Some(sink) = &sink_cancion {
+                let position = sink.get_pos().as_millis() as u64;
+                let mut st = estado_thread.lock().unwrap(); st.posicion_ms = position;
+                (position, st.reproduciendo)
+            } else { (0, false) };
             if playing {
                 while scheduled.front().map(|event| event.at_ms <= clock_ms).unwrap_or(false) {
                     let event = scheduled.pop_front().unwrap();
@@ -407,7 +407,7 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
                                 *value *= env * ZAMPONA_GAIN;
                             }
                             zampona_mixer.add(rodio::buffer::SamplesBuffer::new(sample.channels, sample.sample_rate, pcm));
-                            voces_activas.push_back((Instant::now(), Duration::from_secs_f64(frames as f64 / sample.sample_rate as f64)));
+                            voces_activas.push_back((now, Duration::from_secs_f64(frames as f64 / sample.sample_rate as f64)));
                         }
                     } else { warn!("Muestra programada inexistente: {}", event.sample_id); }
                 }
@@ -416,6 +416,12 @@ pub fn spawn(resource_dir: PathBuf) -> AudioHandle {
     });
 
     AudioHandle { tx, estado }
+}
+
+fn prune_voices(voices: &mut VecDeque<(Instant, Duration)>, now: Instant) {
+    while let Some((started, duration)) = voices.front() {
+        if now.saturating_duration_since(*started) >= *duration { voices.pop_front(); } else { break; }
+    }
 }
 
 fn cargar_samples(resource_dir: &Path) -> HashMap<String, SampleData> {
