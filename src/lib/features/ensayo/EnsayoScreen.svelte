@@ -12,16 +12,26 @@
   import { canciones } from '../../stores/canciones.svelte';
   import { router } from '../../stores/router.svelte';
   import type { NotaZampona } from '../../services/zampona';
+  import { getOrCreateSyncProject, saveSyncProject } from '../../services/ensayo-sync-storage';
+  import type { SyncProject } from '../../domain/ensayo/sync-project';
 
   interface Props {
     id: string;
   }
 
   let { id }: Props = $props();
+  let syncProject = $state<SyncProject | null>(null);
+  let syncStorageError = $state('');
 
   onMount(() => {
     zampona.cargar();
     canciones.cargar();
+  });
+
+  $effect(() => {
+    if (!canciones.buscar(id) || syncProject?.songId === id) return;
+    try { const project = getOrCreateSyncProject(id); saveSyncProject(project); syncProject = project; syncStorageError = ''; }
+    catch (error) { syncStorageError = error instanceof Error ? error.message : 'No se pudo guardar'; }
   });
 
   // Cuando las canciones estén listas, prepara el ensayo
@@ -139,6 +149,10 @@
         </p>
       </div>
     {:else}
+      <div class="rounded-xl border border-dorado/15 bg-black/20 px-3 py-2 flex items-center justify-between gap-2">
+        <span class="text-[10px] text-white/55">Sincronización independiente</span>
+        <span class="text-[10px] font-semibold text-dorado/80">{syncStorageError || (syncProject ? "Proyecto local listo · v1" : "Preparando…")}</span>
+      </div>
       <div class="pt-1">
         {#if estrofaActual}
           <PartituraView estrofa={estrofaActual} {celdaActiva} numero={estrofaNum} />
