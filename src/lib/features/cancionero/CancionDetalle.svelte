@@ -216,18 +216,6 @@
             {#each cancion.estrofas as estrofa, idx}
               <PartituraView {estrofa} numero={idx + 1} />
             {/each}
-                      </tr>
-                      <tr>
-                        <td class="px-2 h-10 text-[11px] font-black text-dorado bg-granate rounded-bl-lg w-8 text-center border-t border-white/10">6</td>
-                        {#each estrofa.columnas as col}
-                          <td class="px-2 h-10 text-center text-[15px] font-black text-white font-mono border-l border-t border-white/10 min-w-[34px] tabular-nums">{col.nota6 || '·'}</td>
-                        {/each}
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </GlassCard>
-            {/each}
           </div>
         {/if}
 
