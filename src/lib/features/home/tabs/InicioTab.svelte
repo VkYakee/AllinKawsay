@@ -100,7 +100,7 @@
       </button>
     {:else}
       <div class="glass rounded-3xl p-5 border border-white/10 flex items-center gap-4">
-        <div class="w-11 h-11 rounded-2xl bg-dorado/10 flex items-center justify-center shrink-0"><Icon name="calendar-days" size={20} class="text-dorado/70" /></div>
+        <div class="w-11 h-11 rounded-2xl bg-dorado/10 flex items-center justify-center shrink-0"><Icon name="calendar" size={20} class="text-dorado/70" /></div>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-bold text-white">Todavía no hay actividades próximas</p>
           <p class="text-xs text-white/45 mt-1">Cuando se publique un evento, aparecerá aquí.</p>
