@@ -133,6 +133,15 @@ function mapEstrofa(raw: unknown): Estrofa {
   return { columnas: [], bis: d.bis === true };
 }
 
+function separarLetra(texto: string, originales: Letra[] = []): Letra[] {
+  return texto.trim()
+    ? texto.trim().split(/\n\s*\n+/).map((parte, index) => ({
+        titulo: originales[index]?.titulo ?? '',
+        texto: parte.trim()
+      })).filter((parte) => parte.texto.length > 0)
+    : [];
+}
+
 function mapCancion(id: string, data: FirestoreData): Cancion {
   const rawEstrofas = Array.isArray(data.estrofas)
     ? data.estrofas
@@ -218,7 +227,7 @@ export const cancionesService = {
       audioUrl: input.audio_url,
       videoUrl: input.video_url.trim(),
       letra: input.letra.trim(),
-      letras: input.letra.trim() ? [{ titulo: '', texto: input.letra.trim() }] : [],
+      letras: separarLetra(input.letra),
       tags: input.tags,
       categoriaId: input.categoriaId,
       estrofas: input.estrofas,
@@ -245,7 +254,7 @@ export const cancionesService = {
         const originalTexto = original?.map((part) => part.texto).join('\n\n').trim();
         return original && originalTexto === input.letra.trim()
           ? original
-          : input.letra.trim() ? [{ titulo: '', texto: input.letra.trim() }] : [];
+          : separarLetra(input.letra, original);
       })(),
       tags: input.tags,
       categoriaId: input.categoriaId,
