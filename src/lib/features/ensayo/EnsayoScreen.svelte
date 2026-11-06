@@ -54,20 +54,32 @@
 
   const cancion = $derived(canciones.buscar(id));
 
+  const celdaSyncActual = $derived.by(() => {
+    const events = syncProject?.tracks.find(t => t.kind === 'notation')?.events ?? [];
+    const nowUs = Math.round(player.posicionMs * 1000);
+    return events.filter(ev => ev.atUs <= nowUs).sort((a, b) => b.atUs - a.atUs)[0] ?? null;
+  });
+
   const estrofaActual = $derived.by(() => {
     if (!cancion) return null;
-    const ev = ensayo.eventoActual;
-    if (!ev) return cancion.estrofas[0] ?? null;
-    return cancion.estrofas[ev.estrofa_idx] ?? null;
+    const index = celdaSyncActual?.estrofaIndex ?? ensayo.eventoActual?.estrofa_idx ?? 0;
+    return cancion.estrofas[index] ?? cancion.estrofas[0] ?? null;
   });
 
   const celdaActiva = $derived.by(() => {
+    if (celdaSyncActual) return { columna: celdaSyncActual.columnaIndex ?? 0, esFila7: celdaSyncActual.fila === 7 };
     const ev = ensayo.eventoActual;
     if (!ev) return null;
     return { columna: ev.columna_idx, esFila7: ev.es_fila7 };
   });
 
-  const estrofaNum = $derived((ensayo.eventoActual?.estrofa_idx ?? 0) + 1);
+  const estrofaNum = $derived((celdaSyncActual?.estrofaIndex ?? ensayo.eventoActual?.estrofa_idx ?? 0) + 1);
+
+  const letraActual = $derived.by(() => {
+    const events = syncProject?.tracks.find(t => t.kind === 'lyrics')?.events ?? [];
+    const nowUs = Math.round(player.posicionMs * 1000);
+    return events.filter(ev => ev.atUs <= nowUs && ev.atUs + (ev.durationUs ?? 2500000) > nowUs).sort((a, b) => b.atUs - a.atUs)[0]?.text ?? '';
+  });
 
   const progreso = $derived(
     player.duracionMs > 0
@@ -261,6 +273,9 @@
         <div class="flex gap-2"><input class="min-w-0 flex-1 rounded-lg bg-black/40 px-3 py-2 text-xs text-white placeholder:text-white/35" placeholder="Escribe la línea que se canta…" bind:value={textoLetra} /><button class="rounded-lg bg-dorado/15 px-3 py-2 text-xs text-dorado" onclick={agregarLineaLetra} disabled={!textoLetra.trim() || !syncProject}>Añadir</button></div>
         <div class="max-h-28 overflow-y-auto space-y-1">{#each (syncProject?.tracks.find(t => t.kind === 'lyrics')?.events ?? []) as ev}<div class="flex items-center justify-between gap-2 text-[10px] text-white/60"><span class="min-w-0 truncate">{ev.text} · {(ev.atUs / 1000000).toFixed(3)} s</span><div class="flex gap-1 shrink-0"><button class="px-1 rounded bg-white/10" onclick={() => moverLetra(ev.id, -100000)} aria-label="Mover letra antes">−</button><button class="px-1 rounded bg-white/10" onclick={() => moverLetra(ev.id, 100000)} aria-label="Mover letra después">+</button><button class="px-1 rounded bg-red-500/15 text-red-300" onclick={() => eliminarLetra(ev.id)} aria-label="Eliminar línea">×</button></div></div>{/each}</div>
       </section>
+      {#if letraActual}
+        <div class="rounded-2xl border border-dorado/20 bg-black/30 px-4 py-3 text-center"><p class="text-[10px] uppercase tracking-[0.2em] text-dorado/65 mb-1">Letra sincronizada</p><p class="text-base font-bold text-white">{letraActual}</p></div>
+      {/if}
       <div class="pt-1">
         {#if estrofaActual}
           <PartituraView estrofa={estrofaActual} {celdaActiva} numero={estrofaNum} />
