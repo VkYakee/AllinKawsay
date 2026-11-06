@@ -13,14 +13,25 @@
   let guardando = $state(false);
   let error = $state('');
 
-  onMount(async () => {
-    const h = await historiaService.obtener();
-    contenido = h.contenido;
-    loading = false;
+  async function cargar() {
+    loading = true;
+    error = '';
+    try {
+      const h = await historiaService.obtener();
+      contenido = h.contenido;
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudo cargar la historia. Comprueba tu conexión.';
+    } finally {
+      loading = false;
+    }
+  }
+
+  onMount(() => {
+    void cargar();
   });
 
   async function guardar() {
-    if (guardando) return;
+    if (guardando || loading || error) return;
     guardando = true;
     error = '';
     try {
@@ -48,13 +59,27 @@
   <div class="px-5 py-6 pb-32 space-y-4">
     {#if loading}
       <div class="glass rounded-3xl h-64 animate-pulse"></div>
+    {:else if error && !contenido}
+      <div class="glass rounded-2xl border border-red-500/30 p-5 text-center">
+        <Icon name="alert-circle" size={28} class="text-red-400 mx-auto mb-3" />
+        <p class="text-sm font-bold text-white">No se pudo cargar el contenido</p>
+        <p class="text-xs text-white/55 mt-2">{error}</p>
+        <button class="mt-5 rounded-xl bg-dorado/15 border border-dorado/30 px-5 py-3 text-sm font-bold text-dorado" onclick={cargar}>
+          Reintentar
+        </button>
+      </div>
     {:else}
-      <div class="glass rounded-2xl border border-white/10">
+      <div class="glass rounded-2xl border border-white/10 focus-within:border-dorado/40 transition-colors">
+        <div class="flex items-center justify-between px-4 pt-3 text-[10px] text-white/40">
+          <span>HISTORIA DEL CONJUNTO</span>
+          <span>{contenido.length.toLocaleString('es-PE')} caracteres</span>
+        </div>
         <textarea
           bind:value={contenido}
           rows="20"
+          aria-label="Contenido de la historia del conjunto"
           placeholder="Escribe aquí la historia del grupo: orígenes, logros, anécdotas..."
-          class="w-full bg-transparent outline-none text-[15px] text-white placeholder:text-white/30 font-medium p-4 resize-none"
+          class="w-full bg-transparent outline-none text-[15px] leading-relaxed text-white placeholder:text-white/30 font-medium p-4 resize-y min-h-[280px]"
         ></textarea>
       </div>
 
