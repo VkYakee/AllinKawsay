@@ -5,7 +5,6 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
-import '../../../core/components/app_button.dart';
 import '../../../core/widgets/animated_list_item.dart';
 
 import '../../../models/cancion.dart';
@@ -13,7 +12,7 @@ import '../../../models/cancion.dart';
 import '../../cancion_detalle/screens/cancion_detalle_screen.dart';
 import '../controllers/cancionero_controller.dart';
 import '../widgets/tarjeta_cancion_elite.dart';
-import 'agregar_cancion_screen.dart';
+import 'crear_cancion_rapida_screen.dart';
 
 class CancioneroScreen extends StatefulWidget {
   const CancioneroScreen({super.key});
@@ -100,7 +99,7 @@ class _CancioneroScreenState extends State<CancioneroScreen> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const AgregarCancionScreen(),
+                    builder: (_) => const CrearCancionRapidaScreen(),
                   ),
                 );
               },

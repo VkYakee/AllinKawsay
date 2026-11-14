@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/components/allin_loading_siku.dart';
 import '../../../core/widgets/zampona_canvas.dart';
 import '../../../data/zampona_catalogo.dart';
 import '../../../design/design.dart';
@@ -122,7 +123,7 @@ class _GrabarPartituraScreenState extends State<GrabarPartituraScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.dorado),
+          child: AllinLoadingSiku(mensaje: 'Afinando zampoña...'),
         ),
       );
     }

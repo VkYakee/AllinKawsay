@@ -8,7 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
-import '../../../core/components/app_button.dart';
+import '../../../core/components/allin_button.dart';
 import '../../../core/components/app_card.dart';
 
 import '../../../models/bloque_audio.dart';
@@ -306,17 +306,19 @@ class _AgregarCancionScreenState extends State<AgregarCancionScreen> {
               videoCtrl: _videoCtrl,
             ),
             const SizedBox(height: Sp.md),
-            AppButton(
+            AllinButton(
               label: 'MARCAR SETLIST',
-              icon: Icons.queue_music,
-              variant: AppButtonVariant.secondary,
-              fullWidth: true,
+              icono: Icons.queue_music_rounded,
+              variant: AllinButtonVariant.glass,
+              expand: true,
               onPressed: _audioUrl != null ? _abrirSetlist : null,
             ),
-            const SizedBox(height: Sp.xxl),
-            AppButton(
+            const SizedBox(height: Sp.lg),
+            AllinButton(
               label: _guardando ? 'GUARDANDO...' : 'GUARDAR CANCIÓN',
-              fullWidth: true,
+              variant: AllinButtonVariant.gold,
+              expand: true,
+              icono: Icons.save_rounded,
               loading: _guardando,
               onPressed: _guardar,
             ),

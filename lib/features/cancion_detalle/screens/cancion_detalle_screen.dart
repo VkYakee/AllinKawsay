@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/components/allin_dialog.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
@@ -112,41 +113,15 @@ class _CancionDetalleScreenState extends State<CancionDetalleScreen>
   }
 
   Future<void> _eliminar() async {
-    final ok = await showDialog<bool>(
+    final ok = await AllinDialog.confirm(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: Rad.rLg),
-        backgroundColor: AppColors.surface(context),
-        title: Text(
-          'Eliminar canción',
-          style: AppText.h3.copyWith(color: AppColors.dorado),
-        ),
-        content: Text(
+      titulo: 'Eliminar canción',
+      mensaje:
           '¿Eliminar "${widget.cancion.titulo}"? Esta acción no se puede deshacer.',
-          style: AppText.body,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancelar',
-              style: AppText.subtitle.copyWith(
-                color: AppColors.onSurfaceVariant(context),
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Eliminar',
-              style: AppText.subtitle.copyWith(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      isDestructive: true,
+      icono: Icons.delete_outline_rounded,
     );
     if (ok != true) return;
     await CancionService().eliminar(widget.cancion.id);

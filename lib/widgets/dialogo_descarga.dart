@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../design/design.dart';
+import '../core/components/allin_download_bar.dart';
 import '../services/descarga_progreso_service.dart';
 import '../theme/colors.dart';
 
@@ -109,13 +110,30 @@ class _BarraFlotanteDescargaState extends State<_BarraFlotanteDescarga> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_error ? 'Error al descargar' : (_terminado ? '¡Completado!' : widget.titulo), style: AppType.subtitle.copyWith(color: _error ? Colors.red : AppColors.granate)),
-                      Text(widget.nombre, style: AppType.captionXs.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(
+                        _error
+                            ? 'Error al descargar'
+                            : (_terminado ? '¡Completado!' : widget.titulo),
+                        style: AppType.subtitle.copyWith(
+                          color: _error ? Colors.red : AppColors.granate,
+                        ),
+                      ),
+                      Text(
+                        widget.nombre,
+                        style: AppType.captionXs.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.5),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       if (!_error && !_terminado) ...[
                         const SizedBox(height: Sp.sm),
-                        ClipRRect(
-                          borderRadius: Rad.rPill,
-                          child: LinearProgressIndicator(value: _progreso > 0 ? _progreso : null, minHeight: 4, backgroundColor: AppColors.granate.withOpacity(0.1), valueColor: const AlwaysStoppedAnimation(AppColors.granate)),
+                        AllinDownloadBar(
+                          progress: _progreso,
+                          isIndeterminate: _progreso <= 0,
                         ),
                       ],
                     ],

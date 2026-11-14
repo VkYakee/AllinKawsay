@@ -7,8 +7,8 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_button.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/components/app_button.dart';
 
 class SeleccionarUbicacionScreen extends StatefulWidget {
   final double? latInicial;
@@ -272,10 +272,11 @@ class _SeleccionarUbicacionScreenState
                         ],
                       ),
                       const SizedBox(height: Sp.lg),
-                      AppButton(
+                      AllinButton(
                         label: 'CONFIRMAR UBICACIÓN',
-                        icon: Icons.check_circle_rounded,
-                        fullWidth: true,
+                        icono: Icons.check_circle_rounded,
+                        variant: AllinButtonVariant.gold,
+                        expand: true,
                         onPressed: _confirmar,
                       ),
                     ],

@@ -7,7 +7,7 @@ import 'package:flutter/rendering.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
-import '../../../core/components/app_button.dart';
+import '../../../core/components/allin_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../models/cancion.dart';
 import '../../../services/compartir_service.dart';
@@ -134,12 +134,13 @@ class _CompartirImagenScreenState extends State<CompartirImagenScreen> {
             ),
             child: SafeArea(
               top: false,
-              child: AppButton(
+              child: AllinButton(
                 label: _compartiendo
                     ? 'GENERANDO...'
                     : 'COMPARTIR IMAGEN',
-                icon: Icons.share,
-                fullWidth: true,
+                icono: Icons.share_rounded,
+                variant: AllinButtonVariant.gold,
+                expand: true,
                 loading: _compartiendo,
                 onPressed: _compartir,
               ),

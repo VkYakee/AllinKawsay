@@ -1,6 +1,7 @@
 // lib/features/admin/screens/gestion_actualizaciones_screen.dart
 import 'package:flutter/material.dart';
 
+import '../../../core/components/allin_dialog.dart';
 import '../../../design/design.dart';
 import '../../../models/info_version.dart';
 import '../../../services/github_service.dart';
@@ -64,24 +65,14 @@ class _GestionActualizacionesScreenState
   }
 
   Future<void> _promoverRelease(ReleaseInfo r) async {
-    final ok = await showDialog<bool>(
+    final ok = await AllinDialog.confirm(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Promover a Release'),
-        content: Text(
+      titulo: 'Promover a Release',
+      mensaje:
           '¿Convertir ${r.tag} en un release estable? Los administradores podrán aprobarlo.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Promover'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Promover',
+      cancelLabel: 'Cancelar',
+      icono: Icons.rocket_launch_rounded,
     );
     if (ok == true) {
       final success = await GithubService.promoverAEstable(r.id);

@@ -26,6 +26,12 @@ class AppMotion {
   /// Overshoot más agresivo. Para héroes, FABs, y transiciones de entrada.
   static const Curve bouncy = Cubic(0.34, 1.56, 0.64, 1.0);
 
+  /// Resorte rápido y tenso para micro-interacciones (iconos, tabs).
+  static const Curve springSnappy = Cubic(0.2, 1.2, 0.3, 1.0);
+
+  /// Resorte suave para modales y navegación de cristal.
+  static const Curve springGentle = Cubic(0.16, 1.0, 0.3, 1.0);
+
   /// Ease out clásico. Compatible con el ThemeData existente.
   static const Curve easeOut = Curves.easeOutCubic;
 
@@ -38,6 +44,29 @@ class AppMotion {
 
   /// Curva de entrada para filas de lista.
   static const Curve entry = Cubic(0.2, 0.9, 0.3, 1.0);
+
+  // ─── Simulaciones de Resorte Físico (SpringSimulations) ──────
+
+  /// Resorte elástico para rebote de botones y tarjetas.
+  static const SpringDescription springBouncy = SpringDescription(
+    mass: 1.0,
+    stiffness: 180.0,
+    damping: 12.0,
+  );
+
+  /// Resorte fluido para cápsulas flotantes y navegación de cristal.
+  static const SpringDescription springSmooth = SpringDescription(
+    mass: 1.0,
+    stiffness: 140.0,
+    damping: 20.0,
+  );
+
+  /// Resorte para modales tridimensionales con peso.
+  static const SpringDescription springModal = SpringDescription(
+    mass: 1.2,
+    stiffness: 200.0,
+    damping: 22.0,
+  );
 
   // ─── Alias legacy (no romper imports existentes) ────────────
   static const Curve bounce = Curves.elasticOut;

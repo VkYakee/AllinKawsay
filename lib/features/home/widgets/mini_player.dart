@@ -2,6 +2,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/design/colors.dart';
+import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/widgets/audio_visualizer.dart';
@@ -20,22 +21,34 @@ class MiniPlayer extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.fromLTRB(Sp.lg, 0, Sp.lg, Sp.sm),
           child: ClipRRect(
-            borderRadius: Rad.rLg,
+            borderRadius: Rad.rPill,
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.granateOscuro.withOpacity(0.92),
-                  borderRadius: Rad.rLg,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.fondoOLED.withOpacity(0.92),
+                      AppColors.granateSagrado.withOpacity(0.85),
+                    ],
+                  ),
+                  borderRadius: Rad.rPill,
                   border: Border.all(
-                    color: AppColors.dorado.withOpacity(0.3),
-                    width: 1,
+                    color: AppColors.oroSolar.withOpacity(0.4),
+                    width: 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.granate.withOpacity(0.3),
+                      color: Colors.black.withOpacity(0.5),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
+                    ),
+                    BoxShadow(
+                      color: AppColors.oroSolar.withOpacity(0.2),
+                      blurRadius: 16,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),
@@ -43,33 +56,35 @@ class MiniPlayer extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
-                      height: 60,
+                      height: 56,
                       child: Row(
                         children: [
-                          const SizedBox(width: Sp.md),
+                          const SizedBox(width: Sp.sm),
+                          // Icono ecualizador temático
                           Container(
-                            width: 40,
-                            height: 40,
+                            width: 38,
+                            height: 38,
                             decoration: BoxDecoration(
                               gradient: AppColors.gradienteDorado,
-                              borderRadius: Rad.rSm,
+                              shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.dorado.withOpacity(0.4),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                                  color: AppColors.oroSolar.withOpacity(0.45),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
                             child: Center(
                               child: MiniEqualizer(
                                 isPlaying: estado.playing,
-                                color: AppColors.granate,
-                                size: 18,
+                                color: AppColors.granateOscuro,
+                                size: 16,
                               ),
                             ),
                           ),
                           const SizedBox(width: Sp.md),
+                          // Título y estado
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,7 +93,9 @@ class MiniPlayer extends StatelessWidget {
                                 Text(
                                   estado.cancionTitulo ?? 'Reproduciendo',
                                   style: AppText.subtitle.copyWith(
-                                    color: AppColors.dorado,
+                                    color: AppColors.oroReflejo,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -86,51 +103,75 @@ class MiniPlayer extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   estado.cargando
-                                      ? 'Cargando...'
-                                      : 'Allin Kawsay',
+                                      ? 'Sincronizando audio...'
+                                      : 'C.I.A.C. Allin Kawsay',
                                   style: AppText.captionXs.copyWith(
-                                    color: AppColors.dorado.withOpacity(0.6),
+                                    color: AppColors.oroSolar.withOpacity(0.7),
+                                    fontSize: 10.5,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: Icon(
-                              estado.playing
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded,
-                              color: AppColors.dorado,
-                              size: 30,
-                            ),
-                            onPressed: () {
+                          // Botón Play / Pause con micro-animación
+                          GestureDetector(
+                            onTap: () {
+                              AppMotion.hapticLight();
                               if (estado.playing) {
                                 PlayerService().player.pause();
                               } else {
                                 PlayerService().player.play();
                               }
                             },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.oroSolar.withOpacity(0.35),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Icon(
+                                estado.playing
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: AppColors.oroSolar,
+                                size: 22,
+                              ),
+                            ),
                           ),
+                          const SizedBox(width: 4),
+                          // Botón cerrar
                           IconButton(
                             icon: const Icon(
                               Icons.close,
                               color: Colors.white54,
-                              size: 20,
+                              size: 18,
                             ),
-                            onPressed: () => PlayerService().detener(),
+                            onPressed: () {
+                              AppMotion.hapticLight();
+                              PlayerService().detener();
+                            },
                           ),
-                          const SizedBox(width: Sp.sm),
+                          const SizedBox(width: Sp.xs),
                         ],
                       ),
                     ),
-                    AudioVisualizer(
-                      isPlaying: estado.playing,
-                      color: AppColors.dorado.withOpacity(0.45),
-                      height: 8,
-                      barCount: 44,
-                      barWidth: 2,
-                      gap: 2,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
+                      child: AudioVisualizer(
+                        isPlaying: estado.playing,
+                        color: AppColors.oroSolar.withOpacity(0.4),
+                        height: 5,
+                        barCount: 36,
+                        barWidth: 2,
+                        gap: 2,
+                      ),
                     ),
+                    const SizedBox(height: 4),
                   ],
                 ),
               ),

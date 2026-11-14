@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_button.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/components/app_button.dart';
 
 class TutorialScreen extends StatefulWidget {
   const TutorialScreen({super.key});
@@ -128,9 +128,15 @@ class _TutorialScreenState extends State<TutorialScreen> {
                         }),
                       ),
                       const SizedBox(height: Sp.xl),
-                      AppButton(
-                        label: _paginaActual == _paginas.length - 1 ? '¡EMPEZAR!' : 'SIGUIENTE',
-                        fullWidth: true,
+                      AllinButton(
+                        label: _paginaActual == _paginas.length - 1
+                            ? '¡EMPEZAR!'
+                            : 'SIGUIENTE',
+                        variant: AllinButtonVariant.gold,
+                        expand: true,
+                        icono: _paginaActual == _paginas.length - 1
+                            ? Icons.celebration_rounded
+                            : Icons.arrow_forward_rounded,
                         onPressed: _siguiente,
                       ),
                     ],

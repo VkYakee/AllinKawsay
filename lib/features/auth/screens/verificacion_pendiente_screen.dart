@@ -1,8 +1,8 @@
 // lib/features/auth/screens/verificacion_pendiente_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../../core/components/allin_button.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/components/app_button.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
@@ -124,18 +124,25 @@ class _VerificacionPendienteScreenState extends State<VerificacionPendienteScree
                         _paso(2, 'Toca el enlace', 'Haz clic en "Verificar correo".'),
                         _paso(3, 'Vuelve aquí', 'Toca el botón de abajo para entrar.', ultimo: true),
                         const SizedBox(height: Sp.xl),
-                        AppButton(
+                        AllinButton(
                           label: _verificando ? 'VERIFICANDO...' : 'YA VERIFIQUÉ',
-                          fullWidth: true,
+                          variant: AllinButtonVariant.gold,
+                          expand: true,
                           loading: _verificando,
+                          icono: Icons.verified_user_rounded,
                           onPressed: _verificar,
                         ),
                         const SizedBox(height: Sp.sm),
-                        AppButton(
-                          label: _reenviando ? 'ENVIANDO...' : (_segundos > 0 ? 'REENVIAR EN ${_segundos}s' : 'REENVIAR EMAIL'),
-                          fullWidth: true,
-                          variant: AppButtonVariant.secondary,
+                        AllinButton(
+                          label: _reenviando
+                              ? 'ENVIANDO...'
+                              : (_segundos > 0
+                                  ? 'REENVIAR EN ${_segundos}s'
+                                  : 'REENVIAR EMAIL'),
+                          variant: AllinButtonVariant.glass,
+                          expand: true,
                           loading: _reenviando,
+                          icono: Icons.send_rounded,
                           onPressed: _segundos > 0 ? null : () => _enviarEmail(),
                         ),
                       ],

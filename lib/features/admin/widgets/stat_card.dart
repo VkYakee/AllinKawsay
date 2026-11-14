@@ -1,8 +1,10 @@
 // lib/features/admin/widgets/stat_card.dart
 import 'package:flutter/material.dart';
 
-import '../../../design/design.dart';
-import '../../../theme/colors.dart';
+import '../../../core/components/app_card.dart';
+import '../../../core/design/colors.dart';
+import '../../../core/design/tokens.dart';
+import '../../../core/design/typography.dart';
 
 class StatCard extends StatelessWidget {
   final IconData icon;
@@ -18,30 +20,40 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
     return AppCard(
-      padding: const EdgeInsets.all(Sp.lg),
+      glass: true,
+      padding: const EdgeInsets.symmetric(horizontal: Sp.md, vertical: Sp.lg),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(Sp.sm),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.granate.withOpacity(0.1),
+              gradient: const LinearGradient(
+                colors: [AppColors.granateProfundo, AppColors.granateOscuro],
+              ),
               shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.dorado.withOpacity(0.35),
+              ),
             ),
-            child: Icon(icon, color: AppColors.granate, size: 24),
+            child: Icon(icon, color: AppColors.dorado, size: 22),
           ),
           const SizedBox(height: Sp.sm),
           Text(
             value,
-            style: AppType.h2.copyWith(color: AppColors.granate),
+            style: AppText.h2.copyWith(
+              color: AppColors.dorado,
+              fontWeight: FontWeight.w900,
+              fontFamily: 'monospace',
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
             textAlign: TextAlign.center,
-            style: AppType.captionXs.copyWith(
-              color: onSurface.withOpacity(0.6),
+            style: AppText.caption.copyWith(
+              color: AppColors.onSurfaceVariant(context),
+              fontSize: 12,
             ),
           ),
         ],

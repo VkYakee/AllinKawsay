@@ -10,6 +10,9 @@ import '../../../models/numerofonia.dart';
 import '../../../services/player_service.dart';
 import '../../../services/zampona_service.dart';
 
+/// Rol de práctica en el diálogo de sikuris
+enum RolEnsayo { ambos, arca, ira }
+
 /// Evento de una nota en el tiempo del bloque.
 class EventoEnsayo {
   final int columna;
@@ -58,6 +61,7 @@ class EnsayoController extends ChangeNotifier {
   bool _cargando = true;
   double _velocidad = 1.0;
   bool _bucle = true;
+  RolEnsayo _rol = RolEnsayo.ambos;
 
   List<EventoEnsayo> _eventosDelBloque = [];
   bool _disposed = false;
@@ -72,6 +76,7 @@ class EnsayoController extends ChangeNotifier {
   bool get cargando => _cargando;
   double get velocidad => _velocidad;
   bool get bucle => _bucle;
+  RolEnsayo get rol => _rol;
   bool get reproduciendo => _player.playing;
   List<BloqueAudio> get bloques => _bloques;
 
@@ -201,8 +206,24 @@ class EnsayoController extends ChangeNotifier {
           notaIndex: 0,
         );
         _notaSonando = eventoActual.idNota;
-        // Tocar la nota real de la zampoña
-        _zampona.tocar(eventoActual.idNota);
+
+        // Lógica de Diálogo Arca vs Ira:
+        // Si el usuario toca Arca (7), la app toca la fila 6 (Ira) como compañero.
+        // Si el usuario toca Ira (6), la app toca la fila 7 (Arca).
+        // Si es "ambos", la app toca todo en modo guía.
+        final bool debeSonarApp;
+        if (_rol == RolEnsayo.ambos) {
+          debeSonarApp = true;
+        } else if (_rol == RolEnsayo.arca) {
+          debeSonarApp = !eventoActual.esFila7; // La app hace de Ira
+        } else {
+          debeSonarApp = eventoActual.esFila7;  // La app hace de Arca
+        }
+
+        if (debeSonarApp) {
+          _zampona.tocar(eventoActual.idNota);
+        }
+
         necesitaRedibujar = true;
       }
     } else {
@@ -309,6 +330,11 @@ class EnsayoController extends ChangeNotifier {
 
   Future<void> toggleBucle() async {
     _bucle = !_bucle;
+    notifyListeners();
+  }
+
+  void setRol(RolEnsayo r) {
+    _rol = r;
     notifyListeners();
   }
 

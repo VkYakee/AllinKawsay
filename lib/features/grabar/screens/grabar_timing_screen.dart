@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/components/allin_button.dart';
+import '../../../core/components/allin_loading_siku.dart';
 import '../../../core/widgets/zampona_canvas.dart';
 import '../../../data/zampona_catalogo.dart';
 import '../../../design/design.dart';
@@ -154,7 +156,7 @@ class _GrabarTimingScreenState extends State<GrabarTimingScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.dorado),
+          child: AllinLoadingSiku(mensaje: 'Afinando zampoña...'),
         ),
       );
     }
@@ -166,10 +168,11 @@ class _GrabarTimingScreenState extends State<GrabarTimingScreen> {
       bottomBar: Row(
         children: [
           Expanded(
-            child: AppButton(
+            child: AllinButton(
               label: 'DESHACER',
-              icon: Icons.undo,
-              variant: AppButtonVariant.secondary,
+              icono: Icons.undo_rounded,
+              variant: AllinButtonVariant.glass,
+              expand: true,
               onPressed: _deltas.isEmpty
                   ? null
                   : () {
@@ -185,9 +188,11 @@ class _GrabarTimingScreenState extends State<GrabarTimingScreen> {
           const SizedBox(width: Sp.sm),
           Expanded(
             flex: 2,
-            child: AppButton(
+            child: AllinButton(
               label: _terminado ? 'GUARDAR TIMING' : 'TERMINAR',
-              icon: Icons.check,
+              icono: Icons.check_circle_rounded,
+              variant: AllinButtonVariant.gold,
+              expand: true,
               onPressed: _deltas.isEmpty ? null : _terminar,
             ),
           ),

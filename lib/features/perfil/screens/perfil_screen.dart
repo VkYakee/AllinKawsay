@@ -6,6 +6,7 @@ import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/components/app_card.dart';
+import '../../../core/components/allin_dialog.dart';
 import '../../../core/widgets/animated_list_item.dart';
 
 import '../../../models/usuario.dart';
@@ -176,49 +177,14 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     ),
                     child: _CerrarSesionButton(
                       onTap: () async {
-                        final ok = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: Rad.rLg,
-                            ),
-                            backgroundColor: AppColors.surface(context),
-                            title: Text(
-                              'Cerrar sesión',
-                              style: AppText.h3.copyWith(
-                                color: AppColors.dorado,
-                              ),
-                            ),
-                            content: Text(
-                              '¿Seguro que quieres salir?',
-                              style: AppText.body,
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(ctx, false),
-                                child: Text(
-                                  'Cancelar',
-                                  style: AppText.subtitle.copyWith(
-                                    color: AppColors.onSurfaceVariant(
-                                      context,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(ctx, true),
-                                child: Text(
-                                  'Salir',
-                                  style: AppText.subtitle.copyWith(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                        final ok = await AllinDialog.confirm(
+                          context,
+                          title: 'Cerrar Sesión',
+                          message: '¿Estás seguro de que deseas salir de tu cuenta?',
+                          confirmText: 'Cerrar Sesión',
+                          cancelText: 'Cancelar',
+                          isDestructive: true,
+                          icon: Icons.logout_rounded,
                         );
                         if (ok == true) {
                           await AuthService().logout();

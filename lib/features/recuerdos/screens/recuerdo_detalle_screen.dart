@@ -5,6 +5,8 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_button.dart';
+import '../../../core/components/allin_dialog.dart';
 import '../../../core/components/app_card.dart';
 
 import '../../../models/recuerdo.dart';
@@ -76,45 +78,44 @@ class _RecuerdoDetalleScreenState extends State<RecuerdoDetalleScreen> {
     );
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: Rad.rLg),
-        backgroundColor: AppColors.surface(context),
-        title: Text(
-          'Mi nota personal',
-          style: AppText.h3.copyWith(color: AppColors.dorado),
-        ),
-        content: TextField(
+      builder: (_) => AllinDialog(
+        titulo: 'Mi nota personal',
+        mensaje: 'Esta nota es privada y solo tú puedes verla.',
+        icono: Icons.edit_note_rounded,
+        contenido: TextField(
           controller: ctrl,
           maxLines: 4,
-          style: AppText.body,
+          style: AppText.body.copyWith(color: AppColors.onSurface(context)),
           decoration: InputDecoration(
-            hintText: 'Solo la ves tú',
-            border: OutlineInputBorder(borderRadius: Rad.rMd),
+            hintText: 'Escribe tu memoria o anécdota personal...',
+            hintStyle: AppText.caption.copyWith(
+              color: AppColors.onSurfaceVariant(context),
+            ),
+            filled: true,
+            fillColor: AppColors.surfaceVariant(context).withOpacity(0.4),
+            border: OutlineInputBorder(
+              borderRadius: Rad.rMd,
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
             focusedBorder: OutlineInputBorder(
               borderRadius: Rad.rMd,
-              borderSide: const BorderSide(color: AppColors.dorado),
+              borderSide: const BorderSide(color: AppColors.dorado, width: 1.5),
             ),
           ),
         ),
-        actions: [
-          TextButton(
+        acciones: [
+          AllinButton(
+            label: 'Cancelar',
+            variant: AllinButtonVariant.glass,
+            expand: true,
             onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancelar',
-              style: AppText.subtitle.copyWith(
-                color: AppColors.onSurfaceVariant(context),
-              ),
-            ),
           ),
-          TextButton(
+          const SizedBox(height: 8),
+          AllinButton(
+            label: 'Guardar',
+            variant: AllinButtonVariant.gold,
+            expand: true,
             onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Guardar',
-              style: AppText.subtitle.copyWith(
-                color: AppColors.dorado,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ],
       ),

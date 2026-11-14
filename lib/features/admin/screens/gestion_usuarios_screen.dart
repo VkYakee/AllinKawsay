@@ -1,6 +1,7 @@
 // lib/features/admin/screens/gestion_usuarios_screen.dart
 import 'package:flutter/material.dart';
 
+import '../../../core/components/allin_dialog.dart';
 import '../../../design/design.dart';
 import '../../../models/usuario.dart';
 import '../../../services/usuario_service.dart';
@@ -43,25 +44,14 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen>
   }
 
   Future<void> _banear(Usuario u) async {
-    final ok = await showDialog<bool>(
+    final ok = await AllinDialog.confirm(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Suspender Usuario'),
-        content: Text(
-          '¿Suspender a "${u.nombre}"? No podrá acceder a la app.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Suspender'),
-          ),
-        ],
-      ),
+      titulo: 'Suspender Usuario',
+      mensaje: '¿Suspender a "${u.nombre}"? No podrá acceder a la app.',
+      confirmLabel: 'Suspender',
+      cancelLabel: 'Cancelar',
+      isDestructive: true,
+      icono: Icons.block_rounded,
     );
     if (ok == true) await _service.banear(u.uid);
   }

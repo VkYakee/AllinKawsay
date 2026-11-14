@@ -6,6 +6,7 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_loading_siku.dart';
 import '../../../core/widgets/zampona_canvas.dart';
 
 import '../../../models/zampona_nota.dart';
@@ -45,6 +46,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
   }
 
   Future<void> _tocarDown(ZamponaNota nota) async {
+    AppMotion.hapticLight();
     setState(() => _sonando.add(nota.id));
     await _service.tocar(nota.id);
     if (_service.modo == ZamponaModo.sostenido) {
@@ -65,7 +67,7 @@ class _ZamponaScreenState extends State<ZamponaScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.dorado),
+          child: AllinLoadingSiku(message: 'Afinando zampoña virtual...'),
         ),
       );
     }

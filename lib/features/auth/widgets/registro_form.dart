@@ -5,8 +5,8 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_button.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/components/app_button.dart';
 
 import 'google_icon.dart';
 
@@ -160,10 +160,12 @@ class _RegistroFormState extends State<RegistroForm> {
           ),
           const SizedBox(height: Sp.xl),
 
-          AppButton(
+          AllinButton(
             label: 'CREAR CUENTA',
-            fullWidth: true,
+            variant: AllinButtonVariant.gold,
+            expand: true,
             loading: widget.loading,
+            icono: Icons.person_add_rounded,
             onPressed: puedeSubmit ? widget.onRegistrar : null,
           ),
 

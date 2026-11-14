@@ -1,20 +1,22 @@
 // lib/widgets/dialogo_actualizacion.dart
 import 'package:flutter/material.dart';
 
-import '../design/design.dart';
+import '../core/components/allin_button.dart';
+import '../core/components/allin_dialog.dart';
+import '../core/design/colors.dart';
+import '../core/design/tokens.dart';
+import '../core/design/typography.dart';
 import '../features/update/screens/actualizacion_screen.dart';
 import '../models/info_version.dart';
-import '../theme/colors.dart';
 
 class DialogoActualizacion extends StatelessWidget {
   final InfoVersion info;
   const DialogoActualizacion({super.key, required this.info});
 
   static Future<bool?> mostrar(BuildContext context, InfoVersion info) {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: !info.critica,
-      builder: (_) => DialogoActualizacion(info: info),
+    return AllinDialog.show<bool>(
+      context,
+      child: DialogoActualizacion(info: info),
     );
   }
 
@@ -22,110 +24,165 @@ class DialogoActualizacion extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: !info.critica,
-      child: AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: Rad.rXl),
-        contentPadding: const EdgeInsets.all(Sp.xl),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(Sp.lg),
-              decoration: const BoxDecoration(
-                gradient: AppColors.gradienteGranate,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.system_update_alt,
-                color: AppColors.dorado,
-                size: 36,
-              ),
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: Sp.xl),
+          constraints: const BoxConstraints(maxWidth: 380),
+          decoration: BoxDecoration(
+            color: AppColors.fondoOLED.withOpacity(0.95),
+            borderRadius: Rad.rXl,
+            border: Border.all(
+              color: AppColors.oroSolar.withOpacity(0.4),
+              width: 1.2,
             ),
-            const SizedBox(height: Sp.lg),
-            Text(
-              info.critica
-                  ? 'ACTUALIZACIÓN OBLIGATORIA'
-                  : 'ACTUALIZACIÓN DISPONIBLE',
-              textAlign: TextAlign.center,
-              style: AppType.h3.copyWith(
-                color: AppColors.seccionTitulo(context),
-                letterSpacing: 1.5,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.6),
+                blurRadius: 35,
+                offset: const Offset(0, 15),
               ),
-            ),
-            const SizedBox(height: Sp.sm),
-            AppBadge(
-              label: 'v${info.displayVersion}',
-              variant: AppBadgeVariant.granate,
-            ),
-            const SizedBox(height: Sp.lg),
-            Text(
-              info.critica
-                  ? 'Necesitas actualizar para seguir usando la app.'
-                  : 'Hay una nueva versión de Allin Kawsay disponible.',
-              textAlign: TextAlign.center,
-              style: AppType.bodySm.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withOpacity(0.7),
+              BoxShadow(
+                color: AppColors.granateSagrado.withOpacity(0.35),
+                blurRadius: 25,
               ),
-            ),
-            if (info.notas.trim().isNotEmpty) ...[
-              const SizedBox(height: Sp.lg),
-              Container(
-                padding: const EdgeInsets.all(Sp.md),
-                decoration: BoxDecoration(
-                  color: AppColors.dorado.withOpacity(0.1),
-                  borderRadius: Rad.rMd,
-                  border: Border.all(
-                    color: AppColors.dorado.withOpacity(0.3),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: Padding(
+              padding: const EdgeInsets.all(Sp.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [
+                          AppColors.granateSagrado,
+                          AppColors.granateOscuro,
+                        ],
+                      ),
+                      border: Border.all(
+                        color: AppColors.oroSolar.withOpacity(0.5),
+                        width: 1.2,
+                      ),
+                      boxShadow: AppColors.glowDorado(intens: 0.3, blur: 14),
+                    ),
+                    child: const Icon(
+                      Icons.system_update_alt,
+                      color: AppColors.oroSolar,
+                      size: 28,
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'NOVEDADES',
-                      style: AppType.labelXs.copyWith(
-                        color: AppColors.granate,
+                  const SizedBox(height: Sp.md),
+                  Text(
+                    info.critica
+                        ? 'ACTUALIZACIÓN OBLIGATORIA'
+                        : 'ACTUALIZACIÓN DISPONIBLE',
+                    textAlign: TextAlign.center,
+                    style: AppText.h3.copyWith(
+                      color: AppColors.oroSolar,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: Sp.xs),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.granateSagrado.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.oroSolar.withOpacity(0.4)),
+                    ),
+                    child: Text(
+                      'Versión ${info.displayVersion}',
+                      style: const TextStyle(
+                        color: AppColors.oroReflejo,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
                       ),
                     ),
-                    const SizedBox(height: Sp.xs),
-                    Text(
-                      info.notas,
-                      style: AppType.captionXs.copyWith(
-                        color: Colors.black87,
-                        height: 1.4,
+                  ),
+                  const SizedBox(height: Sp.md),
+                  Text(
+                    info.critica
+                        ? 'Necesitas actualizar para seguir disfrutando de Allin Kawsay.'
+                        : 'Hay una nueva versión disponible con mejoras y nuevas partituras.',
+                    textAlign: TextAlign.center,
+                    style: AppText.bodySm.copyWith(
+                      color: Colors.white70,
+                      height: 1.35,
+                    ),
+                  ),
+                  if (info.notas.trim().isNotEmpty) ...[
+                    const SizedBox(height: Sp.md),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(Sp.md),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: Rad.rMd,
+                        border: Border.all(
+                          color: AppColors.oroSolar.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'NOVEDADES',
+                            style: AppText.captionXs.copyWith(
+                              color: AppColors.oroSolar,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            info.notas,
+                            style: AppText.caption.copyWith(
+                              color: Colors.white.withOpacity(0.85),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-            ],
-            const SizedBox(height: Sp.xl),
-            AppButton(
-              label: 'ACTUALIZAR',
-              icon: Icons.download,
-              fullWidth: true,
-              onPressed: () {
-                Navigator.pop(context, true);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ActualizacionScreen(info: info),
+                  const SizedBox(height: Sp.xl),
+                  AllinButton(
+                    text: 'ACTUALIZAR AHORA',
+                    icon: Icons.download_rounded,
+                    variant: AllinButtonVariant.primary,
+                    height: 48,
+                    onPressed: () {
+                      Navigator.pop(context, true);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ActualizacionScreen(info: info),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-            if (!info.critica) ...[
-              const SizedBox(height: Sp.sm),
-              AppButton(
-                label: 'MÁS TARDE',
-                variant: AppButtonVariant.ghost,
-                fullWidth: true,
-                onPressed: () => Navigator.pop(context, false),
+                  if (!info.critica) ...[
+                    const SizedBox(height: Sp.sm),
+                    AllinButton(
+                      text: 'MÁS TARDE',
+                      variant: AllinButtonVariant.glass,
+                      height: 44,
+                      onPressed: () => Navigator.pop(context, false),
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ],
+            ),
+          ),
         ),
       ),
     );

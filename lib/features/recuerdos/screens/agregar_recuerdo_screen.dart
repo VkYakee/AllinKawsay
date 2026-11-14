@@ -7,7 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
-import '../../../core/components/app_button.dart';
+import '../../../core/components/allin_button.dart';
+import '../../../core/components/allin_loading_siku.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_input.dart';
 import '../../../models/recuerdo.dart';
@@ -122,11 +123,13 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
         ],
       ),
       body: _guardando
-          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const CircularProgressIndicator(color: AppColors.dorado),
-              const SizedBox(height: Sp.lg),
-              Text(_progreso, style: AppText.subtitle.copyWith(color: AppColors.dorado)),
-            ]))
+          ? Center(
+              child: AllinLoadingSiku(
+                mensaje: _progreso.isNotEmpty
+                    ? _progreso
+                    : 'Subiendo recuerdos a la nube...',
+              ),
+            )
           : Form(
               key: _formKey,
               child: ListView(
@@ -152,7 +155,13 @@ class _AgregarRecuerdoScreenState extends State<AgregarRecuerdoScreen> {
                     onEliminarVideo: (i, esNuevo) => setState(() => esNuevo ? _videosNuevos.removeAt(i) : _videosUrls.removeAt(i)),
                   ),
                   const SizedBox(height: Sp.xl),
-                  AppButton(label: 'GUARDAR RECUERDO', fullWidth: true, onPressed: _guardar),
+                  AllinButton(
+                    label: 'GUARDAR RECUERDO',
+                    variant: AllinButtonVariant.gold,
+                    expand: true,
+                    icono: Icons.save_rounded,
+                    onPressed: _guardar,
+                  ),
                   const SizedBox(height: Sp.xxxl),
                 ],
               ),

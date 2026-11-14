@@ -7,6 +7,8 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_loading_siku.dart';
+import '../../../services/player_service.dart';
 import '../../../services/recuerdo_cache_service.dart';
 
 /// Card élite del video: overlay de play grande, barra de progreso,
@@ -45,6 +47,7 @@ class _VideoPlayerCardEliteState extends State<VideoPlayerCardElite> {
       if (_controller!.value.isPlaying) {
         await _controller!.pause();
       } else {
+        PlayerService().player.pause();
         await _controller!.play();
       }
       setState(() {});
@@ -93,6 +96,7 @@ class _VideoPlayerCardEliteState extends State<VideoPlayerCardElite> {
           _cargando = false;
           _iniciado = true;
         });
+        PlayerService().player.pause();
         _controller!.play();
       }
     } catch (e) {
@@ -186,14 +190,7 @@ class _VideoPlayerCardEliteState extends State<VideoPlayerCardElite> {
 
                 // Loading
                 if (_cargando)
-                  const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      color: AppColors.dorado,
-                      strokeWidth: 3,
-                    ),
-                  ),
+                  const AllinLoadingSiku(compact: true),
 
                 // Error
                 if (_error != null)

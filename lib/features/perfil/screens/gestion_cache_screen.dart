@@ -1,10 +1,14 @@
 // lib/features/perfil/screens/gestion_cache_screen.dart
 import 'package:flutter/material.dart';
 
-import '../../../design/design.dart';
+import '../../../core/components/allin_button.dart';
+import '../../../core/components/allin_dialog.dart';
+import '../../../core/components/allin_loading_siku.dart';
+import '../../../core/design/colors.dart';
+import '../../../core/design/tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../services/audio_cache_service.dart';
 import '../../../services/recuerdo_cache_service.dart';
-import '../../../theme/colors.dart';
 
 class GestionCacheScreen extends StatefulWidget {
   const GestionCacheScreen({super.key});
@@ -16,7 +20,8 @@ class GestionCacheScreen extends StatefulWidget {
 class _GestionCacheScreenState extends State<GestionCacheScreen> {
   int _audioBytes = 0, _audioCantidad = 0;
   int _recuerdoBytes = 0, _recuerdoCantidad = 0;
-  bool _cargando = true, _limpiando = false;
+  bool _cargando = true;
+  bool _limpiando = false;
 
   @override
   void initState() {
@@ -50,161 +55,255 @@ class _GestionCacheScreenState extends State<GestionCacheScreen> {
     return '${(bytes / 1073741824).toStringAsFixed(2)} GB';
   }
 
-  Future<void> _confirmar(
-    String titulo,
-    String mensaje,
-    Future<void> Function() accion,
-  ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(
-          titulo,
-          style: AppType.h3.copyWith(color: AppColors.granate),
-        ),
-        content: Text(mensaje, style: AppType.body),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Borrar'),
-          ),
-        ],
-      ),
+  Future<void> _confirmarBorrado({
+    required String titulo,
+    required String mensaje,
+    required Future<void> Function() accion,
+  }) async {
+    final ok = await AllinDialog.confirm(
+      context,
+      title: titulo,
+      message: mensaje,
+      confirmText: 'Borrar Datos',
+      cancelText: 'Cancelar',
+      isDestructive: true,
+      icon: Icons.delete_forever_outlined,
     );
+
     if (ok == true) {
       setState(() => _limpiando = true);
       await accion();
       await _cargar();
-      if (mounted) setState(() => _limpiando = false);
+      if (mounted) {
+        setState(() => _limpiando = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Caché liberada correctamente'),
+            backgroundColor: AppColors.granateSagrado,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final totalBytes = _audioBytes + _recuerdoBytes;
 
-    return AppScaffold(
-      title: 'Almacenamiento',
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh, color: AppColors.dorado),
-          onPressed: _cargando ? null : _cargar,
+    return Scaffold(
+      backgroundColor: AppColors.fondoOLED,
+      appBar: AppBar(
+        backgroundColor: AppColors.fondoOLED,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.oroSolar, size: 20),
+          onPressed: () => Navigator.pop(context),
         ),
-      ],
-      body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.granate),
+        title: Text(
+          'Almacenamiento y Caché',
+          style: AppText.title.copyWith(
+            color: AppColors.oroSolar,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: AppColors.oroSolar),
+            onPressed: (_cargando || _limpiando) ? null : _cargar,
+          ),
+        ],
+      ),
+      body: (_cargando || _limpiando)
+          ? Center(
+              child: AllinLoadingSiku(
+                message: _limpiando ? 'Liberando espacio...' : 'Calculando caché...',
+              ),
             )
-          : _limpiando
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.dorado),
-                )
-              : ListView(
-                  padding: const EdgeInsets.all(Sp.lg),
-                  children: [
-                    AppCard(
-                      color: AppColors.granate,
-                      child: Column(
-                        children: [
-                          Text(
-                            'USO TOTAL',
-                            style: AppType.label.copyWith(
-                              color: AppColors.dorado,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                          const SizedBox(height: Sp.sm),
-                          Text(
-                            _fmt(_audioBytes + _recuerdoBytes),
-                            style: AppType.h1.copyWith(
-                              color: AppColors.dorado,
-                              fontSize: 36,
-                            ),
-                          ),
-                          const SizedBox(height: Sp.xs),
-                          Text(
-                            '${_audioCantidad + _recuerdoCantidad} archivos guardados',
-                            style: AppType.caption.copyWith(
-                              color: AppColors.dorado.withOpacity(0.7),
-                            ),
-                          ),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(Sp.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Tarjeta Hero con resumen de uso
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(Sp.xl),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.granateSagrado,
+                          AppColors.granateOscuro,
+                          Color(0xFF1A0A0E),
                         ],
                       ),
+                      borderRadius: Rad.rXl,
+                      border: Border.all(
+                        color: AppColors.oroSolar.withOpacity(0.4),
+                        width: 1.2,
+                      ),
+                      boxShadow: AppColors.glowGranate(intens: 0.35, blur: 20),
                     ),
-                    const SizedBox(height: Sp.lg),
-                    AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SeccionHeader(
-                            title: 'Audios',
-                            icon: Icons.music_note,
-                            padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.pie_chart_outline_rounded,
+                          color: AppColors.oroSolar,
+                          size: 38,
+                        ),
+                        const SizedBox(height: Sp.sm),
+                        Text(
+                          _fmt(totalBytes),
+                          style: const TextStyle(
+                            color: AppColors.oroReflejo,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
                           ),
-                          const SizedBox(height: Sp.sm),
-                          Text(
-                            '${_fmt(_audioBytes)} · $_audioCantidad canciones',
-                            style: AppType.subtitle.copyWith(
-                              color: onSurface,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Total ocupado por Allin Kawsay',
+                          style: AppText.caption.copyWith(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: Sp.xl),
+
+                  Text(
+                    'DESGLOSE DE ARCHIVOS DESCARGADOS',
+                    style: AppText.captionXs.copyWith(
+                      color: AppColors.oroSolar,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: Sp.md),
+
+                  // Tarjeta Audios
+                  _CacheItemCard(
+                    icon: Icons.music_note,
+                    titulo: 'Audios y Pistas de Ensayo',
+                    cantidad: '$_audioCantidad archivos',
+                    espacio: _fmt(_audioBytes),
+                    onLimpiar: _audioBytes == 0
+                        ? null
+                        : () => _confirmarBorrado(
+                              titulo: 'Borrar Audios en Caché',
+                              mensaje: '¿Deseas eliminar los audios descargados? Podrás volver a escucharlos si tienes conexión a internet.',
+                              accion: () => AudioCacheService().borrarTodo(),
                             ),
-                          ),
-                          const SizedBox(height: Sp.md),
-                          AppButton(
-                            label: 'LIMPIAR AUDIOS',
-                            variant: AppButtonVariant.secondary,
-                            fullWidth: true,
-                            onPressed: _audioCantidad == 0
-                                ? null
-                                : () => _confirmar(
-                                      'Limpiar audios',
-                                      'Se borrarán los audios descargados. Se volverán a descargar cuando los reproduzcas.',
-                                      () => AudioCacheService().limpiarTodo(),
-                                    ),
-                          ),
-                        ],
+                  ),
+                  const SizedBox(height: Sp.md),
+
+                  // Tarjeta Recuerdos
+                  _CacheItemCard(
+                    icon: Icons.photo_library_outlined,
+                    titulo: 'Fotos y Videos de Recuerdos',
+                    cantidad: '$_recuerdoCantidad elementos',
+                    espacio: _fmt(_recuerdoBytes),
+                    onLimpiar: _recuerdoBytes == 0
+                        ? null
+                        : () => _confirmarBorrado(
+                              titulo: 'Borrar Recuerdos en Caché',
+                              mensaje: '¿Deseas eliminar las miniaturas y fotos guardadas localmente?',
+                              accion: () => RecuerdoCacheService().borrarTodo(),
+                            ),
+                  ),
+                  const SizedBox(height: Sp.xxl),
+
+                  // Botón Borrar Todo
+                  if (totalBytes > 0)
+                    AllinButton(
+                      text: 'LIBERAR TODO EL ALMACENAMIENTO',
+                      icon: Icons.cleaning_services_rounded,
+                      variant: AllinButtonVariant.danger,
+                      height: 52,
+                      onPressed: () => _confirmarBorrado(
+                        titulo: 'Limpieza Completa',
+                        mensaje: 'Se eliminarán todos los archivos temporales de música y recuerdos para liberar espacio en tu teléfono.',
+                        accion: () async {
+                          await AudioCacheService().borrarTodo();
+                          await RecuerdoCacheService().borrarTodo();
+                        },
                       ),
                     ),
-                    const SizedBox(height: Sp.md),
-                    AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SeccionHeader(
-                            title: 'Recuerdos',
-                            icon: Icons.photo_library,
-                            padding: EdgeInsets.zero,
-                          ),
-                          const SizedBox(height: Sp.sm),
-                          Text(
-                            '${_fmt(_recuerdoBytes)} · $_recuerdoCantidad archivos',
-                            style: AppType.subtitle.copyWith(
-                              color: onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: Sp.md),
-                          AppButton(
-                            label: 'LIMPIAR RECUERDOS',
-                            variant: AppButtonVariant.secondary,
-                            fullWidth: true,
-                            onPressed: _recuerdoCantidad == 0
-                                ? null
-                                : () => _confirmar(
-                                      'Limpiar recuerdos',
-                                      'Se borrarán las fotos y videos descargados.',
-                                      () =>
-                                          RecuerdoCacheService().limpiarTodo(),
-                                    ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _CacheItemCard extends StatelessWidget {
+  final IconData icon;
+  final String titulo;
+  final String cantidad;
+  final String espacio;
+  final VoidCallback? onLimpiar;
+
+  const _CacheItemCard({
+    required this.icon,
+    required this.titulo,
+    required this.cantidad,
+    required this.espacio,
+    this.onLimpiar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(Sp.lg),
+      decoration: BoxDecoration(
+        color: AppColors.grafitoCarbon,
+        borderRadius: Rad.rLg,
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.granateSagrado.withOpacity(0.3),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.oroSolar.withOpacity(0.3)),
+            ),
+            child: Icon(icon, color: AppColors.oroSolar, size: 22),
+          ),
+          const SizedBox(width: Sp.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: AppText.subtitle.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  '$cantidad · $espacio',
+                  style: AppText.caption.copyWith(
+                    color: AppColors.oroSolar,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          AllinButton(
+            text: 'BORRAR',
+            variant: AllinButtonVariant.glass,
+            fullWidth: false,
+            height: 36,
+            onPressed: onLimpiar,
+          ),
+        ],
+      ),
     );
   }
 }

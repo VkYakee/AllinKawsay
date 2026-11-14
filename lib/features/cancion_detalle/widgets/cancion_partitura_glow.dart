@@ -6,7 +6,7 @@ import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../models/cancion.dart';
-import '../../../widgets/visor_numerofonia.dart';
+import '../../../core/widgets/atril_numerofonia.dart';
 import '../screens/numerofonia_fullscreen_screen.dart';
 
 /// Partitura del detalle con borde que pulsa al ritmo cuando el
@@ -170,9 +170,9 @@ class _CancionPartituraGlowState extends State<CancionPartituraGlow>
                 ],
               ),
               const SizedBox(height: Sp.md),
-              VisorNumerofonia(
+              AtrilNumerofonia(
                 estrofas: widget.cancion.estrofas,
-                escala: 1.0,
+                fontSize: 15.0,
                 fondoOscuro: true,
               ),
             ],

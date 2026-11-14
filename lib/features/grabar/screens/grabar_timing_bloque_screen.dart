@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
+import '../../../core/components/allin_loading_siku.dart';
 import '../../../core/widgets/zampona_canvas.dart';
 import '../../../design/design.dart';
 import '../../../models/bloque_audio.dart';
@@ -158,7 +159,7 @@ class _GrabarTimingBloqueScreenState extends State<GrabarTimingBloqueScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.dorado),
+          child: AllinLoadingSiku(mensaje: 'Sincronizando bloque...'),
         ),
       );
     }

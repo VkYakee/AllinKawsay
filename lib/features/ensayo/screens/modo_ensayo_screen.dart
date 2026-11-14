@@ -6,10 +6,11 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_loading_siku.dart';
+import '../../../core/widgets/atril_numerofonia.dart';
 import '../../../core/widgets/zampona_canvas.dart';
 
 import '../../../models/cancion.dart';
-import '../../../widgets/visor_numerofonia.dart';
 import '../../../widgets/zampona/tool_scaffold.dart';
 
 import '../controllers/ensayo_controller.dart';
@@ -54,27 +55,81 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
           return const Scaffold(
             backgroundColor: Colors.black,
             body: Center(
-              child: CircularProgressIndicator(color: AppColors.dorado),
+              child: AllinLoadingSiku(message: 'Preparando cañas para el ensayo...'),
             ),
           );
         }
 
+        final rolActual = _controller.rol;
+        final String rolTexto = rolActual == RolEnsayo.arca
+            ? 'Rol: Arca (7)'
+            : rolActual == RolEnsayo.ira
+                ? 'Rol: Ira (6)'
+                : 'Rol: Dúo Completo';
+
         return ToolScaffold(
           titulo: widget.cancion.titulo,
-          subtitulo: 'Modo Ensayo',
+          subtitulo: 'Modo Ensayo · $rolTexto',
           onCerrar: () async {
             await _controller.pause();
             if (mounted) Navigator.pop(context);
           },
           body: Column(
             children: [
-              Expanded(flex: 3, child: _buildTabla()),
+              // Selector rápido de Rol de práctica Arca / Ira
+              Container(
+                height: 34,
+                padding: const EdgeInsets.symmetric(horizontal: Sp.md),
+                color: const Color(0xFF14080A),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _chipRol('DÚO', RolEnsayo.ambos),
+                    const SizedBox(width: Sp.sm),
+                    _chipRol('TOCO ARCA (7)', RolEnsayo.arca),
+                    const SizedBox(width: Sp.sm),
+                    _chipRol('TOCO IRA (6)', RolEnsayo.ira),
+                  ],
+                ),
+              ),
+              Expanded(flex: 4, child: _buildTabla()),
               _buildKaraoke(),
               Expanded(flex: 5, child: _buildZamponaYControles()),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _chipRol(String label, RolEnsayo rol) {
+    final bool activo = _controller.rol == rol;
+    return GestureDetector(
+      onTap: () {
+        AppMotion.hapticSelection();
+        _controller.setRol(rol);
+      },
+      child: AnimatedContainer(
+        duration: AppMotion.fast,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        decoration: BoxDecoration(
+          color: activo ? AppColors.granateSagrado : Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: activo ? AppColors.oroSolar : Colors.white12,
+            width: activo ? 1.0 : 0.6,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: activo ? AppColors.oroReflejo : Colors.white60,
+            fontSize: 10,
+            fontWeight: activo ? FontWeight.bold : FontWeight.w500,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
     );
   }
 
@@ -110,14 +165,14 @@ class _ModoEnsayoScreenState extends State<ModoEnsayoScreen> {
                     fontStyle: FontStyle.italic,
                   ),
                 )
-              : FittedBox(
+              : SingleChildScrollView(
                   key: ValueKey(_controller.bloqueActual),
-                  fit: BoxFit.scaleDown,
-                  child: VisorNumerofonia(
+                  child: AtrilNumerofonia(
                     estrofas: estrofas,
-                    escala: 1.2,
+                    fontSize: 16.0,
                     fondoOscuro: true,
                     celdaActiva: _controller.celdaActiva,
+                    mostrarTituloEstrofa: false,
                   ),
                 ),
         ),

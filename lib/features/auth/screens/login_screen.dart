@@ -6,6 +6,7 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_dialog.dart';
 
 import '../../../services/auth_service.dart';
 
@@ -37,12 +38,12 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService().login(_email.text.trim(), _pass.text.trim());
     } on FirebaseAuthException catch (e) {
       String msg = 'Error al iniciar sesión';
-      if (e.code == 'user-not-found') msg = 'No existe una cuenta con ese email';
-      if (e.code == 'wrong-password') msg = 'Contraseña incorrecta';
-      if (e.code == 'invalid-credential') msg = 'Email o contraseña incorrectos';
-      _snack(msg);
+      if (e.code == 'user-not-found') msg = 'No existe una cuenta registrada con este correo.';
+      if (e.code == 'wrong-password') msg = 'La contraseña ingresada es incorrecta.';
+      if (e.code == 'invalid-credential') msg = 'Correo o contraseña incorrectos. Verifica tus datos.';
+      _mostrarAlerta('Atención', msg);
     } catch (e) {
-      _snack('Error: $e');
+      _mostrarAlerta('Error', 'No se pudo conectar: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -64,6 +65,18 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loadingGoogle = false);
     }
+  }
+
+  void _mostrarAlerta(String titulo, String msg) {
+    if (!mounted) return;
+    AllinDialog.confirm(
+      context,
+      title: titulo,
+      message: msg,
+      confirmText: 'Entendido',
+      cancelText: null,
+      icon: Icons.shield_outlined,
+    );
   }
 
   void _snack(String msg) {

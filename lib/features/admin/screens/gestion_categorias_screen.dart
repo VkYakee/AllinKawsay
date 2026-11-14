@@ -1,6 +1,7 @@
 // lib/features/admin/screens/gestion_categorias_screen.dart
 import 'package:flutter/material.dart';
 
+import '../../../core/components/allin_dialog.dart';
 import '../../../design/design.dart';
 import '../../../models/categoria.dart';
 import '../../../services/categoria_service.dart';
@@ -19,25 +20,15 @@ class _GestionCategoriasScreenState extends State<GestionCategoriasScreen> {
   final _service = CategoriaService();
 
   Future<void> _eliminar(Categoria c) async {
-    final ok = await showDialog<bool>(
+    final ok = await AllinDialog.confirm(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Eliminar categoría'),
-        content: Text(
+      titulo: 'Eliminar categoría',
+      mensaje:
           '¿Eliminar "${c.emoji} ${c.nombre}"? Las canciones quedarán sin categoría.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      isDestructive: true,
+      icono: Icons.delete_outline_rounded,
     );
     if (ok == true) await _service.eliminar(c.id);
   }

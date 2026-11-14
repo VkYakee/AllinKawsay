@@ -7,7 +7,7 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
-import '../../../core/components/app_button.dart';
+import '../../../core/components/allin_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_input.dart';
 
@@ -278,9 +278,11 @@ class _AgregarEventoScreenState extends State<AgregarEventoScreen> {
               ),
             ),
             const SizedBox(height: Sp.xxl),
-            AppButton(
+            AllinButton(
               label: _esEdicion ? 'GUARDAR CAMBIOS' : 'CREAR EVENTO',
-              fullWidth: true,
+              variant: AllinButtonVariant.gold,
+              expand: true,
+              icono: _esEdicion ? Icons.save_rounded : Icons.add_circle_outline_rounded,
               loading: _guardando,
               onPressed: _guardar,
             ),

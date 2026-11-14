@@ -2,9 +2,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
-import '../../../design/design.dart';
+import '../../../core/components/allin_button.dart';
+import '../../../core/design/colors.dart';
+import '../../../core/design/tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../services/onesignal_service.dart';
-import '../../../theme/colors.dart';
 
 class NotificacionModal {
   static void mostrar(BuildContext context) {
@@ -30,11 +32,11 @@ class NotificacionModal {
               child: Container(
                 padding: const EdgeInsets.all(Sp.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.cardColor(ctx).withOpacity(0.9),
+                  color: AppColors.fondoOscuro.withOpacity(0.95),
                   border: Border(
                     top: BorderSide(
-                      color: AppColors.dorado.withOpacity(0.3),
-                      width: 1,
+                      color: AppColors.dorado.withOpacity(0.4),
+                      width: 1.5,
                     ),
                   ),
                 ),
@@ -42,35 +44,98 @@ class NotificacionModal {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 40,
+                      width: 44,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.granate.withOpacity(0.3),
+                        color: AppColors.dorado.withOpacity(0.35),
                         borderRadius: Rad.rPill,
                       ),
                     ),
                     const SizedBox(height: Sp.lg),
-                    Text(
-                      'Mensaje Personalizado',
-                      style: AppType.h3,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.campaign_rounded,
+                          color: AppColors.dorado,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Mensaje a la Hermandad',
+                          style: AppText.h3.copyWith(color: AppColors.dorado),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: Sp.xl),
-                    AppInput(
+                    TextField(
                       controller: tituloCtrl,
-                      label: 'Título',
-                      hint: 'Ej: Ensayo el sábado',
+                      style: AppText.body.copyWith(
+                        color: AppColors.onSurface(context),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Título del aviso',
+                        labelStyle: TextStyle(
+                          color: AppColors.dorado.withOpacity(0.8),
+                        ),
+                        hintText: 'Ej: Ensayo General este Sábado',
+                        hintStyle: AppText.caption.copyWith(
+                          color: AppColors.onSurfaceVariant(context),
+                        ),
+                        filled: true,
+                        fillColor:
+                            AppColors.surfaceVariant(context).withOpacity(0.35),
+                        border: OutlineInputBorder(
+                          borderRadius: Rad.rMd,
+                          borderSide: BorderSide(color: AppColors.border(context)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: Rad.rMd,
+                          borderSide: const BorderSide(
+                            color: AppColors.dorado,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: Sp.md),
-                    AppInput(
+                    TextField(
                       controller: mensajeCtrl,
-                      label: 'Mensaje',
-                      hint: 'Ej: Nos vemos a las 7pm',
                       maxLines: 3,
+                      style: AppText.body.copyWith(
+                        color: AppColors.onSurface(context),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Mensaje detallado',
+                        labelStyle: TextStyle(
+                          color: AppColors.dorado.withOpacity(0.8),
+                        ),
+                        hintText: 'Ej: Traer zampoñas afinadas y uniforme completo a las 7:00 PM.',
+                        hintStyle: AppText.caption.copyWith(
+                          color: AppColors.onSurfaceVariant(context),
+                        ),
+                        filled: true,
+                        fillColor:
+                            AppColors.surfaceVariant(context).withOpacity(0.35),
+                        border: OutlineInputBorder(
+                          borderRadius: Rad.rMd,
+                          borderSide: BorderSide(color: AppColors.border(context)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: Rad.rMd,
+                          borderSide: const BorderSide(
+                            color: AppColors.dorado,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: Sp.xl),
-                    AppButton(
-                      label: 'ENVIAR NOTIFICACIÓN',
-                      fullWidth: true,
+                    AllinButton(
+                      label: enviando ? 'ENVIANDO...' : 'TRANSMITIR PUSH A TODOS',
+                      variant: AllinButtonVariant.gold,
+                      expand: true,
+                      icono: Icons.send_rounded,
                       loading: enviando,
                       onPressed: () async {
                         final t = tituloCtrl.text.trim();
@@ -87,14 +152,19 @@ class NotificacionModal {
                             SnackBar(
                               content: Text(
                                 ok
-                                    ? 'Notificación enviada'
-                                    : 'Error al enviar',
+                                    ? 'Aviso transmitido con éxito a todos los dispositivos'
+                                    : 'Error al enviar notificación',
+                                style: AppText.body.copyWith(
+                                  color: AppColors.dorado,
+                                ),
                               ),
+                              backgroundColor: AppColors.granateProfundo,
                             ),
                           );
                         }
                       },
                     ),
+                    const SizedBox(height: Sp.lg),
                   ],
                 ),
               ),

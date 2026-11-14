@@ -1,10 +1,14 @@
 // lib/features/admin/screens/notificaciones_admin_screen.dart
 import 'package:flutter/material.dart';
 
-import '../../../design/design.dart';
+import '../../../core/components/allin_button.dart';
+import '../../../core/components/allin_loading_siku.dart';
+import '../../../core/components/app_card.dart';
+import '../../../core/design/colors.dart';
+import '../../../core/design/tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../services/cancion_service.dart';
 import '../../../services/onesignal_service.dart';
-import '../../../theme/colors.dart';
 import '../widgets/notificacion_modal.dart';
 
 class NotificacionesAdminScreen extends StatefulWidget {
@@ -44,15 +48,21 @@ class _NotificacionesAdminScreenState
     try {
       final ok = await OneSignalService.enviarATodos(
         titulo: _pendientes == 1
-            ? '🎵 Nueva canción'
+            ? '🎵 Nueva canción agregada'
             : '🎵 $_pendientes canciones nuevas',
-        mensaje: 'Toca para ver el cancionero actualizado',
+        mensaje: 'Toca para abrir el cancionero y ver la partitura actualizada.',
       );
       if (ok && mounted) {
         await CancionService().resetearContadorCanciones();
         await _cargar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notificación enviada')),
+          SnackBar(
+            content: Text(
+              'Notificación de repertorio enviada',
+              style: AppText.body.copyWith(color: AppColors.dorado),
+            ),
+            backgroundColor: AppColors.granateProfundo,
+          ),
         );
       }
     } finally {
@@ -62,43 +72,77 @@ class _NotificacionesAdminScreenState
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    return AppScaffold(
-      title: 'Notificaciones',
+    return Scaffold(
+      backgroundColor: AppColors.fondoOscuro,
+      appBar: AppBar(
+        title: Text(
+          'Centro de Avisos Push',
+          style: AppText.h3.copyWith(color: AppColors.dorado),
+        ),
+        backgroundColor: AppColors.fondoOscuro,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.dorado,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: _cargando
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.granate),
+              child: AllinLoadingSiku(mensaje: 'Consultando estado OneSignal...'),
             )
           : ListView(
-              padding: const EdgeInsets.all(Sp.lg),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: Sp.lg, vertical: Sp.md),
               children: [
+                // ─── CARD CANCIONES PENDIENTES ───
                 AppCard(
+                  glass: true,
                   padding: const EdgeInsets.all(Sp.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SeccionHeader(
-                        title: 'Canciones Nuevas',
-                        icon: Icons.library_music,
-                        padding: EdgeInsets.zero,
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.library_music_rounded,
+                            color: AppColors.dorado,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Alertas de Repertorio',
+                            style: AppText.h3.copyWith(
+                              color: AppColors.dorado,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: Sp.md),
+                      const SizedBox(height: Sp.sm),
                       if (_pendientes == 0)
                         Text(
-                          'No hay canciones pendientes.',
-                          style: AppType.bodySm.copyWith(
-                            color: onSurface.withOpacity(0.6),
+                          'No hay canciones pendientes de avisar a la hermandad.',
+                          style: AppText.caption.copyWith(
+                            color: AppColors.onSurfaceVariant(context),
                           ),
                         )
                       else ...[
                         Text(
-                          'Hay $_pendientes canción(es) sin notificar.',
-                          style: AppType.subtitle,
+                          'Hay $_pendientes canción(es) subida(s) recientemente sin notificar.',
+                          style: AppText.body.copyWith(
+                            color: AppColors.onSurface(context),
+                          ),
                         ),
-                        const SizedBox(height: Sp.md),
-                        AppButton(
-                          label: 'NOTIFICAR CANCIONES',
-                          fullWidth: true,
+                        const SizedBox(height: Sp.lg),
+                        AllinButton(
+                          label: 'NOTIFICAR REPERTORIO',
+                          variant: AllinButtonVariant.gold,
+                          expand: true,
+                          icono: Icons.notification_add_rounded,
                           loading: _enviando,
                           onPressed: _notificarCanciones,
                         ),
@@ -106,35 +150,53 @@ class _NotificacionesAdminScreenState
                     ],
                   ),
                 ),
-                const SizedBox(height: Sp.md),
+
+                const SizedBox(height: Sp.lg),
+
+                // ─── CARD MENSAJE LIBRE / ENSAYOS ───
                 AppCard(
+                  glass: true,
                   padding: const EdgeInsets.all(Sp.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SeccionHeader(
-                        title: 'Mensaje Libre',
-                        icon: Icons.campaign,
-                        padding: EdgeInsets.zero,
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.campaign_rounded,
+                            color: AppColors.dorado,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Comunicado General',
+                            style: AppText.h3.copyWith(
+                              color: AppColors.dorado,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: Sp.md),
+                      const SizedBox(height: Sp.sm),
                       Text(
-                        'Envía un aviso a todos los usuarios.',
-                        style: AppType.bodySm.copyWith(
-                          color: onSurface.withOpacity(0.6),
+                        'Redacta un aviso personalizado sobre ensayos, uniformes o fechas de viaje.',
+                        style: AppText.caption.copyWith(
+                          color: AppColors.onSurfaceVariant(context),
                         ),
                       ),
-                      const SizedBox(height: Sp.md),
-                      AppButton(
-                        label: 'ESCRIBIR MENSAJE',
-                        variant: AppButtonVariant.secondary,
-                        fullWidth: true,
-                        onPressed: () =>
-                            NotificacionModal.mostrar(context),
+                      const SizedBox(height: Sp.lg),
+                      AllinButton(
+                        label: 'REDACTAR AVISO',
+                        variant: AllinButtonVariant.glass,
+                        expand: true,
+                        icono: Icons.edit_note_rounded,
+                        onPressed: () => NotificacionModal.mostrar(context),
                       ),
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 60),
               ],
             ),
     );

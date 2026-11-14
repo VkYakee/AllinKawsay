@@ -2,9 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../design/design.dart';
+import '../../../core/components/allin_button.dart';
+import '../../../core/components/allin_loading_siku.dart';
+import '../../../core/components/app_card.dart';
+import '../../../core/design/colors.dart';
+import '../../../core/design/tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../services/respaldo_service.dart';
-import '../../../theme/colors.dart';
 
 class ExportarRespaldoScreen extends StatefulWidget {
   const ExportarRespaldoScreen({super.key});
@@ -39,76 +43,124 @@ class _ExportarRespaldoScreenState extends State<ExportarRespaldoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Exportar Respaldo',
+    return Scaffold(
+      backgroundColor: AppColors.fondoOscuro,
+      appBar: AppBar(
+        title: Text(
+          'Exportar Respaldo',
+          style: AppText.h3.copyWith(color: AppColors.dorado),
+        ),
+        backgroundColor: AppColors.fondoOscuro,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.dorado,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(Sp.lg),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: Sp.lg, vertical: Sp.md),
         children: [
           AppCard(
+            glass: true,
+            padding: const EdgeInsets.all(Sp.lg),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SeccionHeader(
-                  title: 'Contenido Actual',
-                  icon: Icons.inventory_2,
-                  padding: EdgeInsets.zero,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.inventory_2_rounded,
+                      color: AppColors.dorado,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Colecciones del Sistema',
+                      style: AppText.h3.copyWith(
+                        color: AppColors.dorado,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: Sp.md),
-                if (_conteo != null) ...[
-                  _fila(
-                    'Canciones',
-                    _conteo!['canciones'] ?? 0,
-                    Icons.music_note,
-                  ),
-                  _fila(
-                    'Eventos',
-                    _conteo!['eventos'] ?? 0,
-                    Icons.event,
-                  ),
-                  _fila(
-                    'Recuerdos',
-                    _conteo!['recuerdos'] ?? 0,
-                    Icons.photo_library,
-                  ),
-                  _fila(
-                    'Usuarios',
-                    _conteo!['usuarios'] ?? 0,
-                    Icons.people,
-                  ),
+                if (_conteo == null)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: AllinLoadingSiku(mensaje: 'Contando documentos...'),
+                    ),
+                  )
+                else ...[
+                  _fila('Canciones registradas', _conteo!['canciones'] ?? 0, Icons.music_note_rounded),
+                  _fila('Eventos programados', _conteo!['eventos'] ?? 0, Icons.event_rounded),
+                  _fila('Recuerdos en galería', _conteo!['recuerdos'] ?? 0, Icons.photo_library_rounded),
+                  _fila('Usuarios del grupo', _conteo!['usuarios'] ?? 0, Icons.group_rounded),
                 ],
               ],
             ),
           ),
+
           const SizedBox(height: Sp.xl),
+
           if (_json == null)
-            AppButton(
-              label: 'GENERAR RESPALDO (JSON)',
-              icon: Icons.download,
-              fullWidth: true,
+            AllinButton(
+              label: _generando ? 'GENERANDO ARCHIVO JSON...' : 'GENERAR RESPALDO JSON',
+              icono: Icons.download_rounded,
+              variant: AllinButtonVariant.gold,
+              expand: true,
               loading: _generando,
               onPressed: _generar,
             )
           else ...[
             AppCard(
-              color: const Color(0xFF0A0A0A),
-              border: Border.all(
-                color: AppColors.dorado.withOpacity(0.4),
-              ),
+              padding: const EdgeInsets.all(Sp.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Respaldo generado',
-                        style: AppType.subtitle.copyWith(
-                          color: AppColors.dorado,
-                        ),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.dorado,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Respaldo Listo',
+                            style: AppText.subtitle.copyWith(
+                              color: AppColors.dorado,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      AppBadge(
-                        label:
-                            '${(_json!.length / 1024).toStringAsFixed(1)} KB',
-                        variant: AppBadgeVariant.gold,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.dorado.withOpacity(0.15),
+                          borderRadius: Rad.rPill,
+                          border: Border.all(
+                            color: AppColors.dorado.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          '${(_json!.length / 1024).toStringAsFixed(1)} KB',
+                          style: const TextStyle(
+                            color: AppColors.dorado,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -116,17 +168,20 @@ class _ExportarRespaldoScreenState extends State<ExportarRespaldoScreen> {
                   Container(
                     padding: const EdgeInsets.all(Sp.md),
                     decoration: BoxDecoration(
-                      color: Colors.black,
+                      color: const Color(0xFF0C0D11),
                       borderRadius: Rad.rMd,
-                      border: Border.all(color: Colors.white12),
+                      border: Border.all(
+                        color: AppColors.dorado.withOpacity(0.2),
+                      ),
                     ),
                     child: Text(
-                      _json!.length > 200
-                          ? '${_json!.substring(0, 200)}...'
+                      _json!.length > 250
+                          ? '${_json!.substring(0, 250)}...'
                           : _json!,
-                      style: AppType.mono.copyWith(
+                      style: const TextStyle(
                         color: AppColors.dorado,
                         fontSize: 10,
+                        fontFamily: 'monospace',
                       ),
                     ),
                   ),
@@ -134,20 +189,28 @@ class _ExportarRespaldoScreenState extends State<ExportarRespaldoScreen> {
               ),
             ),
             const SizedBox(height: Sp.lg),
-            AppButton(
+            AllinButton(
               label: 'COPIAR AL PORTAPAPELES',
-              icon: Icons.copy,
-              fullWidth: true,
+              icono: Icons.copy_rounded,
+              variant: AllinButtonVariant.gold,
+              expand: true,
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: _json!));
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Respaldo copiado')),
+                    SnackBar(
+                      content: Text(
+                        'Respaldo JSON copiado al portapapeles',
+                        style: AppText.body.copyWith(color: AppColors.dorado),
+                      ),
+                      backgroundColor: AppColors.granateProfundo,
+                    ),
                   );
                 }
               },
             ),
           ],
+          const SizedBox(height: 60),
         ],
       ),
     );
@@ -155,22 +218,38 @@ class _ExportarRespaldoScreenState extends State<ExportarRespaldoScreen> {
 
   Widget _fila(String label, int valor, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Sp.xs),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.granate, size: 18),
+          Icon(icon, color: AppColors.dorado.withOpacity(0.8), size: 18),
           const SizedBox(width: Sp.sm),
           Expanded(
             child: Text(
               label,
-              style: AppType.body.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
+              style: AppText.body.copyWith(
+                color: AppColors.onSurface(context),
+                fontSize: 14,
               ),
             ),
           ),
-          AppBadge(
-            label: '$valor',
-            variant: AppBadgeVariant.granate,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.granateProfundo,
+              borderRadius: Rad.rPill,
+              border: Border.all(
+                color: AppColors.dorado.withOpacity(0.3),
+              ),
+            ),
+            child: Text(
+              '$valor',
+              style: const TextStyle(
+                color: AppColors.dorado,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                fontFamily: 'monospace',
+              ),
+            ),
           ),
         ],
       ),

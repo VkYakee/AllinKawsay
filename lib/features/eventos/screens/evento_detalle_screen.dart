@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/components/app_button.dart';
+import '../../../core/components/allin_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/tokens.dart';
@@ -158,11 +158,11 @@ class EventoDetalleScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: Sp.md),
-                          AppButton(
-                            label: 'CÓMO LLEGAR (GOOGLE MAPS)',
-                            icon: Icons.directions,
-                            variant: AppButtonVariant.secondary,
-                            fullWidth: true,
+                          AllinButton(
+                            text: 'CÓMO LLEGAR (GOOGLE MAPS)',
+                            icon: Icons.directions_outlined,
+                            variant: AllinButtonVariant.primary,
+                            height: 48,
                             onPressed: _abrirRuta,
                           ),
                         ],

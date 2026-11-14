@@ -1,6 +1,8 @@
 // lib/features/eventos/screens/eventos_screen.dart
 import 'package:flutter/material.dart';
 
+import '../../../core/components/allin_button.dart';
+import '../../../core/components/allin_dialog.dart';
 import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
@@ -56,45 +58,44 @@ class _EventosScreenState extends State<EventosScreen> {
     );
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: Rad.rLg),
-        backgroundColor: AppColors.surface(context),
-        title: Text(
-          'Nota personal',
-          style: AppText.h3.copyWith(color: AppColors.dorado),
-        ),
-        content: TextField(
+      builder: (ctx) => AllinDialog(
+        titulo: 'Nota personal',
+        mensaje: 'Esta nota es privada y solo tú puedes verla.',
+        icono: Icons.edit_note_rounded,
+        contenido: TextField(
           controller: ctrl,
           maxLines: 3,
-          style: AppText.body,
+          style: AppText.body.copyWith(color: AppColors.onSurface(context)),
           decoration: InputDecoration(
-            hintText: 'Solo la ves tú',
-            border: OutlineInputBorder(borderRadius: Rad.rMd),
+            hintText: 'Escribe tu recordatorio o nota del ensayo...',
+            hintStyle: AppText.caption.copyWith(
+              color: AppColors.onSurfaceVariant(context),
+            ),
+            filled: true,
+            fillColor: AppColors.surfaceVariant(context).withOpacity(0.4),
+            border: OutlineInputBorder(
+              borderRadius: Rad.rMd,
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
             focusedBorder: OutlineInputBorder(
               borderRadius: Rad.rMd,
-              borderSide: const BorderSide(color: AppColors.dorado),
+              borderSide: const BorderSide(color: AppColors.dorado, width: 1.5),
             ),
           ),
         ),
-        actions: [
-          TextButton(
+        acciones: [
+          AllinButton(
+            label: 'Cancelar',
+            variant: AllinButtonVariant.glass,
+            expand: true,
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Cancelar',
-              style: AppText.subtitle.copyWith(
-                color: AppColors.onSurfaceVariant(context),
-              ),
-            ),
           ),
-          TextButton(
+          const SizedBox(height: 8),
+          AllinButton(
+            label: 'Guardar',
+            variant: AllinButtonVariant.gold,
+            expand: true,
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Guardar',
-              style: AppText.subtitle.copyWith(
-                color: AppColors.dorado,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ],
       ),
@@ -105,41 +106,14 @@ class _EventosScreenState extends State<EventosScreen> {
   }
 
   Future<void> _eliminar(Evento e) async {
-    final ok = await showDialog<bool>(
+    final ok = await AllinDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: Rad.rLg),
-        backgroundColor: AppColors.surface(context),
-        title: Text(
-          'Eliminar evento',
-          style: AppText.h3.copyWith(color: AppColors.dorado),
-        ),
-        content: Text(
-          '¿Eliminar "${e.titulo}"?',
-          style: AppText.body,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Cancelar',
-              style: AppText.subtitle.copyWith(
-                color: AppColors.onSurfaceVariant(context),
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Eliminar',
-              style: AppText.subtitle.copyWith(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+      titulo: 'Eliminar evento',
+      mensaje: '¿Eliminar "${e.titulo}"? Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      isDestructive: true,
+      icono: Icons.delete_outline_rounded,
     );
     if (ok == true) await _service.eliminar(e.id);
   }

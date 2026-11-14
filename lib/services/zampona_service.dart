@@ -63,9 +63,10 @@ class ZamponaService {
       _fadeTimers[notaId]?.cancel();
       _fadeTimers[notaId] = null;
 
-      await player.stop();
-      await player.setVolume(1.0);
-      await player.resume();
+      // Disparo inmediato de baja latencia sin encadenar 3 awaits bloqueantes
+      player.seek(Duration.zero);
+      player.setVolume(1.0);
+      player.resume();
     } catch (e) {
       debugPrint('⚠️ Error al tocar $notaId: $e');
     }

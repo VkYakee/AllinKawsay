@@ -1,7 +1,7 @@
 name: allinkawsay_app
 description: App para grupo de sikuris Allin Kawsay
 publish_to: 'none'
-version: 1.1.2+0
+version: 2.0.0+1
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

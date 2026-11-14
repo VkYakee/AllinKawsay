@@ -7,7 +7,7 @@ import '../../cancionero/screens/cancionero_screen.dart';
 import '../../eventos/screens/eventos_screen.dart';
 import '../../recuerdos/screens/recuerdos_screen.dart';
 import '../../perfil/screens/perfil_screen.dart';
-import '../widgets/main_nav_bar.dart';
+import '../widgets/allin_floating_nav_bar.dart';
 import '../widgets/mini_player.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ValueListenableBuilder<int>(
             valueListenable: NovedadesService.eventosNuevos,
             builder: (context, count, _) {
-              return MainNavBar(
+              return AllinFloatingNavBar(
                 selectedIndex: _index,
                 onDestinationSelected: (i) => setState(() => _index = i),
                 eventosNuevos: count,

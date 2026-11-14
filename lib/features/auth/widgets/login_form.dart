@@ -6,7 +6,7 @@ import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/components/app_button.dart';
+import '../../../core/components/allin_button.dart';
 
 import 'google_icon.dart';
 
@@ -107,10 +107,11 @@ class _LoginFormState extends State<LoginForm> {
           ),
           const SizedBox(height: Sp.xl),
 
-          AppButton(
-            label: 'INGRESAR',
+          AllinButton(
+            text: 'INGRESAR',
             fullWidth: true,
             loading: widget.loading,
+            variant: AllinButtonVariant.primary,
             onPressed: puedeSubmit ? widget.onLogin : null,
           ),
 

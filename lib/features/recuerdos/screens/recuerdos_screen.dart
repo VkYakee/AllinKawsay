@@ -5,6 +5,7 @@ import '../../../core/design/colors.dart';
 import '../../../core/design/motion.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/components/allin_dialog.dart';
 import '../../../core/widgets/animated_list_item.dart';
 
 import '../../../models/recuerdo.dart';
@@ -45,41 +46,14 @@ class _RecuerdosScreenState extends State<RecuerdosScreen> {
   }
 
   Future<void> _eliminar(Recuerdo r) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: Rad.rLg),
-        backgroundColor: AppColors.surface(context),
-        title: Text(
-          'Eliminar recuerdo',
-          style: AppText.h3.copyWith(color: AppColors.dorado),
-        ),
-        content: Text(
-          '¿Eliminar "${r.titulo}"? Esta acción no se puede deshacer.',
-          style: AppText.body,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Cancelar',
-              style: AppText.subtitle.copyWith(
-                color: AppColors.onSurfaceVariant(context),
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Eliminar',
-              style: AppText.subtitle.copyWith(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final ok = await AllinDialog.confirm(
+      context,
+      title: 'Eliminar Recuerdo',
+      message: '¿Estás seguro de eliminar "${r.titulo}"? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      isDestructive: true,
+      icon: Icons.delete_outline,
     );
     if (ok == true) await _service.eliminar(r.id);
   }

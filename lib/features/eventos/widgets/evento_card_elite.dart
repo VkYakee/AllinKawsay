@@ -135,6 +135,10 @@ class _EventoCardEliteState extends State<EventoCardElite> {
                                   ),
                                 ),
                                 const SizedBox(width: Sp.md),
+                                if (!widget.esPasado) ...[
+                                  _CountdownTicker(fecha: e.fecha),
+                                  const SizedBox(width: Sp.md),
+                                ],
                                 Icon(
                                   Icons.place,
                                   size: 12,
@@ -415,6 +419,70 @@ class _BloqueFecha extends StatelessWidget {
                   : AppColors.dorado.withOpacity(0.8),
               fontSize: 10,
               letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CountdownTicker extends StatelessWidget {
+  final DateTime fecha;
+  const _CountdownTicker({required this.fecha});
+
+  @override
+  Widget build(BuildContext context) {
+    final ahora = DateTime.now();
+    final diff = fecha.difference(ahora);
+
+    if (diff.isNegative) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.greenAccent.withOpacity(0.5)),
+        ),
+        child: const Text(
+          '¡EN VIVO!',
+          style: TextStyle(
+            color: Colors.greenAccent,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
+    final dias = diff.inDays;
+    final horas = diff.inHours % 24;
+
+    final String texto = dias > 0
+        ? 'Faltan ${dias}d ${horas}h'
+        : horas > 0
+            ? 'Hoy en ${horas}h'
+            : '¡Comienza pronto!';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.oroSolar.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: AppColors.oroSolar.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timer_outlined, size: 10, color: AppColors.oroSolar),
+          const SizedBox(width: 3),
+          Text(
+            texto,
+            style: const TextStyle(
+              color: AppColors.oroSolar,
+              fontSize: 9.5,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
             ),
           ),
         ],
