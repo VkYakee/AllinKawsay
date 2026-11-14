@@ -27,7 +27,7 @@ class PerfilMenuItem extends StatelessWidget {
     final onSurface = AppColors.onSurface(context);
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Sp.lg, vertical: Sp.xs),
+      padding: const EdgeInsets.symmetric(horizontal: Sp.lg, vertical: 6),
       child: AppCard(
         glass: true,
         padding: const EdgeInsets.all(Sp.md),
@@ -38,16 +38,23 @@ class PerfilMenuItem extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
-                color: isDanger ? Colors.red.withOpacity(0.1) : AppColors.granate.withOpacity(0.2),
+                color: isDanger 
+                    ? Colors.red.withOpacity(0.15) 
+                    : AppColors.granate.withOpacity(0.3),
                 borderRadius: Rad.rMd,
+                border: Border.all(
+                  color: isDanger 
+                      ? Colors.red.withOpacity(0.3) 
+                      : AppColors.dorado.withOpacity(0.2),
+                ),
               ),
               child: Icon(
                 icono,
-                color: isDanger ? Colors.red : AppColors.dorado,
-                size: 20,
+                color: isDanger ? Colors.redAccent : AppColors.dorado,
+                size: 22,
               ),
             ),
             const SizedBox(width: Sp.md),
@@ -57,24 +64,24 @@ class PerfilMenuItem extends StatelessWidget {
                 children: [
                   Text(
                     titulo,
-                    style: AppText.subtitle.copyWith(
-                      color: isDanger ? Colors.red : onSurface,
+                    style: AppText.title.copyWith(
+                      color: isDanger ? Colors.redAccent : Colors.white,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitulo,
                     style: AppText.captionXs.copyWith(
-                      color: onSurface.withOpacity(0.5),
+                      color: Colors.white54,
                     ),
                   ),
                 ],
               ),
             ),
             Icon(
-              Icons.chevron_right,
-              color: AppColors.dorado.withOpacity(0.6),
-              size: 20,
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.dorado.withOpacity(0.4),
+              size: 16,
             ),
           ],
         ),

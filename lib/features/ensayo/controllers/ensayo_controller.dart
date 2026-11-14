@@ -9,6 +9,8 @@ import '../../../models/cancion.dart';
 import '../../../models/numerofonia.dart';
 import '../../../services/player_service.dart';
 import '../../../services/zampona_service.dart';
+// IMPORT NECESARIO PARA CeldaActiva:
+import '../../../widgets/visor_numerofonia.dart';
 
 /// Rol de práctica en el diálogo de sikuris
 enum RolEnsayo { ambos, arca, ira }
@@ -31,14 +33,6 @@ class EventoEnsayo {
 }
 
 /// Controlador único del Modo Ensayo.
-///
-/// Antes: la lógica de cálculo de timings, la posición del audio,
-/// el bloque activo, la celda activa y el karaoke vivían dentro del
-/// State del widget. Eso hacía que cada frame de audio disparara un
-/// setState que redibujaba TODO el árbol.
-///
-/// Ahora: todo vive acá. La UI escucha al controller y solo redibuja
-/// la parte que cambió (bloque actual, nota sonando, texto karaoke).
 class EnsayoController extends ChangeNotifier {
   final Cancion cancion;
 
@@ -80,7 +74,6 @@ class EnsayoController extends ChangeNotifier {
   bool get reproduciendo => _player.playing;
   List<BloqueAudio> get bloques => _bloques;
 
-  /// Estrofas a mostrar en la tabla: la del bloque actual, o vacío.
   List<EstrofaNumerofonia> get estrofasAMostrar {
     if (_bloqueActual < 0 || _bloqueActual >= _bloques.length) return [];
     final bloque = _bloques[_bloqueActual];
@@ -147,8 +140,6 @@ class EnsayoController extends ChangeNotifier {
     }
   }
 
-  // ─── Cálculo de bloque ──────────────────────────────────────
-
   int _getBloqueIndex(Duration pos) {
     final ms = pos.inMilliseconds;
     if (_bloques.isEmpty) return -1;
@@ -188,7 +179,6 @@ class EnsayoController extends ChangeNotifier {
     final bloque = _bloques[idx];
     final msActual = _pos.inMilliseconds;
 
-    // Nota activa
     EventoEnsayo? eventoActual;
     for (final ev in _eventosDelBloque) {
       if (msActual >= ev.inicioMs && msActual < ev.finMs) {
@@ -206,7 +196,6 @@ class EnsayoController extends ChangeNotifier {
           notaIndex: 0,
         );
         _notaSonando = eventoActual.idNota;
-
         // Lógica de Diálogo Arca vs Ira:
         // Si el usuario toca Arca (7), la app toca la fila 6 (Ira) como compañero.
         // Si el usuario toca Ira (6), la app toca la fila 7 (Arca).
@@ -223,7 +212,6 @@ class EnsayoController extends ChangeNotifier {
         if (debeSonarApp) {
           _zampona.tocar(eventoActual.idNota);
         }
-
         necesitaRedibujar = true;
       }
     } else {
@@ -234,7 +222,6 @@ class EnsayoController extends ChangeNotifier {
       }
     }
 
-    // Karaoke
     String textoNuevo = '';
     for (final frag in bloque.karaokeFragments) {
       if (msActual >= frag.inicioMs && msActual <= frag.finMs) {
@@ -307,8 +294,6 @@ class EnsayoController extends ChangeNotifier {
       ));
     }
   }
-
-  // ─── Controles públicos ─────────────────────────────────────
 
   Future<void> play() async {
     if (_player.processingState == ProcessingState.completed) {

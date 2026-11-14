@@ -47,13 +47,27 @@ class _PerfilScreenState extends State<PerfilScreen> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             slivers: [
+              // Gradiente de fondo superior
               SliverToBoxAdapter(
-                child: SafeArea(
-                  bottom: false,
-                  child: PerfilHeader(usuario: u),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.granateOscuro.withOpacity(0.6),
+                        AppColors.fondoOscuro,
+                      ],
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: PerfilHeader(usuario: u),
+                  ),
                 ),
               ),
 
+              // Stats
               if (u != null)
                 SliverToBoxAdapter(
                   child: AnimatedListItem(
@@ -63,6 +77,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   ),
                 ),
 
+              // Admin Banner
               SliverToBoxAdapter(
                 child: AnimatedListItem(
                   index: 1,
@@ -91,11 +106,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 ),
               ),
 
+              // Título "MI CUENTA"
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                     Sp.xl,
-                    Sp.md,
+                    Sp.lg,
                     Sp.xl,
                     Sp.sm,
                   ),
@@ -123,6 +139,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 ),
               ),
 
+              // Items del menú
               SliverToBoxAdapter(
                 child: AnimatedListItem(
                   index: 2,
@@ -166,6 +183,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
               const SliverToBoxAdapter(child: SizedBox(height: Sp.xl)),
 
+              // Cerrar sesión
               SliverToBoxAdapter(
                 child: AnimatedListItem(
                   index: 3,
@@ -218,7 +236,7 @@ class _PerfilStats extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
       child: AppCard(
         glass: true,
-        padding: const EdgeInsets.all(Sp.lg),
+        padding: const EdgeInsets.symmetric(vertical: Sp.lg, horizontal: Sp.md),
         child: Row(
           children: [
             Expanded(
@@ -265,7 +283,7 @@ class _PerfilStats extends StatelessWidget {
   Widget _divider() {
     return Container(
       width: 1,
-      height: 36,
+      height: 40,
       color: AppColors.dorado.withOpacity(0.15),
     );
   }
@@ -286,13 +304,13 @@ class _StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: AppColors.dorado, size: 18),
+        Icon(icon, color: AppColors.dorado, size: 22),
         const SizedBox(height: Sp.xs),
         Text(
           value,
           style: AppText.h3.copyWith(
-            color: AppColors.dorado,
-            fontSize: 20,
+            color: Colors.white,
+            fontSize: 22,
             letterSpacing: -0.5,
           ),
         ),
@@ -301,7 +319,7 @@ class _StatTile extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: AppText.captionXs.copyWith(
-            color: AppColors.onSurfaceVariant(context),
+            color: Colors.white54,
             fontSize: 10,
           ),
         ),
@@ -352,17 +370,16 @@ class _AdminBannerState extends State<_AdminBanner> {
             borderRadius: Rad.rLg,
             border: Border.all(
               color: widget.esDev
-                  ? Colors.cyanAccent.withOpacity(0.4)
-                  : AppColors.dorado.withOpacity(0.3),
+                  ? Colors.cyanAccent.withOpacity(0.5)
+                  : AppColors.dorado.withOpacity(0.4),
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: (widget.esDev
-                        ? Colors.cyanAccent
-                        : AppColors.granate)
+                color: (widget.esDev ? Colors.cyanAccent : AppColors.granate)
                     .withOpacity(0.3),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -375,13 +392,9 @@ class _AdminBannerState extends State<_AdminBanner> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  widget.esDev
-                      ? Icons.code
-                      : Icons.admin_panel_settings,
-                  color: widget.esDev
-                      ? Colors.cyanAccent
-                      : AppColors.dorado,
-                  size: 26,
+                  widget.esDev ? Icons.code : Icons.admin_panel_settings,
+                  color: widget.esDev ? Colors.cyanAccent : AppColors.dorado,
+                  size: 28,
                 ),
               ),
               const SizedBox(width: Sp.md),
@@ -393,10 +406,8 @@ class _AdminBannerState extends State<_AdminBanner> {
                       widget.esDev
                           ? 'Panel de Desarrollador'
                           : 'Panel de Administración',
-                      style: AppText.subtitle.copyWith(
-                        color: widget.esDev
-                            ? Colors.cyanAccent
-                            : AppColors.dorado,
+                      style: AppText.title.copyWith(
+                        color: widget.esDev ? Colors.cyanAccent : Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -404,21 +415,16 @@ class _AdminBannerState extends State<_AdminBanner> {
                     Text(
                       'Métricas y gestión del grupo',
                       style: AppText.captionXs.copyWith(
-                        color: (widget.esDev
-                                ? Colors.cyanAccent
-                                : AppColors.dorado)
-                            .withOpacity(0.7),
+                        color: widget.esDev ? Colors.cyanAccent.withOpacity(0.7) : Colors.white70,
                       ),
                     ),
                   ],
                 ),
               ),
               Icon(
-                Icons.arrow_forward_ios,
-                color: widget.esDev
-                    ? Colors.cyanAccent
-                    : AppColors.dorado,
-                size: 14,
+                Icons.arrow_forward_ios_rounded,
+                color: widget.esDev ? Colors.cyanAccent : AppColors.dorado,
+                size: 16,
               ),
             ],
           ),
@@ -458,24 +464,24 @@ class _CerrarSesionButtonState extends State<_CerrarSesionButton> {
         duration: AppMotion.fast,
         curve: AppMotion.spring,
         child: Container(
-          height: 54,
+          height: 56,
           decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.08),
+            color: Colors.red.withOpacity(0.1),
             borderRadius: Rad.rMd,
             border: Border.all(
-              color: Colors.red.withOpacity(0.4),
+              color: Colors.redAccent.withOpacity(0.5),
               width: 1.5,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.logout, color: Colors.red, size: 20),
+              const Icon(Icons.logout, color: Colors.redAccent, size: 20),
               const SizedBox(width: Sp.sm),
               Text(
                 'CERRAR SESIÓN',
                 style: AppText.label.copyWith(
-                  color: Colors.red,
+                  color: Colors.redAccent,
                   letterSpacing: 1.5,
                 ),
               ),

@@ -51,8 +51,8 @@ class AppInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = AppColors.onSurface(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = AppColors.onSurface(context);
 
     return TextFormField(
       controller: controller,
@@ -74,30 +74,31 @@ class AppInput extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: prefixIcon == null ? null : Icon(prefixIcon, color: AppColors.granate, size: 20),
+        prefixIcon: prefixIcon == null ? null : Icon(prefixIcon, color: AppColors.dorado.withOpacity(0.7), size: 20),
         suffixIcon: suffix,
         counterText: '',
         filled: true,
-        fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        // Fondo del input: oscuro y semi-transparente
+        fillColor: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.04),
         contentPadding: const EdgeInsets.symmetric(horizontal: Sp.lg, vertical: Sp.lg),
-        labelStyle: const TextStyle(color: AppColors.granate),
-        floatingLabelStyle: const TextStyle(color: AppColors.granate, fontWeight: FontWeight.bold),
-        hintStyle: TextStyle(color: onSurface.withOpacity(0.4)),
+        labelStyle: TextStyle(color: AppColors.dorado.withOpacity(0.7)),
+        floatingLabelStyle: const TextStyle(color: AppColors.dorado, fontWeight: FontWeight.bold),
+        hintStyle: TextStyle(color: onSurface.withOpacity(0.3)),
         focusedBorder: OutlineInputBorder(
           borderRadius: Rad.rMd,
-          borderSide: const BorderSide(color: AppColors.dorado, width: 2),
+          borderSide: const BorderSide(color: AppColors.dorado, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: Rad.rMd,
-          borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.3), width: 1),
+          borderSide: BorderSide(color: AppColors.dorado.withOpacity(0.2), width: 1),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: Rad.rMd,
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: Rad.rMd,
-          borderSide: const BorderSide(color: Colors.red, width: 2),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 2),
         ),
       ),
     );
