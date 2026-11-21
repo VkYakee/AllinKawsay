@@ -6,42 +6,49 @@ import '../design/tokens.dart';
 import '../design/typography.dart';
 
 enum AllinButtonVariant {
-  primary,   // Granate ceremonial + resplandor dorado
-  gold,      // Dorado solar metálico
-  glass,     // Cristal translúcido con desenfoque
-  outline,   // Borde fino dorado + fondo transparente
-  danger,    // Rojo carmesí para acciones destructivas
+  primary,
+  gold,
+  glass,
+  outline,
+  danger,
 }
 
 class AllinButton extends StatefulWidget {
-  final String text;
+  final String? text;
+  final String? label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final IconData? trailingIcon;
+  final IconData? icono;
   final AllinButtonVariant variant;
   final bool loading;
   final bool fullWidth;
+  final bool expand;
   final double height;
   final bool enableShimmer;
 
   const AllinButton({
     super.key,
-    required this.text,
+    this.text,
+    this.label,
     this.onPressed,
     this.icon,
     this.trailingIcon,
+    this.icono,
     this.variant = AllinButtonVariant.primary,
     this.loading = false,
     this.fullWidth = true,
+    this.expand = false,
     this.height = 54,
     this.enableShimmer = true,
-  });
+  }) : assert(text != null || label != null);
 
   @override
   State<AllinButton> createState() => _AllinButtonState();
 }
 
-class _AllinButtonState extends State<AllinButton> with SingleTickerProviderStateMixin {
+class _AllinButtonState extends State<AllinButton>
+    with SingleTickerProviderStateMixin {
   bool _isPressed = false;
   late final AnimationController _shimmerCtrl;
 
@@ -66,22 +73,19 @@ class _AllinButtonState extends State<AllinButton> with SingleTickerProviderStat
     setState(() => _isPressed = true);
   }
 
-  void _onTapUp(TapUpDetails _) {
-    if (_isPressed) setState(() => _isPressed = false);
-  }
-
-  void _onTapCancel() {
-    if (_isPressed) setState(() => _isPressed = false);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final bool disabled = widget.onPressed == null || widget.loading;
+    final disabled = widget.onPressed == null || widget.loading;
+    final displayText = widget.text ?? widget.label ?? '';
 
     return GestureDetector(
       onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
+      onTapUp: (_) {
+        if (_isPressed) setState(() => _isPressed = false);
+      },
+      onTapCancel: () {
+        if (_isPressed) setState(() => _isPressed = false);
+      },
       onTap: disabled ? null : widget.onPressed,
       behavior: HitTestBehavior.opaque,
       child: AnimatedScale(
@@ -89,7 +93,7 @@ class _AllinButtonState extends State<AllinButton> with SingleTickerProviderStat
         duration: AppMotion.fast,
         curve: AppMotion.spring,
         child: SizedBox(
-          width: widget.fullWidth ? double.infinity : null,
+          width: (widget.fullWidth || widget.expand) ? double.infinity : null,
           height: widget.height,
           child: AnimatedContainer(
             duration: AppMotion.normal,
@@ -100,7 +104,6 @@ class _AllinButtonState extends State<AllinButton> with SingleTickerProviderStat
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Barrido de destello metálico (Shimmer)
                   if (widget.enableShimmer &&
                       !disabled &&
                       (widget.variant == AllinButtonVariant.primary ||
@@ -108,28 +111,24 @@ class _AllinButtonState extends State<AllinButton> with SingleTickerProviderStat
                     Positioned.fill(
                       child: AnimatedBuilder(
                         animation: _shimmerCtrl,
-                        builder: (context, _) {
-                          return Transform.translate(
-                            offset: Offset(
-                              MediaQuery.of(context).size.width *
-                                  (2.5 * _shimmerCtrl.value - 1.25),
-                              0,
-                            ),
-                            child: Transform.rotate(
-                              angle: 0.35,
-                              child: Container(
-                                width: 70,
-                                decoration: const BoxDecoration(
-                                  gradient: AppColors.gradienteShimmer,
-                                ),
+                        builder: (_, __) => Transform.translate(
+                          offset: Offset(
+                            MediaQuery.of(context).size.width *
+                                (2.5 * _shimmerCtrl.value - 1.25),
+                            0,
+                          ),
+                          child: Transform.rotate(
+                            angle: 0.35,
+                            child: Container(
+                              width: 70,
+                              decoration: const BoxDecoration(
+                                gradient: AppColors.gradienteShimmer,
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
                     ),
-
-                  // Contenido (Texto + Iconos o Spinner)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
                     child: widget.loading
@@ -144,24 +143,29 @@ class _AllinButtonState extends State<AllinButton> with SingleTickerProviderStat
                             ),
                           )
                         : Row(
-                            mainAxisSize: widget.fullWidth ? MainAxisSize.max : MainAxisSize.min,
+                            mainAxisSize: (widget.fullWidth || widget.expand)
+                                ? MainAxisSize.max
+                                : MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (widget.icon != null) ...[
+                              if (widget.icon != null || widget.icono != null) ...[
                                 Icon(
-                                  widget.icon,
+                                  widget.icon ?? widget.icono,
                                   size: 19,
                                   color: _getTextColor(disabled),
                                 ),
                                 const SizedBox(width: Sp.sm),
                               ],
-                              Text(
-                                widget.text,
-                                style: AppText.button.copyWith(
-                                  color: _getTextColor(disabled),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.6,
+                              Flexible(
+                                child: Text(
+                                  displayText,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.button.copyWith(
+                                    color: _getTextColor(disabled),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.6,
+                                  ),
                                 ),
                               ),
                               if (widget.trailingIcon != null) ...[
@@ -210,64 +214,33 @@ class _AllinButtonState extends State<AllinButton> with SingleTickerProviderStat
             color: AppColors.oroSolar.withOpacity(0.4),
             width: 1.2,
           ),
-          boxShadow: [
-            ...AppColors.glowGranate(intens: 0.45, blur: 18),
-            if (_isPressed)
-              ...AppColors.glowDorado(intens: 0.3, blur: 12),
-          ],
+          boxShadow: AppColors.glowGranate(intens: 0.45, blur: 18),
         );
-
       case AllinButtonVariant.gold:
         return BoxDecoration(
           gradient: AppColors.gradienteDorado,
           borderRadius: Rad.rPill,
-          border: Border.all(
-            color: AppColors.oroReflejo.withOpacity(0.7),
-            width: 1.2,
-          ),
+          border: Border.all(color: AppColors.oroReflejo.withOpacity(0.7)),
           boxShadow: AppColors.glowDorado(intens: 0.5, blur: 22),
         );
-
       case AllinButtonVariant.glass:
         return BoxDecoration(
           color: Colors.white.withOpacity(0.08),
           borderRadius: Rad.rPill,
-          border: Border.all(
-            color: Colors.white.withOpacity(0.18),
-            width: 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.25),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          border: Border.all(color: Colors.white.withOpacity(0.18)),
         );
-
       case AllinButtonVariant.outline:
         return BoxDecoration(
           color: Colors.transparent,
           borderRadius: Rad.rPill,
-          border: Border.all(
-            color: AppColors.oroSolar.withOpacity(0.7),
-            width: 1.4,
-          ),
+          border: Border.all(color: AppColors.oroSolar.withOpacity(0.7), width: 1.4),
         );
-
       case AllinButtonVariant.danger:
         return BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFFB31217), Color(0xFFE52D27)],
           ),
           borderRadius: Rad.rPill,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.red.withOpacity(0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
         );
     }
   }
