@@ -82,28 +82,27 @@ jobs:
             echo "✅ MainActivity custom copiado"
           fi
 
-      - name: Configurar keystore de release (opcional)
-        if: ${{ secrets.KEYSTORE_BASE64 != '' && secrets.KEYSTORE_PASSWORD != '' && secrets.KEY_PASSWORD != '' && secrets.KEY_ALIAS != '' }}
+      - name: Configurar firma de release (keystore opcional)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/allinkawsay.keystore
-          test -s android/app/allinkawsay.keystore
-          cat > android/keystore.properties << EOF
+          if [[ -n "$KEYSTORE_BASE64" && -n "$KEYSTORE_PASSWORD" && -n "$KEY_PASSWORD" && -n "$KEY_ALIAS" ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/allinkawsay.keystore
+            test -s android/app/allinkawsay.keystore
+            cat > android/keystore.properties << EOF
           storeFile=allinkawsay.keystore
           storePassword=$KEYSTORE_PASSWORD
           keyAlias=$KEY_ALIAS
           keyPassword=$KEY_PASSWORD
           EOF
-
-      - name: Usar firma debug si no hay keystore
-        if: ${{ secrets.KEYSTORE_BASE64 == '' || secrets.KEYSTORE_PASSWORD == '' || secrets.KEY_PASSWORD == '' || secrets.KEY_ALIAS == '' }}
-        run: |
-          rm -f android/keystore.properties android/app/allinkawsay.keystore
-          echo 'No se configuró keystore; se usará firma debug para validar/compilar la APK.'
+            echo 'Keystore de release configurado.'
+          else
+            rm -f android/keystore.properties android/app/allinkawsay.keystore
+            echo 'No hay keystore completo; se usará la firma debug para compilar.'
+          fi
 
       - name: Preparar assets
         run: |
