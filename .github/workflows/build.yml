@@ -9,7 +9,7 @@ on:
         default: ''
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -78,15 +78,16 @@ jobs:
             echo "✅ MainActivity custom copiado"
           fi
 
-      - name: Configurar keystore de release desde Secrets
+      - name: Configurar keystore de release (opcional)
+        if: ${{ secrets.KEYSTORE_BASE64 != '' && secrets.KEYSTORE_PASSWORD != '' && secrets.KEY_PASSWORD != '' && secrets.KEY_ALIAS != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/allinkawsay.keystore
-
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/allinkawsay.keystore
+          test -s android/app/allinkawsay.keystore
           cat > android/keystore.properties << EOF
           storeFile=allinkawsay.keystore
           storePassword=$KEYSTORE_PASSWORD
@@ -94,7 +95,11 @@ jobs:
           keyPassword=$KEY_PASSWORD
           EOF
 
-          echo "✅ Keystore de release configurado desde Secrets"
+      - name: Usar firma debug si no hay keystore
+        if: ${{ secrets.KEYSTORE_BASE64 == '' || secrets.KEYSTORE_PASSWORD == '' || secrets.KEY_PASSWORD == '' || secrets.KEY_ALIAS == '' }}
+        run: |
+          rm -f android/keystore.properties android/app/allinkawsay.keystore
+          echo 'No se configuró keystore; se usará firma debug para validar/compilar la APK.'
 
       - name: Preparar assets
         run: |
@@ -170,30 +175,13 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk \
              build/app/outputs/flutter-apk/AllinKawsay.apk
 
-      - name: Crear release en GitHub
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RUN=${{ github.run_number }}
-          VERSION=${{ steps.version.outputs.version }}
-          TAG="v${VERSION}.${RUN}"
-          APK="build/app/outputs/flutter-apk/AllinKawsay.apk"
-          SIZE=$(stat -c%s $APK)
-          SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $SIZE/1048576}")
-          MOTIVO="${{ github.event.inputs.motivo }}"
+      - name: Verificar APK generada
+        run: test -s build/app/outputs/flutter-apk/AllinKawsay.apk
 
-          cat > /tmp/notas.md <<EOF
-          🚀 **NUEVA VERSIÓN**
-
-          - **Versión:** ${VERSION}.${RUN}
-          - **Build number:** ${RUN}
-          - **Tamaño:** ${SIZE_MB} MB
-          - **Commit:** ${{ github.sha }}
-          - **Fecha:** $(date +'%Y-%m-%d %H:%M UTC')
-
-          ${MOTIVO:+**Motivo:** ${MOTIVO}}
-          EOF
-
-          gh release create "$TAG" "$APK" \
-            --title "v${VERSION}.${RUN}" \
-            --notes-file /tmp/notas.md
+      - name: Publicar APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: AllinKawsay-main-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/AllinKawsay.apk
+          if-no-files-found: error
+          retention-days: 14
